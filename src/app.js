@@ -9,7 +9,7 @@ const els = {
   accountingSummary:$('accountingSummary'), lineSummary:$('lineSummary'), importSummary:$('importSummary'), sheetList:$('sheetList'), recentOrdersBody:$('recentOrdersBody'), unknownList:$('unknownList'), emptyReview:$('emptyReview'),
   searchInput:$('searchInput'), countrySelect:$('countrySelect'), categorySelect:$('categorySelect'), ordersBody:$('ordersBody'), resultCount:$('resultCount'), tableNote:$('tableNote'),
   navReviewCount:$('navReviewCount'), quickReviewCount:$('quickReviewCount'), systemStatus:$('systemStatus'), lastImportText:$('lastImportText'), sidebarResetButton:$('sidebarResetButton'),
-  reimportButton:$('reimportButton'), clearButton:$('clearButton'), topExportButton:$('topExportButton'), quickExportButton:$('quickExportButton'), exportButton:$('exportButton'),
+  reimportButton:$('reimportButton'), clearButton:$('clearButton'), topExportButton:$('topExportButton'), quickExportButton:$('quickExportButton'), exportButton:$('exportButton'), heroExportButton:$('heroExportButton'), heroImportButton:$('heroImportButton'), inlineImportButton:$('inlineImportButton'), navImportButton:$('navImportButton'),
   confirmModal:$('confirmModal'), modalTitle:$('modalTitle'), modalText:$('modalText'), modalCancel:$('modalCancel'), modalConfirm:$('modalConfirm')
 };
 
@@ -225,7 +225,8 @@ els.dropzone.addEventListener('dragover',e=>{e.preventDefault();if(!busy)els.dro
 els.dropzone.addEventListener('dragleave',()=>els.dropzone.classList.remove('dragging'));
 els.dropzone.addEventListener('drop',e=>{e.preventDefault();els.dropzone.classList.remove('dragging');startImport(e.dataTransfer.files)});
 els.dismissError.addEventListener('click',hideError); els.searchInput.addEventListener('input',renderOrders); els.countrySelect.addEventListener('change',renderOrders); els.categorySelect.addEventListener('change',renderOrders);
-[els.exportButton,els.topExportButton,els.quickExportButton].forEach(btn=>btn?.addEventListener('click',exportAccounting));
+[els.exportButton,els.topExportButton,els.quickExportButton,els.heroExportButton].forEach(btn=>btn?.addEventListener('click',exportAccounting));
+[els.heroImportButton,els.inlineImportButton,els.navImportButton].forEach(btn=>btn?.addEventListener('click',reimportFlow));
 els.reimportButton.addEventListener('click',reimportFlow); els.sidebarResetButton.addEventListener('click',reimportFlow); els.clearButton.addEventListener('click',clearFlow);
 els.modalCancel.addEventListener('click',closeConfirm); els.confirmModal.addEventListener('click',e=>{if(e.target===els.confirmModal)closeConfirm()});
 els.modalConfirm.addEventListener('click',()=>{const action=modalAction;closeConfirm();action?.()});
