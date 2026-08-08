@@ -131,6 +131,224 @@ function buildXlsx(sheets){const entries=[],workbookSheets=sheets.map((s,i)=>`<s
 function downloadBlob(blob,filename){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=filename;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000)}
 
 
+// v6.5.5 FACT template preservation + backfill engine.
+// The original XLSX is treated as a template. Only FACT data cell VALUES are replaced;
+// styles, borders, merged cells, row heights, column widths, formulas/layout and all other package parts are preserved.
+
+const ZIP_EOCD=0x06054b50, ZIP_CEN=0x02014b50, ZIP_LOC=0x04034b50;
+const utf8dec=new TextDecoder('utf-8');
+
+function basename(path=''){return String(path).replace(/\\/g,'/').split('/').pop()||'workbook.xlsx'}
+function xmlDecodeLocal(value=''){
+  return String(value).replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"')
+    .replace(/&apos;/g,"'").replace(/&amp;/g,'&')
+    .replace(/&#(\d+);/g,(_,n)=>String.fromCodePoint(Number(n)))
+    .replace(/&#x([0-9a-f]+);/gi,(_,n)=>String.fromCodePoint(parseInt(n,16)));
+}
+function zipFileName(bytes,flags){try{return new TextDecoder((flags&0x800)?'utf-8':'utf-8').decode(bytes)}catch{return utf8dec.decode(bytes)}}
+
+class PreserveZipArchive{
+  constructor(blob,entries){this.blob=blob;this.entries=entries;this.byName=new Map(entries.map(e=>[e.name,e]));}
+  static async open(blob){
+    const tailSize=Math.min(blob.size,65557), tail=new Uint8Array(await blob.slice(blob.size-tailSize).arrayBuffer());
+    const v=new DataView(tail.buffer,tail.byteOffset,tail.byteLength); let pos=-1;
+    for(let i=tail.length-22;i>=0;i--){if(v.getUint32(i,true)===ZIP_EOCD){pos=i;break}}
+    if(pos<0)throw new Error('无法读取 XLSX ZIP 尾部目录');
+    const total=v.getUint16(pos+10,true), centralSize=v.getUint32(pos+12,true), centralOffset=v.getUint32(pos+16,true);
+    if(total===0xffff||centralOffset===0xffffffff||centralSize===0xffffffff)throw new Error('暂不支持 ZIP64 XLSX');
+    const central=new Uint8Array(await blob.slice(centralOffset,centralOffset+centralSize).arrayBuffer());
+    const cv=new DataView(central.buffer,central.byteOffset,central.byteLength), entries=[]; let p=0;
+    while(p+46<=central.length&&entries.length<total){
+      if(cv.getUint32(p,true)!==ZIP_CEN)break;
+      const flags=cv.getUint16(p+8,true), method=cv.getUint16(p+10,true), modTime=cv.getUint16(p+12,true), modDate=cv.getUint16(p+14,true);
+      const crc=cv.getUint32(p+16,true), compressedSize=cv.getUint32(p+20,true), uncompressedSize=cv.getUint32(p+24,true);
+      const nameLen=cv.getUint16(p+28,true), extraLen=cv.getUint16(p+30,true), commentLen=cv.getUint16(p+32,true), externalAttrs=cv.getUint32(p+38,true), localOffset=cv.getUint32(p+42,true);
+      const name=zipFileName(central.slice(p+46,p+46+nameLen),flags).replace(/^\//,'');
+      entries.push({name,flags,method,modTime,modDate,crc,compressedSize,uncompressedSize,externalAttrs,localOffset});
+      p+=46+nameLen+extraLen+commentLen;
+    }
+    return new PreserveZipArchive(blob,entries);
+  }
+  get(name){return this.byName.get(String(name).replace(/^\//,''))}
+  async dataRange(entry){
+    const h=new DataView(await this.blob.slice(entry.localOffset,entry.localOffset+30).arrayBuffer());
+    if(h.getUint32(0,true)!==ZIP_LOC)throw new Error(`XLSX 条目损坏：${entry.name}`);
+    const nameLen=h.getUint16(26,true), extraLen=h.getUint16(28,true), start=entry.localOffset+30+nameLen+extraLen;
+    return {start,end:start+entry.compressedSize};
+  }
+  async compressedBlob(entry){const {start,end}=await this.dataRange(entry);return this.blob.slice(start,end)}
+  async stream(entryOrName){
+    const entry=typeof entryOrName==='string'?this.get(entryOrName):entryOrName;if(!entry)throw new Error(`找不到 XLSX 条目：${entryOrName}`);
+    const source=(await this.compressedBlob(entry)).stream();
+    if(entry.method===0)return source;
+    if(entry.method===8)return source.pipeThrough(new DecompressionStream('deflate-raw'));
+    throw new Error(`不支持 XLSX 压缩方式：${entry.method}`);
+  }
+  async bytes(entryOrName,max=32*1024*1024){
+    const entry=typeof entryOrName==='string'?this.get(entryOrName):entryOrName;if(!entry)return new Uint8Array();
+    if(entry.uncompressedSize>max)throw new Error(`XLSX 条目过大，不能整块读取：${entry.name}`);
+    const reader=(await this.stream(entry)).getReader(),chunks=[];let size=0;
+    while(true){const {value,done}=await reader.read();if(done)break;size+=value.byteLength;if(size>max)throw new Error(`XLSX 条目过大：${entry.name}`);chunks.push(value)}
+    const out=new Uint8Array(size);let off=0;for(const c of chunks){out.set(c,off);off+=c.length}return out;
+  }
+  async text(name,max=32*1024*1024){return utf8dec.decode(await this.bytes(name,max))}
+}
+function normalizeTargetLocal(target){
+  const clean=xmlDecodeLocal(target).replace(/^\//,'').replace(/^\.\//,'');
+  return clean.startsWith('xl/')?clean:`xl/${clean}`;
+}
+function findFactSheetPath(workbookXml,relsXml){
+  const rels=new Map();let m;
+  const rr=/<Relationship\b([^>]*)\/?\s*>/g;
+  while((m=rr.exec(relsXml))){const id=/\bId="([^"]+)"/.exec(m[1])?.[1],target=/\bTarget="([^"]+)"/.exec(m[1])?.[1];if(id&&target)rels.set(id,normalizeTargetLocal(target))}
+  const sr=/<sheet\b([^>]*)\/?\s*>/g;
+  while((m=sr.exec(workbookXml))){const name=xmlDecodeLocal(/\bname="([^"]+)"/.exec(m[1])?.[1]||''),rid=/\br:id="([^"]+)"/.exec(m[1])?.[1];if(name.trim().toUpperCase()==='FACT'&&rels.get(rid))return rels.get(rid)}
+  return '';
+}
+function normalizeCountry(v=''){
+  const s=norm(v).toUpperCase().replace(/\s+/g,' ');
+  const aliases={'FR':'FRANCE','BE':'BELGIUM','CA':'CANADA','CH':'SWITZERLAND','LU':'LUXEMBOURG','DE':'GERMANY','US':'UNITED STATES','USA':'UNITED STATES','ES':'SPAIN','UA':'UKRAINE'};
+  return aliases[s]||s;
+}
+function isColorPack6(item){
+  const x=`${item.productName||''} ${item.sku||''}`.toLowerCase();
+  return /pack[^0-9]*6|52725633384712|49624586256648|qb-6/.test(x);
+}
+function factDescriptionType(desc=''){
+  const d=norm(desc).toLowerCase();
+  const pencil=/stylo\s*eternel\s*x\s*(\d+)/i.exec(d);
+  if(pencil)return {type:'pencil',bucket:Number(pencil[1])};
+  if(/lot de 4 mines rechargeables/.test(d))return {type:'refill'};
+  if(/lot de 6 mines color/.test(d))return {type:'color6'};
+  if(/mines color/.test(d))return {type:'colorSingle'};
+  if(/gravure personnalis/.test(d))return {type:'engraving'};
+  if(/coffret cadeau/.test(d))return {type:'giftBox'};
+  return {type:'unknown'};
+}
+function sourceDataForWorkbook(workbookName){
+  const wbOrders=(classified?.orders||[]).filter(o=>o.sourceFile===workbookName);
+  const wbLines=(classified?.lineItems||[]).filter(x=>x.sourceFile===workbookName);
+  const orderById=new Map(wbOrders.map(o=>[String(o.orderId),o]));
+  const pencilQtyByOrder=new Map();
+  for(const x of wbLines){if(x.category==='PENCIL')pencilQtyByOrder.set(String(x.orderId),(pencilQtyByOrder.get(String(x.orderId))||0)+(Number(x.quantity)||1))}
+  const pencilBucket=new Map(),refill=new Map(),color6=new Map(),colorSingle=new Map();
+  const add=(map,country,n)=>map.set(country,(map.get(country)||0)+n);
+  for(const o of wbOrders){
+    const country=normalizeCountry(o.country),qty=Math.round(pencilQtyByOrder.get(String(o.orderId))||0);
+    if(qty>0){const k=`${country}\u0001${qty}`;pencilBucket.set(k,(pencilBucket.get(k)||0)+1)}
+  }
+  let engraving=0,boxWithPencil=0,boxWithoutPencil=0;
+  for(const x of wbLines){
+    const q=Number(x.quantity)||1,country=normalizeCountry(x.country);
+    if(x.category==='REFILL')add(refill,country,q);
+    else if(x.category==='COLOR_REFILL')add(isColorPack6(x)?color6:colorSingle,country,q);
+    else if(x.category==='ENGRAVING')engraving+=q;
+    else if(x.category==='GIFT_BOX'){
+      if((pencilQtyByOrder.get(String(x.orderId))||0)>0)boxWithPencil+=q;else boxWithoutPencil+=q;
+    }
+  }
+  return {wbOrders,wbLines,orderById,pencilBucket,refill,color6,colorSingle,engraving,boxWithPencil,boxWithoutPencil};
+}
+function buildFactBackfillPlan(workbookName,factRows){
+  const src=sourceDataForWorkbook(workbookName), plan=new Map(), boxRows=factRows.filter(r=>factDescriptionType(r.description).type==='giftBox').sort((a,b)=>a.sourceRow-b.sourceRow);
+  let firstBoxRow=boxRows[0]?.sourceRow, secondBoxRow=boxRows[1]?.sourceRow;
+  let total=0;
+  for(const r of factRows){
+    const kind=factDescriptionType(r.description), country=normalizeCountry(r.country), unit=Number.isFinite(Number(r.unitTotal))?Number(r.unitTotal):((Number(r.cogs)||0)+(Number(r.shipping)||0));
+    let quantity=0;
+    if(kind.type==='pencil')quantity=src.pencilBucket.get(`${country}\u0001${kind.bucket}`)||0;
+    else if(kind.type==='refill')quantity=src.refill.get(country)||0;
+    else if(kind.type==='color6')quantity=src.color6.get(country)||0;
+    else if(kind.type==='colorSingle')quantity=src.colorSingle.get(country)||0;
+    else if(kind.type==='engraving')quantity=src.engraving;
+    else if(kind.type==='giftBox'){
+      if(r.sourceRow===firstBoxRow)quantity=src.boxWithPencil;
+      else if(r.sourceRow===secondBoxRow)quantity=src.boxWithoutPencil;
+      else quantity=0;
+    }
+    quantity=Math.max(0,Math.round(quantity));
+    const amount=Math.round((quantity*unit+Number.EPSILON)*100)/100;
+    plan.set(Number(r.sourceRow),{quantity,amount});
+    total+=amount;
+  }
+  return {plan,total:Math.round((total+Number.EPSILON)*100)/100};
+}
+function escapeRegExp(s){return String(s).replace(/[.*+?^${}()|[\]\\]/g,'\\$&')}
+function numericCellXml(attrs,ref,value){
+  const cleanAttrs=String(attrs).replace(/\s+t="[^"]*"/g,'');
+  if(value===''||value==null)return `<c${cleanAttrs}/>`;
+  return `<c${cleanAttrs}><v>${Number(value)}</v></c>`;
+}
+function replaceNumericCell(xml,ref,value){
+  const re=new RegExp(`<c([^>]*\\br="${escapeRegExp(ref)}"[^>]*)\\/>|<c([^>]*\\br="${escapeRegExp(ref)}"[^>]*)>[\\s\\S]*?<\\/c>`);
+  const m=re.exec(xml);if(!m)return xml;
+  return xml.slice(0,m.index)+numericCellXml(m[1]||m[2],ref,value)+xml.slice(m.index+m[0].length);
+}
+function readNumericCell(xml,ref){
+  const re=new RegExp(`<c[^>]*\\br="${escapeRegExp(ref)}"[^>]*>[\\s\\S]*?<v[^>]*>([^<]*)<\\/v>[\\s\\S]*?<\\/c>`);
+  const m=re.exec(xml);const n=m?Number(m[1]):NaN;return Number.isFinite(n)?n:null;
+}
+function patchFactXml(xml,factRows,workbookName){
+  const {plan,total}=buildFactBackfillPlan(workbookName,factRows);
+  const oldTotal=factRows.reduce((a,r)=>a+(Number(r.amount)||0),0);
+  let out=xml;
+  for(const r of factRows){
+    const row=Number(r.sourceRow),v=plan.get(row)||{quantity:0,amount:0};
+    out=replaceNumericCell(out,`D${row}`,v.quantity>0?v.quantity:'');
+    out=replaceNumericCell(out,`H${row}`,v.amount);
+  }
+  // Preserve total-cell formatting by replacing only values of cells that held the previous FACT total.
+  const maxRow=Math.max(0,...factRows.map(r=>Number(r.sourceRow)||0)),scanEnd=maxRow+16;
+  const candidates=[];
+  for(let row=maxRow+1;row<=scanEnd;row++){
+    for(const col of ['A','B','C','D','E','F','G','H']){
+      const ref=`${col}${row}`,num=readNumericCell(out,ref);
+      if(num!==null&&Math.abs(num-oldTotal)<0.02)candidates.push(ref);
+    }
+  }
+  for(const ref of candidates)out=replaceNumericCell(out,ref,total);
+  return {xml:out,total,rows:plan.size};
+}
+function zipLocalHeader(e,nameBytes){
+  const flags=(e.flags||0)&0x800;
+  return new Uint8Array([...u32(ZIP_LOC),...u16(20),...u16(flags),...u16(e.method),...u16(e.modTime||0),...u16(e.modDate||0),...u32(e.crc),...u32(e.compressedSize),...u32(e.uncompressedSize),...u16(nameBytes.length),...u16(0),...nameBytes]);
+}
+function zipCentralHeader(e,nameBytes,offset){
+  const flags=(e.flags||0)&0x800;
+  return new Uint8Array([...u32(ZIP_CEN),...u16(20),...u16(20),...u16(flags),...u16(e.method),...u16(e.modTime||0),...u16(e.modDate||0),...u32(e.crc),...u32(e.compressedSize),...u32(e.uncompressedSize),...u16(nameBytes.length),...u16(0),...u16(0),...u16(0),...u16(0),...u32(e.externalAttrs||0),...u32(offset),...nameBytes]);
+}
+async function rebuildFactWorkbook(blob,workbookName){
+  const archive=await PreserveZipArchive.open(blob),wbXml=await archive.text('xl/workbook.xml',4*1024*1024),relsXml=await archive.text('xl/_rels/workbook.xml.rels',4*1024*1024),factPath=findFactSheetPath(wbXml,relsXml);
+  if(!factPath)throw new Error(`${basename(workbookName)} 没有 FACT 工作表`);
+  const factRows=sheets.flatMap(s=>s.sourceFile===workbookName&&s.status==='ignored_fact'?(s.factRows||[]):[]);
+  if(!factRows.length)throw new Error(`${basename(workbookName)} 的 FACT 模板没有可识别的分类行`);
+  const factXml=await archive.text(factPath,16*1024*1024),patched=patchFactXml(factXml,factRows,workbookName),newBytes=enc.encode(patched.xml);
+  const parts=[],central=[],entries=[];let offset=0;
+  for(const orig of archive.entries){
+    const nameBytes=enc.encode(orig.name);let e,data;
+    if(orig.name===factPath){
+      e={...orig,flags:(orig.flags||0)&0x800,method:0,crc:crc32(newBytes),compressedSize:newBytes.length,uncompressedSize:newBytes.length};data=newBytes;
+    }else{e={...orig,flags:(orig.flags||0)&0x800};data=await archive.compressedBlob(orig)}
+    const local=zipLocalHeader(e,nameBytes);parts.push(local,data);central.push(zipCentralHeader(e,nameBytes,offset));offset+=local.length+e.compressedSize;entries.push(e);
+  }
+  const centralSize=central.reduce((a,b)=>a+b.length,0),centralOffset=offset;
+  parts.push(...central,new Uint8Array([...u32(ZIP_EOCD),...u16(0),...u16(0),...u16(entries.length),...u16(entries.length),...u32(centralSize),...u32(centralOffset),...u16(0)]));
+  return new Blob(parts,{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+}
+async function crc32Blob(blob){
+  let c=0xffffffff;const reader=blob.stream().getReader();
+  while(true){const {value,done}=await reader.read();if(done)break;for(const b of value){c^=b;for(let k=0;k<8;k++)c=(c>>>1)^((c&1)?0xedb88320:0)}}
+  return (c^0xffffffff)>>>0;
+}
+async function zipStoreBlobs(entries){
+  const meta=[];for(const e of entries){const data=e.data instanceof Blob?e.data:new Blob([e.data]),crc=await crc32Blob(data);meta.push({name:e.name,data,size:data.size,crc})}
+  const parts=[],central=[];let offset=0;
+  for(const e of meta){const name=enc.encode(e.name),h=new Uint8Array([...u32(ZIP_LOC),...u16(20),...u16(0x800),...u16(0),...u16(0),...u16(0),...u32(e.crc),...u32(e.size),...u32(e.size),...u16(name.length),...u16(0),...name]);parts.push(h,e.data);central.push(new Uint8Array([...u32(ZIP_CEN),...u16(20),...u16(20),...u16(0x800),...u16(0),...u16(0),...u16(0),...u32(e.crc),...u32(e.size),...u32(e.size),...u16(name.length),...u16(0),...u16(0),...u16(0),...u16(0),...u32(0),...u32(offset),...name]));offset+=h.length+e.size}
+  const centralSize=central.reduce((a,b)=>a+b.length,0),centralOffset=offset;
+  return new Blob([...parts,...central,new Uint8Array([...u32(ZIP_EOCD),...u16(0),...u16(0),...u16(meta.length),...u16(meta.length),...u32(centralSize),...u32(centralOffset),...u16(0)])],{type:'application/zip'});
+}
+
+
 
 const $ = (id) => document.getElementById(id);
 const els = {
@@ -147,7 +365,7 @@ const els = {
 const numberFormat = new Intl.NumberFormat('zh-CN');
 const moneyFormat = new Intl.NumberFormat('fr-FR',{style:'currency',currency:'EUR',minimumFractionDigits:2,maximumFractionDigits:2});
 const decimalFormat = new Intl.NumberFormat('zh-CN',{maximumFractionDigits:1});
-let worker=null, orders=[], sheets=[], classified=null, busy=false, duplicateCount=0, importStartedAt=0, importDuration=0, importedFileNames=[];
+let worker=null, orders=[], sheets=[], classified=null, busy=false, duplicateCount=0, importStartedAt=0, importDuration=0, importedFileNames=[], sourceWorkbooks=[];
 let modalAction=null;
 
 function escapeHtml(v){return String(v??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}
@@ -163,7 +381,7 @@ function setView(view){
   document.querySelectorAll('.view[data-view-panel]').forEach(panel=>panel.classList.toggle('active',panel.dataset.viewPanel===view));
 }
 function resetState({showLanding=true}={}){
-  worker?.terminate(); worker=null; orders=[]; sheets=[]; classified=null; busy=false; duplicateCount=0; importDuration=0; importedFileNames=[];
+  worker?.terminate(); worker=null; orders=[]; sheets=[]; classified=null; busy=false; duplicateCount=0; importDuration=0; importedFileNames=[]; sourceWorkbooks=[];
   setBusy(false); hideError(); els.progressFill.style.width='0%'; els.fileInput.value=''; els.searchInput.value='';
   els.countrySelect.innerHTML='<option value="ALL">全部国家</option>'; els.categorySelect.innerHTML='<option value="ALL">全部会计分类</option>';
   els.appViews.hidden=true; els.topActions.hidden=true; els.importLanding.hidden=!showLanding; els.sidebarResetButton.disabled=true;
@@ -210,7 +428,7 @@ function closeConfirm(){
 
 function startImport(fileList){
   const files=[...fileList].filter(f=>/\.(xlsx|zip)$/i.test(f.name)); if(!files.length||busy)return;
-  worker?.terminate(); worker=new Worker('./src/workers/import.worker.bundle.js?v=6.5'); importStartedAt=performance.now(); importedFileNames=files.map(f=>f.name);
+  worker?.terminate(); worker=new Worker('./src/workers/import.worker.bundle.js?v=6.5.5'); importStartedAt=performance.now(); importedFileNames=files.map(f=>f.name);
   setBusy(true); hideError(); els.importLanding.hidden=false; els.appViews.hidden=true; els.topActions.hidden=true;
   els.currentFile.textContent='准备读取…'; els.progressFill.style.width='0%'; els.progressText.textContent='0% · 大文件在独立线程运行';
   worker.onmessage=({data})=>{
@@ -221,7 +439,7 @@ function startImport(fileList){
       if(data.detail) els.currentFile.textContent=data.detail;
     }
     if(data.type==='complete'){
-      orders=data.orders||[]; sheets=data.sheets||[]; duplicateCount=data.duplicates||0; classified=classifyOrders(orders); importDuration=(performance.now()-importStartedAt)/1000;
+      orders=data.orders||[]; sheets=data.sheets||[]; sourceWorkbooks=data.workbooks||[]; duplicateCount=data.duplicates||0; classified=classifyOrders(orders); importDuration=(performance.now()-importStartedAt)/1000;
       els.progressFill.style.width='100%'; els.progressText.textContent='100% · 导入并分类完成'; els.currentFile.textContent='解析完成'; hideError(); setBusy(false); renderResults();
       worker?.terminate(); worker=null;
     }
@@ -399,7 +617,7 @@ function buildFactExportData(){
   return {factRows,active,totalAmount,totalQty,cogsTotal,shippingTotal,unallocated,summary,countries,countryOrder};
 }
 
-function exportAccounting(){
+function buildAccountingReport(){
   if(!classified)return;
   const totalAmount=classified.orders.reduce((a,o)=>a+(Number(o.orderAmount)||0),0);
   const reviewOrders=classified.orders.filter(o=>o.classificationStatus==='需复核');
@@ -485,7 +703,26 @@ function exportAccounting(){
     {name:'90_订单审计',rows:auditRows,widths:[22,17,22,14,14,54,24,12,28,22,22],headerRows:[1],freezeRow:1,freezeCol:1,autoFilterRow:1,currencyColumns:[2],integerColumns:[8],bandedRows:true},
     {name:'99_导入日志',rows:logRows,widths:[56,26,20,14,56,20],headerRows:[1],freezeRow:1,autoFilterRow:1,integerColumns:[4,6],bandedRows:true}
   ]);
-  downloadBlob(blob,`WRITE_会计结算_${new Date().toISOString().slice(0,10)}.xlsx`);
+  return {blob,fileName:`WRITE_会计结算_${new Date().toISOString().slice(0,10)}.xlsx`};
+}
+
+async function exportAccounting(){
+  if(!classified)return;
+  const report=buildAccountingReport();
+  const factBooks=sourceWorkbooks.filter(w=>sheets.some(s=>s.sourceFile===w.name&&s.status==='ignored_fact'));
+  if(!factBooks.length){downloadBlob(report.blob,report.fileName);return;}
+  try{
+    const updated=[];
+    for(const wb of factBooks){
+      const patched=await rebuildFactWorkbook(wb.blob,wb.name);
+      updated.push({name:`FACT_已回填_${basename(wb.name)}`,data:patched});
+    }
+    const packageBlob=await zipStoreBlobs([{name:report.fileName,data:report.blob},...updated]);
+    downloadBlob(packageBlob,`WRITE_结算交付包_${new Date().toISOString().slice(0,10)}.zip`);
+  }catch(err){
+    console.error(err);
+    showError(`FACT 回填导出失败：${err?.message||err}`);
+  }
 }
 function reimportFlow(){
   if(!classified){els.fileInput.click();return}
@@ -512,7 +749,7 @@ document.addEventListener('click',e=>{const btn=e.target.closest('[data-go-view]
 document.addEventListener('click',e=>{const btn=e.target.closest('.review-save');if(btn){const editor=btn.closest('.review-editor');if(editor)saveReviewRow(editor)}});
 
 
-// v6.5.4 theme controller: auto / light / dark
+// v6.5.5 theme controller: auto / light / dark
 const themeButton=document.getElementById('themeToggleButton');
 const themeLabel=document.getElementById('themeLabel');
 const themeMedia=window.matchMedia('(prefers-color-scheme: dark)');
@@ -548,25 +785,25 @@ if(themeMedia.addEventListener)themeMedia.addEventListener('change',onSystemThem
 applyTheme(getThemePreference(),{persist:false});
 
 
-// v6.5.4 release notes controller — show once per release per browser
+// v6.5.5 release notes controller — show once per release per browser
 const WRITE_RELEASE = {
-  version: document.body.dataset.release || '6.5.4',
+  version: document.body.dataset.release || '6.5.5',
   date: '2026-08-08',
-  title: 'WRITE Settlement Manager v6.5.4',
+  title: 'WRITE Settlement Manager v6.5.5',
   sections: [
     {label:'新增', items:[
-      '新增版本更新日志弹窗：每个浏览器首次打开本版本时自动展示。',
-      '更新日志已读状态保存在本机浏览器；同一版本关闭后不再重复弹出。',
-      'GitHub 新增 CHANGELOG.md，并把更新日志纳入固定发布流程。'
+      '新增 FACT 原格式回填：导出时按照 WebApp 已分析的订单结果重新计算 FACT 数量与金额。',
+      'FACT 已有统计数据时会先清空旧的 Quantity / Amount 数值，再按当前订单重新填入。',
+      '导出交付包同时包含专业会计统计表与原格式 FACT 已回填工作簿。'
     ]},
-    {label:'优化', items:[
-      '保留自动 / 浅色 / 深色三态主题，并继续支持系统主题实时跟随。',
-      '统一 README、RELEASE、Git commit 与 Cloudflare 部署日志的版本号。',
-      '更新弹窗完整适配桌面、iPad 与 iPhone，并遵循当前黑白灰主题。'
+    {label:'FACT 规则', items:[
+      '按国家/地区统计 Stylo eternel X1、X2、X3…等铅笔订单包装数量。',
+      '自动统计普通笔芯、Pack 6 彩色笔芯、单色笔芯、雕刻与礼盒项目。',
+      '沿用 FACT 模板内原有 COGs、Shipping 与单件成本规则计算 Amount，不修改原 FACT 样式。'
     ]},
-    {label:'发布规范', items:[
-      '以后每次版本更新必须同步维护 CHANGELOG.md、README.md、README_CN.md 和发布脚本文案。',
-      '新版本号变化后，更新日志会在同一浏览器再次自动显示一次。'
+    {label:'保留', items:[
+      'FACT 页列宽、行高、边框、填充、字体、合并单元格及其他原始格式全部保持不变。',
+      '继续保留自动 / 浅色 / 深色三态主题、首次版本更新日志与 GitHub CHANGELOG 发布规范。'
     ]}
   ]
 };

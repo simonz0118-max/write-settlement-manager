@@ -353,25 +353,20 @@ function exportAccounting(){
 function reimportFlow(){
   if(!classified){els.fileInput.click();return}
   openConfirm({title:'重新导入数据？',text:'当前统计结果会被清空，然后打开文件选择器重新导入。原始文件不会被修改。',confirmText:'清空并重新导入',action:()=>{
-// v6.5.4 release notes controller — show once per release per browser
+// v6.5.5 release notes controller — show once per release per browser
 const WRITE_RELEASE = {
-  version: document.body.dataset.release || '6.5.4',
+  version: document.body.dataset.release || '6.5.5',
   date: '2026-08-08',
-  title: 'WRITE Settlement Manager v6.5.4',
+  title: 'WRITE Settlement Manager v6.5.5',
   sections: [
     {label:'新增', items:[
-      '新增版本更新日志弹窗：每个浏览器首次打开本版本时自动展示。',
-      '更新日志已读状态保存在本机浏览器；同一版本关闭后不再重复弹出。',
-      'GitHub 新增 CHANGELOG.md，并把更新日志纳入固定发布流程。'
+      '新增 FACT 原格式回填：按照当前订单分析结果重新计算并写回 FACT。',
+      'FACT 已有统计数据时清空旧的 Quantity / Amount 后重新填入。',
+      '导出交付包同时包含专业会计统计表与 FACT 回填工作簿。'
     ]},
-    {label:'优化', items:[
-      '保留自动 / 浅色 / 深色三态主题，并继续支持系统主题实时跟随。',
-      '统一 README、RELEASE、Git commit 与 Cloudflare 部署日志的版本号。',
-      '更新弹窗完整适配桌面、iPad 与 iPhone，并遵循当前黑白灰主题。'
-    ]},
-    {label:'发布规范', items:[
-      '以后每次版本更新必须同步维护 CHANGELOG.md、README.md、README_CN.md 和发布脚本文案。',
-      '新版本号变化后，更新日志会在同一浏览器再次自动显示一次。'
+    {label:'保留', items:[
+      'FACT 原有格式不调整，仅替换统计数据。',
+      '继续保留三态主题和每版本首次更新日志。'
     ]}
   ]
 };
@@ -425,7 +420,7 @@ document.addEventListener('click',e=>{const btn=e.target.closest('[data-go-view]
 document.addEventListener('click',e=>{const btn=e.target.closest('.review-save');if(btn){const editor=btn.closest('.review-editor');if(editor)saveReviewRow(editor)}});
 
 
-// v6.5.4 theme controller: auto / light / dark
+// v6.5.5 theme controller: auto / light / dark
 const themeButton=document.getElementById('themeToggleButton');
 const themeLabel=document.getElementById('themeLabel');
 const themeMedia=window.matchMedia('(prefers-color-scheme: dark)');

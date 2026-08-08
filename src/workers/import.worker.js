@@ -273,6 +273,7 @@ async function parseUploadedZip(file, overallCb) {
   const outer = await ZipArchive.open(file);
   const xlsxEntries = outer.list((e) => /\.xlsx$/i.test(e.name) && !e.name.includes('__MACOSX/') && !/(^|\/)\._/.test(e.name));
   const results = [];
+  const workbooks = [];
   for (let i = 0; i < xlsxEntries.length; i++) {
     const entry = xlsxEntries[i];
     overallCb?.((i / Math.max(1, xlsxEntries.length)), entry.name, 'extract');
@@ -283,13 +284,17 @@ async function parseUploadedZip(file, overallCb) {
       overallCb?.((i + 0.25 + p * 0.75) / xlsxEntries.length, `${entry.name} · ${sheetName}`, phase);
     });
     results.push(...workbookResults);
+    workbooks.push({ name: entry.name, blob: xlsxBlob });
   }
-  return results;
+  return { results, workbooks };
 }
 
 async function parseInput(file, progressCb) {
   if (/\.zip$/i.test(file.name)) return parseUploadedZip(file, progressCb);
-  if (/\.xlsx$/i.test(file.name)) return parseXlsxBlob(file, file.name, (p, sheetName, phase) => progressCb?.(p, `${file.name} · ${sheetName}`, phase));
+  if (/\.xlsx$/i.test(file.name)) {
+    const results = await parseXlsxBlob(file, file.name, (p, sheetName, phase) => progressCb?.(p, `${file.name} · ${sheetName}`, phase));
+    return { results, workbooks: [{ name: file.name, blob: file }] };
+  }
   throw new Error(`不支持的文件：${file.name}`);
 }
 
@@ -297,13 +302,15 @@ self.onmessage = async ({ data }) => {
   const files = data.files || [];
   try {
     const all = [];
+    const workbooks = [];
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
       self.postMessage({ type: 'file-start', fileName: file.name, index: i, total: files.length });
-      const result = await parseInput(file, (p, detail, phase) => {
+      const parsed = await parseInput(file, (p, detail, phase) => {
         self.postMessage({ type: 'progress', progress: (i + p) / files.length, detail, phase });
       });
-      all.push(...result);
+      all.push(...(parsed.results || []));
+      workbooks.push(...(parsed.workbooks || []));
     }
 
     const rawOrders = all.flatMap((s) => s.orders || []);
@@ -318,7 +325,7 @@ self.onmessage = async ({ data }) => {
       orders.push(order);
     }
     const sheets = all.map(({ orders: _orders, ...rest }) => rest);
-    self.postMessage({ type: 'complete', progress: 1, orders, sheets, duplicates });
+    self.postMessage({ type: 'complete', progress: 1, orders, sheets, duplicates, workbooks });
   } catch (error) {
     self.postMessage({ type: 'error', message: error?.message || String(error), stack: error?.stack || '' });
   }

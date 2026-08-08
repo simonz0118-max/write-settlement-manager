@@ -1,6 +1,6 @@
 # WRITE Settlement Manager
 
-## Current release — v6.5.4
+## Current release — v6.5.5
 
 - Release notes now appear once per new version in each browser.
 - Auto / Light / Dark theme control remains available and persistent.
@@ -78,3 +78,8 @@ Milestone 2: accountant classification rules, SKU/product mapping, COGS/shipping
 ## v4.1
 - Rebuilt the original white-line side-profile panda mark for stronger panda recognition.
 - Professional six-sheet accounting export structure retained and validated.
+
+### V6.5.5 highlights
+- Rebuild FACT values from the current WebApp analysis at export time.
+- Preserve the original FACT formatting; only statistical cell values are replaced.
+- Export an accounting delivery package containing the professional report and FACT-filled source workbooks.

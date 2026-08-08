@@ -1,5 +1,29 @@
 # CHANGELOG
 
+## v6.5.5 — 2026-08-08
+
+### Added
+- FACT 原格式回填引擎：以用户导入的原始 FACT 工作表作为模板，仅更新统计数值。
+- FACT 已有数据时，导出前清空旧的 `Quantity` / `Amount (€)` 统计值并按 WebApp 当前分析结果重新计算。
+- FACT 没有统计数据时，同样按识别到的模板分类行自动填入。
+- 导出改为结算交付包：包含专业会计统计工作簿，以及每个带 FACT 页的原始工作簿回填副本。
+- 支持从 ZIP 导入时保留内部 XLSX 原始工作簿，以便导出时回填 FACT。
+
+### FACT calculation rules
+- `Stylo eternel Xn`：按国家/地区，统计每个订单中铅笔数量为 n 的订单数。
+- `Lot de 4 mines rechargeables UPSELL`：按国家统计普通笔芯数量。
+- `Lot de 6 Mines colorées UPSELL`：按国家统计 Pack 6 彩色笔芯数量。
+- `Mines colorées UPSELL`：按国家统计非 Pack 6 彩色笔芯数量。
+- `Gravure Personnalisée`：统计工作簿内雕刻数量。
+- `Coffret Cadeau`：按“随铅笔订单 / 独立礼盒订单”分配到模板中对应礼盒成本行。
+- `Amount (€)`：沿用 FACT 模板中原有 `COGs + Shipping (€)` 单价规则重新计算。
+- FACT 汇总总额单元格同步更新。
+
+### Preserved
+- FACT 原有字体、字号、对齐、填充、边框、列宽、行高、合并单元格和工作簿其他内容保持不变。
+- 自动 / 浅色 / 深色主题切换和版本更新日志首次弹窗机制继续保留。
+
+
 All notable changes to WRITE Settlement Manager are recorded here.
 
 ## v6.5.4 — 2026-08-08
