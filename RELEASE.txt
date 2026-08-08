@@ -1,5 +1,7 @@
-WRITE Settlement Manager v5.3.2
-- Larger UI typography and spacing
-- Editable review rows with save/reclassify
-- Fixed clear confirmation action
-- Reworked accounting export with readable settlement summary and FACT classification summary
+WRITE Settlement Manager v5.3.3
+Professional Accountant Export Layout
+- One worksheet = one accounting purpose
+- All spreadsheet content centered horizontally and vertically
+- Wider columns, no cramped mixed-table summary page
+- Dedicated order accounting category summary sheet
+- FACT summary and FACT country detail remain independent

@@ -1,4 +1,4 @@
-# V5.3.2 Hotfix validation
+# V5.3.3 Hotfix validation
 
 - Main UI JavaScript bundled into `src/app.bundle.js`; no ES module imports remain.
 - Import worker bundled into `src/workers/import.worker.bundle.js`; no worker module imports remain.

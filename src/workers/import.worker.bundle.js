@@ -1,4 +1,4 @@
-/* WRITE Settlement Manager v5.3.2 - standalone import worker */
+/* WRITE Settlement Manager v5.3.3 - standalone import worker */
 const EOCD_SIG = 0x06054b50;
 const CEN_SIG = 0x02014b50;
 const LOC_SIG = 0x04034b50;

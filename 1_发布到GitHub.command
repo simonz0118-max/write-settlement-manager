@@ -5,7 +5,7 @@ REMOTE="https://github.com/${REPO}.git"
 ROOT="$(cd "$(dirname "$0")" && pwd)"
 cd "$ROOT"
 
-printf "\nWRITE Settlement Manager v5.3.2 — GitHub 自动更新\n"
+printf "\nWRITE Settlement Manager v5.3.3 — GitHub 自动更新\n"
 printf "==============================================\n\n"
 
 if ! command -v brew >/dev/null 2>&1; then
@@ -46,11 +46,11 @@ git add -A
 if git diff --cached --quiet; then
   echo "GitHub 已经是最新 V5，无需重复提交。"
 else
-  git commit -m "Release WRITE Settlement Manager v5.3.2" >/dev/null
+  git commit -m "Release WRITE Settlement Manager v5.3.3" >/dev/null
 fi
 
 echo "正在推送 V5 到 GitHub main..."
 git push -u origin main
 
-echo "\n✅ GitHub V5.3.2 更新完成"
+echo "\n✅ GitHub V5.3.3 更新完成"
 echo "https://github.com/$REPO"

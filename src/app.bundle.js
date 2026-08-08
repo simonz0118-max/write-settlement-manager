@@ -1,4 +1,4 @@
-/* WRITE Settlement Manager v5.3.2 - single-file browser bundle */
+/* WRITE Settlement Manager v5.3.3 - single-file browser bundle */
 const norm = (v='') => String(v ?? '').trim();
 const low = (v='') => norm(v).toLowerCase();
 
@@ -102,29 +102,29 @@ function cellXml(v,r,c,style=0){const ref=`${colName(c)}${r}`;if(v==null||v===''
 const K={text:0,header:1,int:2,currency:3,altText:4,altInt:5,altCurrency:6,percent:7,altPercent:8,title:9,subtitle:10,section:11,totalText:12,totalInt:13,totalCurrency:14,totalPercent:15,reviewHeader:16,center:17,wrap:18,muted:19};
 function formatKind(sheet,r,c){for(const rule of sheet.formatRules||[]){if(r>=rule.r1&&r<=rule.r2&&c>=rule.c1&&c<=rule.c2)return rule.kind}if(sheet.currencyColumns?.includes(c))return'currency';if(sheet.percentColumns?.includes(c))return'percent';if(sheet.integerColumns?.includes(c))return'int';if(sheet.centerColumns?.includes(c))return'center';if(sheet.wrapColumns?.includes(c))return'wrap';return'text'}
 function styleFor(sheet,ri,ci,value){const r=ri+1,c=ci+1;if(r===sheet.titleRow)return K.title;if(r===sheet.subtitleRow)return K.subtitle;if(sheet.sectionRows?.includes(r))return K.section;if(sheet.headerRows?.includes(r))return sheet.reviewMode?K.reviewHeader:K.header;const kind=formatKind(sheet,r,c);const total=sheet.totalRows?.includes(r),alt=sheet.bandedRows&&r>(sheet.headerRows?.[0]||1)&&r%2===0;if(total){if(kind==='currency')return K.totalCurrency;if(kind==='percent')return K.totalPercent;if(kind==='int')return K.totalInt;return K.totalText}if(kind==='currency')return alt?K.altCurrency:K.currency;if(kind==='percent')return alt?K.altPercent:K.percent;if(kind==='int')return alt?K.altInt:K.int;if(kind==='center')return K.center;if(kind==='wrap')return K.wrap;return alt?K.altText:K.text}
-function sheetXml(sheet){const rows=sheet.rows||[],widths=sheet.widths||[],freezeRow=sheet.freezeRow??1,freezeCol=sheet.freezeCol??0,filterRow=sheet.autoFilterRow??0;const maxCols=Math.max(1,rows.reduce((m,r)=>Math.max(m,r?.length||0),0)),lastCol=colName(maxCols),lastRow=Math.max(1,rows.length);let xml='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">';xml+='<sheetViews><sheetView workbookViewId="0" showGridLines="0">';if(freezeRow>0||freezeCol>0){const topLeft=`${colName(freezeCol+1)}${freezeRow+1}`,pane=freezeRow>0&&freezeCol>0?'bottomRight':freezeRow>0?'bottomLeft':'topRight';xml+=`<pane${freezeCol?` xSplit="${freezeCol}"`:''}${freezeRow?` ySplit="${freezeRow}"`:''} topLeftCell="${topLeft}" activePane="${pane}" state="frozen"/>`}xml+='</sheetView></sheetViews><sheetFormatPr defaultRowHeight="22"/>';if(widths.length)xml+='<cols>'+widths.map((w,i)=>`<col min="${i+1}" max="${i+1}" width="${w}" customWidth="1"/>`).join('')+'</cols>';xml+='<sheetData>';rows.forEach((row,ri)=>{const r=ri+1;let ht=22;if(r===sheet.titleRow)ht=38;else if(r===sheet.subtitleRow)ht=30;else if(sheet.headerRows?.includes(r)||sheet.sectionRows?.includes(r))ht=27;else if(sheet.tallRows?.includes(r))ht=38;xml+=`<row r="${r}" ht="${ht}" customHeight="1">`;for(let ci=0;ci<(row||[]).length;ci++)xml+=cellXml(row[ci],r,ci+1,styleFor(sheet,ri,ci,row[ci]));xml+='</row>'});xml+='</sheetData>';if(sheet.merges?.length)xml+=`<mergeCells count="${sheet.merges.length}">${sheet.merges.map(x=>`<mergeCell ref="${x}"/>`).join('')}</mergeCells>`;if(filterRow>0&&rows.length>=filterRow)xml+=`<autoFilter ref="A${filterRow}:${lastCol}${lastRow}"/>`;xml+='<pageMargins left="0.3" right="0.3" top="0.5" bottom="0.5" header="0.2" footer="0.2"/><pageSetup orientation="landscape" fitToWidth="1" fitToHeight="0"/></worksheet>';return xml}
+function sheetXml(sheet){const rows=sheet.rows||[],widths=sheet.widths||[],freezeRow=sheet.freezeRow??1,freezeCol=sheet.freezeCol??0,filterRow=sheet.autoFilterRow??0;const maxCols=Math.max(1,rows.reduce((m,r)=>Math.max(m,r?.length||0),0)),lastCol=colName(maxCols),lastRow=Math.max(1,rows.length);let xml='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">';xml+='<sheetViews><sheetView workbookViewId="0" showGridLines="0">';if(freezeRow>0||freezeCol>0){const topLeft=`${colName(freezeCol+1)}${freezeRow+1}`,pane=freezeRow>0&&freezeCol>0?'bottomRight':freezeRow>0?'bottomLeft':'topRight';xml+=`<pane${freezeCol?` xSplit="${freezeCol}"`:''}${freezeRow?` ySplit="${freezeRow}"`:''} topLeftCell="${topLeft}" activePane="${pane}" state="frozen"/>`}xml+='</sheetView></sheetViews><sheetFormatPr defaultRowHeight="24"/>';if(widths.length)xml+='<cols>'+widths.map((w,i)=>`<col min="${i+1}" max="${i+1}" width="${w}" customWidth="1"/>`).join('')+'</cols>';xml+='<sheetData>';rows.forEach((row,ri)=>{const r=ri+1;let ht=24;if(r===sheet.titleRow)ht=38;else if(r===sheet.subtitleRow)ht=30;else if(sheet.headerRows?.includes(r)||sheet.sectionRows?.includes(r))ht=30;else if(sheet.tallRows?.includes(r))ht=38;xml+=`<row r="${r}" ht="${ht}" customHeight="1">`;for(let ci=0;ci<(row||[]).length;ci++)xml+=cellXml(row[ci],r,ci+1,styleFor(sheet,ri,ci,row[ci]));xml+='</row>'});xml+='</sheetData>';if(sheet.merges?.length)xml+=`<mergeCells count="${sheet.merges.length}">${sheet.merges.map(x=>`<mergeCell ref="${x}"/>`).join('')}</mergeCells>`;if(filterRow>0&&rows.length>=filterRow)xml+=`<autoFilter ref="A${filterRow}:${lastCol}${lastRow}"/>`;xml+='<pageMargins left="0.3" right="0.3" top="0.5" bottom="0.5" header="0.2" footer="0.2"/><pageSetup orientation="landscape" fitToWidth="1" fitToHeight="0"/></worksheet>';return xml}
 
 const styles=`<?xml version="1.0" encoding="UTF-8"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><numFmts count="2"><numFmt numFmtId="164" formatCode="#,##0.00 [$€-fr-FR]"/><numFmt numFmtId="165" formatCode="0.00%"/></numFmts><fonts count="7"><font><sz val="11"/><name val="Aptos"/><color rgb="FF1D1D1F"/></font><font><b/><sz val="11"/><name val="Aptos"/><color rgb="FFFFFFFF"/></font><font><b/><sz val="20"/><name val="Aptos Display"/><color rgb="FFFFFFFF"/></font><font><sz val="11"/><name val="Aptos"/><color rgb="FF6E6E73"/></font><font><b/><sz val="11"/><name val="Aptos"/><color rgb="FF1D1D1F"/></font><font><b/><sz val="11"/><name val="Aptos"/><color rgb="FF9A3412"/></font><font><sz val="11"/><name val="Aptos"/><color rgb="FF6E6E73"/></font></fonts><fills count="8"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FF1C1C1E"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFF2F2F7"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFE5E5EA"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFFAFAFC"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFF7F7F8"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFFFF7ED"/></patternFill></fill></fills><borders count="3"><border><left/><right/><top/><bottom/><diagonal/></border><border><left/><right/><top/><bottom style="thin"><color rgb="FFE5E5EA"/></bottom><diagonal/></border><border><left/><right/><top style="thin"><color rgb="FFC7C7CC"/></top><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="20">
-<xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0"><alignment vertical="center"/></xf>
-<xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFill="1" applyFont="1"><alignment vertical="center"/></xf>
-<xf numFmtId="3" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1"><alignment horizontal="right" vertical="center"/></xf>
-<xf numFmtId="164" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1"><alignment horizontal="right" vertical="center"/></xf>
-<xf numFmtId="0" fontId="0" fillId="6" borderId="1" xfId="0" applyFill="1"><alignment vertical="center"/></xf>
-<xf numFmtId="3" fontId="0" fillId="6" borderId="1" xfId="0" applyFill="1" applyNumberFormat="1"><alignment horizontal="right" vertical="center"/></xf>
-<xf numFmtId="164" fontId="0" fillId="6" borderId="1" xfId="0" applyFill="1" applyNumberFormat="1"><alignment horizontal="right" vertical="center"/></xf>
-<xf numFmtId="165" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1"><alignment horizontal="right" vertical="center"/></xf>
-<xf numFmtId="165" fontId="0" fillId="6" borderId="1" xfId="0" applyFill="1" applyNumberFormat="1"><alignment horizontal="right" vertical="center"/></xf>
-<xf numFmtId="0" fontId="2" fillId="2" borderId="0" xfId="0" applyFill="1" applyFont="1"><alignment vertical="center"/></xf>
-<xf numFmtId="0" fontId="3" fillId="5" borderId="0" xfId="0" applyFill="1" applyFont="1"><alignment vertical="center" wrapText="1"/></xf>
-<xf numFmtId="0" fontId="4" fillId="3" borderId="1" xfId="0" applyFill="1" applyFont="1"><alignment vertical="center"/></xf>
-<xf numFmtId="0" fontId="4" fillId="4" borderId="2" xfId="0" applyFill="1" applyFont="1"><alignment vertical="center"/></xf>
-<xf numFmtId="3" fontId="4" fillId="4" borderId="2" xfId="0" applyFill="1" applyFont="1" applyNumberFormat="1"><alignment horizontal="right" vertical="center"/></xf>
-<xf numFmtId="164" fontId="4" fillId="4" borderId="2" xfId="0" applyFill="1" applyFont="1" applyNumberFormat="1"><alignment horizontal="right" vertical="center"/></xf>
-<xf numFmtId="165" fontId="4" fillId="4" borderId="2" xfId="0" applyFill="1" applyFont="1" applyNumberFormat="1"><alignment horizontal="right" vertical="center"/></xf>
-<xf numFmtId="0" fontId="5" fillId="7" borderId="0" xfId="0" applyFill="1" applyFont="1"><alignment vertical="center"/></xf>
 <xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0"><alignment horizontal="center" vertical="center"/></xf>
-<xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0"><alignment vertical="top" wrapText="1"/></xf>
-<xf numFmtId="0" fontId="6" fillId="0" borderId="1" xfId="0"><alignment vertical="center"/></xf>
+<xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFill="1" applyFont="1"><alignment horizontal="center" vertical="center"/></xf>
+<xf numFmtId="3" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1"><alignment horizontal="center" vertical="center"/></xf>
+<xf numFmtId="164" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1"><alignment horizontal="center" vertical="center"/></xf>
+<xf numFmtId="0" fontId="0" fillId="6" borderId="1" xfId="0" applyFill="1"><alignment horizontal="center" vertical="center"/></xf>
+<xf numFmtId="3" fontId="0" fillId="6" borderId="1" xfId="0" applyFill="1" applyNumberFormat="1"><alignment horizontal="center" vertical="center"/></xf>
+<xf numFmtId="164" fontId="0" fillId="6" borderId="1" xfId="0" applyFill="1" applyNumberFormat="1"><alignment horizontal="center" vertical="center"/></xf>
+<xf numFmtId="165" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1"><alignment horizontal="center" vertical="center"/></xf>
+<xf numFmtId="165" fontId="0" fillId="6" borderId="1" xfId="0" applyFill="1" applyNumberFormat="1"><alignment horizontal="center" vertical="center"/></xf>
+<xf numFmtId="0" fontId="2" fillId="2" borderId="0" xfId="0" applyFill="1" applyFont="1"><alignment horizontal="center" vertical="center"/></xf>
+<xf numFmtId="0" fontId="3" fillId="5" borderId="0" xfId="0" applyFill="1" applyFont="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf>
+<xf numFmtId="0" fontId="4" fillId="3" borderId="1" xfId="0" applyFill="1" applyFont="1"><alignment horizontal="center" vertical="center"/></xf>
+<xf numFmtId="0" fontId="4" fillId="4" borderId="2" xfId="0" applyFill="1" applyFont="1"><alignment horizontal="center" vertical="center"/></xf>
+<xf numFmtId="3" fontId="4" fillId="4" borderId="2" xfId="0" applyFill="1" applyFont="1" applyNumberFormat="1"><alignment horizontal="center" vertical="center"/></xf>
+<xf numFmtId="164" fontId="4" fillId="4" borderId="2" xfId="0" applyFill="1" applyFont="1" applyNumberFormat="1"><alignment horizontal="center" vertical="center"/></xf>
+<xf numFmtId="165" fontId="4" fillId="4" borderId="2" xfId="0" applyFill="1" applyFont="1" applyNumberFormat="1"><alignment horizontal="center" vertical="center"/></xf>
+<xf numFmtId="0" fontId="5" fillId="7" borderId="0" xfId="0" applyFill="1" applyFont="1"><alignment horizontal="center" vertical="center"/></xf>
+<xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0"><alignment horizontal="center" vertical="center"/></xf>
+<xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0"><alignment horizontal="center" vertical="center" wrapText="1"/></xf>
+<xf numFmtId="0" fontId="6" fillId="0" borderId="1" xfId="0"><alignment horizontal="center" vertical="center"/></xf>
 </cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`;
 
 function buildXlsx(sheets){const entries=[],workbookSheets=sheets.map((s,i)=>`<sheet name="${esc(s.name.slice(0,31))}" sheetId="${i+1}" r:id="rId${i+1}"/>`).join('');entries.push({name:'[Content_Types].xml',data:`<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>${sheets.map((_,i)=>`<Override PartName="/xl/worksheets/sheet${i+1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join('')}</Types>`});entries.push({name:'_rels/.rels',data:'<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>'});entries.push({name:'xl/workbook.xml',data:`<?xml version="1.0" encoding="UTF-8"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><workbookPr/><bookViews><workbookView xWindow="0" yWindow="0" windowWidth="22000" windowHeight="14000"/></bookViews><sheets>${workbookSheets}</sheets></workbook>`});entries.push({name:'xl/_rels/workbook.xml.rels',data:`<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${sheets.map((_,i)=>`<Relationship Id="rId${i+1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${i+1}.xml"/>`).join('')}<Relationship Id="rId${sheets.length+1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`});entries.push({name:'xl/styles.xml',data:styles});sheets.forEach((s,i)=>entries.push({name:`xl/worksheets/sheet${i+1}.xml`,data:sheetXml(s)}));return zipStore(entries)}
@@ -210,7 +210,7 @@ function closeConfirm(){
 
 function startImport(fileList){
   const files=[...fileList].filter(f=>/\.(xlsx|zip)$/i.test(f.name)); if(!files.length||busy)return;
-  worker?.terminate(); worker=new Worker('./src/workers/import.worker.bundle.js?v=5.3.2'); importStartedAt=performance.now(); importedFileNames=files.map(f=>f.name);
+  worker?.terminate(); worker=new Worker('./src/workers/import.worker.bundle.js?v=5.3.3'); importStartedAt=performance.now(); importedFileNames=files.map(f=>f.name);
   setBusy(true); hideError(); els.importLanding.hidden=false; els.appViews.hidden=true; els.topActions.hidden=true;
   els.currentFile.textContent='准备读取…'; els.progressFill.style.width='0%'; els.progressText.textContent='0% · 大文件在独立线程运行';
   worker.onmessage=({data})=>{
@@ -405,79 +405,85 @@ function exportAccounting(){
   const reviewOrders=classified.orders.filter(o=>o.classificationStatus==='需复核');
   const reportDate=new Date().toLocaleString('zh-CN',{hour12:false});
   const sourceNames=[...new Set(sheets.map(x=>x.sourceFile).filter(Boolean))];
-  const factSheets=sheets.filter(s=>s.status==='ignored_fact');
   const totalItemQty=classified.lineItems.reduce((a,x)=>a+(Number(x.quantity)||1),0);
   const giftQty=classified.lineItems.filter(x=>x.isFree).reduce((a,x)=>a+(Number(x.quantity)||1),0);
   const factData=buildFactExportData();
   const grossProfit=totalAmount-factData.totalAmount;
   const grossMargin=totalAmount?grossProfit/totalAmount:0;
+  const sourceLabel=sourceNames.length===1?sourceNames[0]:`${sourceNames.length} 个文件`;
 
-  const summary=[
-    ['WRITE Settlement Manager — 结算摘要','','','','','',''],
-    [`生成时间：${reportDate}｜数据源：${sourceNames.length===1?sourceNames[0]:`${sourceNames.length} 个文件`}｜先看本页，明细与审计位于后续工作表。`,'','','','','',''],
+  // 00: only one clear accounting overview table. No FACT/order tables mixed on this sheet.
+  const overview=[
+    ['WRITE Settlement Manager — 专业会计结算总览','','',''],
+    [`生成时间：${reportDate}｜数据源：${sourceLabel}`,'','',''],
     [],
-    ['一、结算核心指标','','','','','',''],
-    ['指标','数值','口径 / 说明','','','',''],
-    ['销售订单总额',totalAmount,'去重后订单金额合计','','','',''],
-    ['FACT 成本总额',factData.totalAmount,'来自 FACT 页 Amount (€) 合计','','','',''],
-    ['估算毛利',grossProfit,'销售订单总额 - FACT 成本总额','','','',''],
-    ['估算毛利率',grossMargin,'估算毛利 ÷ 销售订单总额','','','',''],
-    ['去重后订单数',classified.orders.length,'最终纳入结算的唯一订单','','','',''],
-    ['商品件数',totalItemQty,'所有商品行数量合计','','','',''],
-    ['赠品件数',giftQty,'🎁 / 100% off 自动识别','','','',''],
-    ['待复核订单',reviewOrders.length,'建议归零后再正式交会计','','','',''],
-    [],
-    ['二、FACT 分类汇总（与 FACT 页面相同口径）','','','','','',''],
-    ['No','Description','Quantity','COGs (€)','Shipping (€)','COGs + Shipping (€)','Amount (€)']
+    ['指标','数值','会计口径','状态'],
+    ['销售订单总额',totalAmount,'去重后订单金额合计','已核算'],
+    ['FACT 成本总额',factData.totalAmount,'FACT 页面 Amount (€) 合计',factData.active?'已解析':'无 FACT 数据'],
+    ['估算毛利',grossProfit,'销售订单总额 - FACT 成本总额','估算值'],
+    ['估算毛利率',grossMargin,'估算毛利 ÷ 销售订单总额','估算值'],
+    ['去重后订单数',classified.orders.length,'最终纳入结算的唯一订单','已核算'],
+    ['商品件数',totalItemQty,'所有商品行数量合计','已核算'],
+    ['赠品件数',giftQty,'🎁 / 100% off 自动识别','已识别'],
+    ['待复核订单',reviewOrders.length,'正式交付前建议归零',reviewOrders.length?'需处理':'通过']
   ];
-  const factStart=summary.length+1; let no=1;
-  for(const r of factData.summary) summary.push([no++,r.description,r.quantity,r.avgCogs,r.avgShipping,r.avgUnit,r.amount]);
-  const factTotalRow=summary.length+1;
-  summary.push(['','TOTAL / 合计',factData.totalQty,factData.totalQty?factData.cogsTotal/factData.totalQty:0,factData.totalQty?factData.shippingTotal/factData.totalQty:0,factData.totalQty?(factData.cogsTotal+factData.shippingTotal)/factData.totalQty:0,factData.totalAmount]);
-  summary.push([]);
-  const orderTitleRow=summary.length+1; summary.push(['三、订单会计分类汇总','','','','','','']);
-  const orderHeaderRow=summary.length+1; summary.push(['会计分类','订单数','订单金额','金额占比','待复核','','']);
-  const orderStart=summary.length+1;
-  for(const r of classified.orderSummary) summary.push([r.category,r.orders,r.amount,totalAmount?r.amount/totalAmount:0,r.review||0,'','']);
-  const orderTotalRow=summary.length+1; summary.push(['合计',classified.orders.length,totalAmount,1,reviewOrders.length,'','']);
 
-  const factSummaryRows=[['No','Description','Quantity','COGs (€)','Shipping (€)','COGs + Shipping (€)','Amount (€)']]; no=1;
+  // 01: FACT category summary only.
+  const factSummaryRows=[['No','Description','Quantity','COGs (€)','Shipping (€)','COGs + Shipping (€)','Amount (€)']];
+  let no=1;
   for(const r of factData.summary) factSummaryRows.push([no++,r.description,r.quantity,r.avgCogs,r.avgShipping,r.avgUnit,r.amount]);
   factSummaryRows.push(['','TOTAL / 合计',factData.totalQty,factData.totalQty?factData.cogsTotal/factData.totalQty:0,factData.totalQty?factData.shippingTotal/factData.totalQty:0,factData.totalQty?(factData.cogsTotal+factData.shippingTotal)/factData.totalQty:0,factData.totalAmount]);
 
-  const factDetailRows=[['国家/地区','No','Description','Quantity','COGs (€)','Shipping (€)','COGs + Shipping (€)','Amount (€)']];
-  for(const country of factData.countryOrder){ for(const r of factData.countries.get(country)||[]) factDetailRows.push([country,r.no||'',r.description||'',r.quantity??'',r.cogs??'',r.shipping??'',r.unitTotal??'',r.amount??'']); }
+  // 02: Order accounting categories only.
+  const orderCategoryRows=[['会计分类','订单数','订单金额','金额占比','待复核']];
+  for(const r of classified.orderSummary) orderCategoryRows.push([r.category,r.orders,r.amount,totalAmount?r.amount/totalAmount:0,r.review||0]);
+  orderCategoryRows.push(['合计',classified.orders.length,totalAmount,1,reviewOrders.length]);
 
+  // 03: FACT country detail.
+  const factDetailRows=[['国家/地区','No','Description','Quantity','COGs (€)','Shipping (€)','COGs + Shipping (€)','Amount (€)']];
+  for(const country of factData.countryOrder){
+    for(const r of factData.countries.get(country)||[]){
+      factDetailRows.push([country,r.no||'',r.description||'',r.quantity??'',r.cogs??'',r.shipping??'',r.unitTotal??'',r.amount??'']);
+    }
+  }
+
+  // 04: Order detail.
   const orderRows=[['订单号','日期','客户','国家/地区','订单金额','会计分类','状态','商品件数','含赠品','运单号']];
   for(const o of classified.orders) orderRows.push([o.orderId,o.orderTime||'',o.buyerName||'',o.country||'',Number(o.orderAmount)||0,o.accountingCategory,o.classificationStatus,Number(o.productCount)||0,o.hasGift?'是':'否',o.trackingNo||'']);
 
+  // 05: Product summary.
   const productMap=new Map();
-  for(const x of classified.lineItems){const key=[x.categoryLabel||'待确认',x.productName||'',x.sku||''].join('\u0001');const cur=productMap.get(key)||{category:x.categoryLabel||'待确认',product:x.productName||'',sku:x.sku||'',qty:0,free:0,orders:new Set()};const qty=Number(x.quantity)||1;cur.qty+=qty;if(x.isFree)cur.free+=qty;cur.orders.add(x.orderId);productMap.set(key,cur)}
+  for(const x of classified.lineItems){
+    const key=[x.categoryLabel||'待确认',x.productName||'',x.sku||''].join('\u0001');
+    const cur=productMap.get(key)||{category:x.categoryLabel||'待确认',product:x.productName||'',sku:x.sku||'',qty:0,free:0,orders:new Set()};
+    const qty=Number(x.quantity)||1; cur.qty+=qty; if(x.isFree)cur.free+=qty; cur.orders.add(x.orderId); productMap.set(key,cur);
+  }
   const productRows=[['商品分类','产品名称','SKU','总件数','付费件数','赠品件数','涉及订单数']];
   [...productMap.values()].sort((a,b)=>b.qty-a.qty||a.category.localeCompare(b.category)).forEach(x=>productRows.push([x.category,x.product,x.sku,x.qty,Math.max(0,x.qty-x.free),x.free,x.orders.size]));
 
+  // 06: Review only.
   const byId=new Map(classified.orders.map(o=>[o.orderId,o]));
   const reviewRows=[['订单号','订单金额','客户','国家/地区','待确认产品','SKU','建议处理']];
-  for(const x of classified.unknown){const o=byId.get(x.orderId)||{};reviewRows.push([x.orderId,Number(o.orderAmount)||0,o.buyerName||'',o.country||x.country||'',x.productName||'',x.sku||'','请在 WebApp「待复核」页修改并保存'])}
+  for(const x of classified.unknown){const o=byId.get(x.orderId)||{};reviewRows.push([x.orderId,Number(o.orderAmount)||0,o.buyerName||'',o.country||x.country||'',x.productName||'',x.sku||'','请在 WebApp「待复核」页修改并保存']);}
   if(reviewRows.length===1)reviewRows.push(['—',0,'','','无待复核商品','','全部已完成分类']);
 
   const auditRows=[['订单号','订单金额','会计分类','分类状态','人工修正','来源文件','来源 Sheet','源行号','店铺账号','付款时间','发货时间']];
   for(const o of classified.orders) auditRows.push([o.orderId,Number(o.orderAmount)||0,o.accountingCategory,o.classificationStatus,Object.keys(o.manualLineCategories||{}).length?'是':'否',o.sourceFile||'',o.sourceSheet||'',o.sourceRow||'',o.storeAccount||'',o.paidTime||'',o.shippedTime||'']);
-  const logRows=[['来源文件','Sheet','处理状态','订单行数','处理说明','解压读取字节']]; for(const x of sheets)logRows.push([x.sourceFile,x.sheetName,x.status,x.orderCount,x.reason,x.inflatedBytes||0]);
+  const logRows=[['来源文件','Sheet','处理状态','订单行数','处理说明','解压读取字节']];
+  for(const x of sheets)logRows.push([x.sourceFile,x.sheetName,x.status,x.orderCount,x.reason,x.inflatedBytes||0]);
 
   const blob=buildXlsx([
-    {name:'00_结算摘要',rows:summary,widths:[30,18,20,17,17,20,20],titleRow:1,subtitleRow:2,sectionRows:[4,15,orderTitleRow],headerRows:[5,16,orderHeaderRow],totalRows:[factTotalRow,orderTotalRow],freezeRow:16,freezeCol:2,merges:['A1:G1','A2:G2','A4:G4','A15:G15',`A${orderTitleRow}:G${orderTitleRow}`],formatRules:[
-      {r1:6,r2:8,c1:2,c2:2,kind:'currency'},{r1:9,r2:9,c1:2,c2:2,kind:'percent'},{r1:10,r2:13,c1:2,c2:2,kind:'int'},
-      {r1:factStart,r2:factTotalRow,c1:1,c2:1,kind:'int'},{r1:factStart,r2:factTotalRow,c1:3,c2:3,kind:'int'},{r1:factStart,r2:factTotalRow,c1:4,c2:7,kind:'currency'},
-      {r1:orderStart,r2:orderTotalRow,c1:2,c2:2,kind:'int'},{r1:orderStart,r2:orderTotalRow,c1:3,c2:3,kind:'currency'},{r1:orderStart,r2:orderTotalRow,c1:4,c2:4,kind:'percent'},{r1:orderStart,r2:orderTotalRow,c1:5,c2:5,kind:'int'}
-    ],wrapColumns:[1,2,3]},
-    {name:'01_FACT分类汇总',rows:factSummaryRows,widths:[9,42,13,15,17,21,19],headerRows:[1],totalRows:[factSummaryRows.length],freezeRow:1,freezeCol:2,autoFilterRow:1,integerColumns:[1,3],currencyColumns:[4,5,6,7],wrapColumns:[2],bandedRows:true},
-    {name:'02_FACT国家明细',rows:factDetailRows,widths:[18,9,42,13,15,17,21,19],headerRows:[1],freezeRow:1,freezeCol:3,autoFilterRow:1,integerColumns:[2,4],currencyColumns:[5,6,7,8],wrapColumns:[3],bandedRows:true},
-    {name:'03_订单明细',rows:orderRows,widths:[20,20,22,13,15,20,12,11,10,24],headerRows:[1],freezeRow:1,freezeCol:2,autoFilterRow:1,currencyColumns:[5],integerColumns:[8],centerColumns:[4,7,9],bandedRows:true},
-    {name:'04_商品汇总',rows:productRows,widths:[18,46,30,12,12,12,14],headerRows:[1],freezeRow:1,freezeCol:1,autoFilterRow:1,integerColumns:[4,5,6,7],wrapColumns:[2,3],bandedRows:true},
-    {name:'05_待复核',rows:reviewRows,widths:[20,15,22,14,46,30,38],headerRows:[1],freezeRow:1,freezeCol:2,autoFilterRow:1,currencyColumns:[2],wrapColumns:[5,6,7],reviewMode:true,bandedRows:true},
-    {name:'90_订单审计',rows:auditRows,widths:[20,15,20,12,12,42,20,10,26,20,20],headerRows:[1],freezeRow:1,freezeCol:1,autoFilterRow:1,currencyColumns:[2],integerColumns:[8],bandedRows:true},
-    {name:'99_导入日志',rows:logRows,widths:[44,22,18,12,48,20],headerRows:[1],freezeRow:1,autoFilterRow:1,integerColumns:[4,6],wrapColumns:[5],bandedRows:true}
+    {name:'00_结算总览',rows:overview,widths:[26,20,38,20],titleRow:1,subtitleRow:2,headerRows:[4],freezeRow:4,freezeCol:1,merges:['A1:D1','A2:D2'],formatRules:[
+      {r1:5,r2:7,c1:2,c2:2,kind:'currency'},{r1:8,r2:8,c1:2,c2:2,kind:'percent'},{r1:9,r2:12,c1:2,c2:2,kind:'int'}
+    ]},
+    {name:'01_FACT分类汇总',rows:factSummaryRows,widths:[10,52,14,16,18,22,20],headerRows:[1],totalRows:[factSummaryRows.length],freezeRow:1,freezeCol:2,autoFilterRow:1,integerColumns:[1,3],currencyColumns:[4,5,6,7],bandedRows:true},
+    {name:'02_订单会计分类',rows:orderCategoryRows,widths:[26,14,18,16,14],headerRows:[1],totalRows:[orderCategoryRows.length],freezeRow:1,freezeCol:1,autoFilterRow:1,integerColumns:[2,5],currencyColumns:[3],percentColumns:[4],bandedRows:true},
+    {name:'03_FACT国家明细',rows:factDetailRows,widths:[20,10,52,14,16,18,22,20],headerRows:[1],freezeRow:1,freezeCol:3,autoFilterRow:1,integerColumns:[2,4],currencyColumns:[5,6,7,8],bandedRows:true},
+    {name:'04_订单明细',rows:orderRows,widths:[22,22,28,18,17,22,14,13,12,28],headerRows:[1],freezeRow:1,freezeCol:2,autoFilterRow:1,currencyColumns:[5],integerColumns:[8],bandedRows:true},
+    {name:'05_商品汇总',rows:productRows,widths:[18,60,36,14,14,14,16],headerRows:[1],freezeRow:1,freezeCol:1,autoFilterRow:1,integerColumns:[4,5,6,7],bandedRows:true},
+    {name:'06_待复核',rows:reviewRows,widths:[22,17,28,18,58,36,42],headerRows:[1],freezeRow:1,freezeCol:2,autoFilterRow:1,currencyColumns:[2],reviewMode:true,bandedRows:true},
+    {name:'90_订单审计',rows:auditRows,widths:[22,17,22,14,14,54,24,12,28,22,22],headerRows:[1],freezeRow:1,freezeCol:1,autoFilterRow:1,currencyColumns:[2],integerColumns:[8],bandedRows:true},
+    {name:'99_导入日志',rows:logRows,widths:[56,26,20,14,56,20],headerRows:[1],freezeRow:1,autoFilterRow:1,integerColumns:[4,6],bandedRows:true}
   ]);
   downloadBlob(blob,`WRITE_会计结算_${new Date().toISOString().slice(0,10)}.xlsx`);
 }
