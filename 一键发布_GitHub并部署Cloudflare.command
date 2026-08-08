@@ -2,7 +2,7 @@
 set -e
 ROOT="$(cd "$(dirname "$0")" && pwd)"
 clear
-printf "\nWRITE Settlement Manager v5.2.1 — 一键更新\n"
+printf "\nWRITE Settlement Manager v5.2.2.2.2 — 一键更新\n"
 printf "=======================================\n\n"
 "$ROOT/1_发布到GitHub.command"
 "$ROOT/2_发布到Cloudflare.command"

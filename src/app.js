@@ -10,7 +10,7 @@ const els = {
   searchInput:$('searchInput'), countrySelect:$('countrySelect'), categorySelect:$('categorySelect'), ordersBody:$('ordersBody'), resultCount:$('resultCount'), tableNote:$('tableNote'),
   navReviewCount:$('navReviewCount'), quickReviewCount:$('quickReviewCount'), systemStatus:$('systemStatus'), lastImportText:$('lastImportText'), sidebarResetButton:$('sidebarResetButton'),
   reimportButton:$('reimportButton'), clearButton:$('clearButton'), topExportButton:$('topExportButton'), quickExportButton:$('quickExportButton'), exportButton:$('exportButton'), heroExportButton:$('heroExportButton'), heroImportButton:$('heroImportButton'), inlineImportButton:$('inlineImportButton'), navImportButton:$('navImportButton'),
-  confirmModal:$('confirmModal'), modalTitle:$('modalTitle'), modalText:$('modalText'), modalCancel:$('modalCancel'), modalConfirm:$('modalConfirm')
+  confirmModal:null, modalTitle:null, modalText:null, modalCancel:null, modalConfirm:null
 };
 
 const numberFormat = new Intl.NumberFormat('zh-CN');
@@ -40,13 +40,40 @@ function resetState({showLanding=true}={}){
   els.navReviewCount.hidden=true; els.quickReviewCount.textContent='0'; setView('dashboard');
 }
 
-function openConfirm({title,text,confirmText='确认清空',action}){
+function ensureConfirmModal(){
+  let modal=document.getElementById('confirmModal');
+  if(modal) return modal;
+  modal=document.createElement('div');
+  modal.id='confirmModal';
+  modal.className='modal-backdrop';
+  modal.hidden=true;
+  modal.setAttribute('aria-hidden','true');
+  modal.innerHTML=`<div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal-icon">⌫</div>
+    <h3 id="modalTitle">确认操作</h3>
+    <p id="modalText"></p>
+    <div class="modal-actions"><button id="modalCancel" class="toolbar-button" type="button">取消</button><button id="modalConfirm" class="toolbar-button danger filled" type="button">确认</button></div>
+  </div>`;
+  document.body.appendChild(modal);
+  els.confirmModal=modal;
+  els.modalTitle=modal.querySelector('#modalTitle');
+  els.modalText=modal.querySelector('#modalText');
+  els.modalCancel=modal.querySelector('#modalCancel');
+  els.modalConfirm=modal.querySelector('#modalConfirm');
+  els.modalCancel.addEventListener('click',closeConfirm);
+  modal.addEventListener('click',e=>{if(e.target===modal)closeConfirm()});
+  return modal;
+}
+function openConfirm({title,text,confirmText='确认',action}){
+  const modal=ensureConfirmModal();
   els.modalTitle.textContent=title; els.modalText.textContent=text; els.modalConfirm.textContent=confirmText; modalAction=action;
-  els.confirmModal.hidden=false; els.confirmModal.removeAttribute('aria-hidden');
-  requestAnimationFrame(()=>els.modalConfirm.focus());
+  modal.hidden=false; modal.setAttribute('aria-hidden','false');
+  requestAnimationFrame(()=>els.modalConfirm?.focus());
 }
 function closeConfirm(){
-  els.confirmModal.hidden=true; els.confirmModal.setAttribute('aria-hidden','true'); modalAction=null;
+  const modal=document.getElementById('confirmModal');
+  if(modal){modal.hidden=true;modal.setAttribute('aria-hidden','true')}
+  modalAction=null;
 }
 
 function startImport(fileList){
@@ -370,11 +397,8 @@ els.dismissError.addEventListener('click',hideError); els.searchInput.addEventLi
 [els.exportButton,els.topExportButton,els.quickExportButton,els.heroExportButton].forEach(btn=>btn?.addEventListener('click',exportAccounting));
 [els.heroImportButton,els.inlineImportButton,els.navImportButton].forEach(btn=>btn?.addEventListener('click',reimportFlow));
 els.reimportButton.addEventListener('click',reimportFlow); els.sidebarResetButton.addEventListener('click',reimportFlow); els.clearButton.addEventListener('click',clearFlow);
-els.modalCancel.addEventListener('click',closeConfirm); els.confirmModal.addEventListener('click',e=>{if(e.target===els.confirmModal)closeConfirm()});
-els.modalConfirm.addEventListener('click',()=>{const action=modalAction;closeConfirm();action?.()});
-document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!els.confirmModal.hidden)closeConfirm()});
+document.addEventListener('keydown',e=>{const m=document.getElementById('confirmModal');if(e.key==='Escape'&&m&&!m.hidden)closeConfirm()});
 document.getElementById('sideNav').addEventListener('click',e=>{const btn=e.target.closest('[data-view]');if(btn&&classified)setView(btn.dataset.view)});
 document.addEventListener('click',e=>{const btn=e.target.closest('[data-go-view]');if(btn&&classified)setView(btn.dataset.goView)});
 
-closeConfirm();
 resetState();

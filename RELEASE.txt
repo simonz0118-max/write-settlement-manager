@@ -1,0 +1,2 @@
+WRITE Settlement Manager V5.2.2
+Build: modal-dynamic + embedded-panda + no-store
