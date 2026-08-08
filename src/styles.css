@@ -94,7 +94,7 @@ button,input,select,textarea{max-width:100%}
 }
 
 /* =========================================================
-   WRITE Settlement Manager v6.1 — oMLX grayscale visual system
+   WRITE Settlement Manager v6.5 — oMLX grayscale visual system
    Strict monochrome: black / white / neutral gray only
    ========================================================= */
 :root{
@@ -214,3 +214,53 @@ input,select,textarea{caret-color:#202124}
 @media(prefers-color-scheme:dark) and (max-width:900px){.sidebar{background:rgba(29,29,32,.97);border-bottom-color:#38383d}.nav-item.active{background:#3a3a3f;color:#fff}}
 @media(max-width:600px){.sidebar{background:rgba(255,255,255,.98);border-top-color:#dedfe2}.nav-item{color:#5d6066}.nav-item.active{background:#2d2e31;color:#fff}.topbar{background:rgba(255,255,255,.96)}}
 @media(prefers-color-scheme:dark) and (max-width:600px){.sidebar{background:rgba(29,29,32,.98);border-top-color:#3b3b40}.nav-item{color:#9a9aa0}.nav-item.active{background:#eeeeef;color:#171719}.nav-item.active span{color:#171719}.topbar{background:rgba(28,28,31,.96)}}
+
+/* ==========================================================
+   WRITE Settlement Manager v6.5 — monochrome workstation UI
+   Version C line-art panda logo + no-panda accounting hero
+   ========================================================== */
+.brand-logo-c{width:58px;height:58px;display:block;color:var(--text);flex:0 0 auto;overflow:visible}
+.brand-logo-c *{vector-effect:non-scaling-stroke}
+:root{--logo-eye:#fff}
+.hero-image{display:flex;align-items:stretch;justify-content:stretch;background:var(--surface-soft,#f7f7f8);overflow:hidden}
+.hero-image .hero-visual{width:100%;height:100%;min-height:100%;display:flex;align-items:center;justify-content:center;color:#18191c;padding:20px}
+.hero-visual svg{width:100%;height:100%;max-width:720px;max-height:480px;display:block}
+.hero-visual .visual-paper rect,.hero-visual .visual-card rect{fill:rgba(255,255,255,.78);stroke:currentColor;stroke-opacity:.14;stroke-width:1.4}
+.hero-visual .visual-paper path,.hero-visual .visual-paper circle,.hero-visual .visual-card path{fill:none;stroke:currentColor;stroke-opacity:.18;stroke-width:7;stroke-linecap:round;stroke-linejoin:round}
+.hero-visual .visual-paper>circle{fill:currentColor;stroke:none;opacity:.12}
+.hero-visual .solid-wedge{fill:currentColor!important;fill-opacity:.2!important;stroke:none!important}
+.hero-visual .bars path{stroke-width:10;stroke-opacity:.28}
+.hero-visual .visual-card .trend{stroke-opacity:.52;stroke-width:5}
+
+/* A cleaner browser-adaptive hero: content and illustration share space without clipping. */
+.landing-hero,.dashboard-hero{grid-template-columns:minmax(430px,1.08fr) minmax(360px,.92fr);min-height:390px}
+.landing-hero .hero-copy,.dashboard-hero .hero-copy{min-width:0}
+.hero-copy h1{max-width:760px;text-wrap:balance}
+.hero-copy>p{max-width:620px}
+
+/* Never invert bitmap assets in dark mode; v6.5 uses vectors for the brand/hero. */
+@media (prefers-color-scheme:dark){
+  :root{--logo-eye:#1d1d20}
+  .brand-logo-c{color:#f1f1f2}
+  .hero-image .hero-visual{color:#ededee;background:#1d1d20}
+  .hero-visual .visual-paper rect,.hero-visual .visual-card rect{fill:rgba(35,35,38,.72);stroke-opacity:.2}
+}
+
+@media (max-width:1180px){
+  .landing-hero,.dashboard-hero{grid-template-columns:minmax(0,1fr) minmax(310px,.76fr)}
+  .hero-image .hero-visual{padding:14px}
+}
+@media (max-width:900px){
+  .brand-logo-c{width:46px;height:46px}
+  .landing-hero,.dashboard-hero{grid-template-columns:1fr}
+  .hero-image{display:flex;min-height:260px;border-left:0;border-top:1px solid var(--line)}
+  .hero-image .hero-visual{height:260px;min-height:260px;padding:8px 18px}
+}
+@media (max-width:600px){
+  .hero-image{display:none}
+  .landing-hero,.dashboard-hero{display:block}
+  .hero-copy h1,.hero-copy.compact h1{font-size:clamp(30px,10vw,40px);overflow-wrap:break-word}
+  .hero-copy>p{max-width:none}
+}
+.hero-image img{display:none!important}
+.brand-logo-c{filter:none!important;mix-blend-mode:normal!important;object-fit:initial!important;border-radius:0!important}

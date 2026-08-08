@@ -1,2 +1,2 @@
-WRITE Settlement Manager v6.1
+WRITE Settlement Manager v6.5
 Grayscale oMLX-inspired visual system + shared panda identity + responsive desktop/iPad/iPhone UI.
