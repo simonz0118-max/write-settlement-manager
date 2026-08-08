@@ -41,9 +41,13 @@ function resetState({showLanding=true}={}){
 }
 
 function openConfirm({title,text,confirmText='确认清空',action}){
-  els.modalTitle.textContent=title; els.modalText.textContent=text; els.modalConfirm.textContent=confirmText; modalAction=action; els.confirmModal.hidden=false;
+  els.modalTitle.textContent=title; els.modalText.textContent=text; els.modalConfirm.textContent=confirmText; modalAction=action;
+  els.confirmModal.hidden=false; els.confirmModal.removeAttribute('aria-hidden');
+  requestAnimationFrame(()=>els.modalConfirm.focus());
 }
-function closeConfirm(){els.confirmModal.hidden=true;modalAction=null}
+function closeConfirm(){
+  els.confirmModal.hidden=true; els.confirmModal.setAttribute('aria-hidden','true'); modalAction=null;
+}
 
 function startImport(fileList){
   const files=[...fileList].filter(f=>/\.(xlsx|zip)$/i.test(f.name)); if(!files.length||busy)return;
@@ -372,4 +376,5 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!els.confirmModal.h
 document.getElementById('sideNav').addEventListener('click',e=>{const btn=e.target.closest('[data-view]');if(btn&&classified)setView(btn.dataset.view)});
 document.addEventListener('click',e=>{const btn=e.target.closest('[data-go-view]');if(btn&&classified)setView(btn.dataset.goView)});
 
+closeConfirm();
 resetState();
