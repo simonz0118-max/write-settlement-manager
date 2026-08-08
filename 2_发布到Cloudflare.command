@@ -4,7 +4,7 @@ PROJECT="write-settlement-manager"
 ROOT="$(cd "$(dirname "$0")" && pwd)"
 cd "$ROOT"
 
-printf "\nWRITE Settlement Manager v6.5.6 — Cloudflare Pages 自动更新\n"
+printf "\nWRITE Settlement Manager v6.5.7 — Cloudflare Pages 自动更新\n"
 printf "========================================================\n\n"
 
 if ! command -v brew >/dev/null 2>&1; then
@@ -38,10 +38,10 @@ HEADERS
 
 "${WRANGLER[@]}" pages project create "$PROJECT" --production-branch main >/dev/null 2>&1 || true
 LOG="$ROOT/cloudflare-deploy.log"
-echo "正在上传 V6.5.6 到 Cloudflare Pages..."
-"${WRANGLER[@]}" pages deploy "$DEPLOY_DIR" --project-name "$PROJECT" --branch main --commit-message "WRITE Settlement Manager v6.5.6" | tee "$LOG"
+echo "正在上传 V6.5.7 到 Cloudflare Pages..."
+"${WRANGLER[@]}" pages deploy "$DEPLOY_DIR" --project-name "$PROJECT" --branch main --commit-message "WRITE Settlement Manager v6.5.7" | tee "$LOG"
 rm -rf "$DEPLOY_DIR"
 
-echo "\n✅ Cloudflare V6.5.6 更新完成"
+echo "\n✅ Cloudflare V6.5.7 更新完成"
 echo "https://write-settlement-manager.pages.dev/"
 open "https://write-settlement-manager.pages.dev/"

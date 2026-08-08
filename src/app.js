@@ -355,22 +355,20 @@ function exportAccounting(){
 function reimportFlow(){
   if(!classified){els.fileInput.click();return}
   openConfirm({title:'重新导入数据？',text:'当前统计结果会被清空，然后打开文件选择器重新导入。原始文件不会被修改。',confirmText:'清空并重新导入',action:()=>{
-// v6.5.6 release notes controller — show once per release per browser
+// v6.5.7 release notes controller — show once per release per browser
 const WRITE_RELEASE = {
-  version: document.body.dataset.release || '6.5.6',
-  date: '2026-08-09',
-  title: 'WRITE Settlement Manager v6.5.6',
+  version: document.body.dataset.release || '6.5.7',
+  date: '2026-08-09 00:10',
+  title: 'WRITE Settlement Manager v6.5.7',
   sections: [
-    {label:'格式统一', items:[
-      '所有用户可见小数统一使用法式逗号作为小数分隔符，例如 18 419,33 €。',
-      '百分比、处理耗时、文件大小等小数显示统一使用逗号，不再显示点号。',
-      '专业会计 Excel 保持真正数值类型，并采用法国区域数字格式显示。'
+    {label:'新增', items:[
+      '左侧菜单新增「历史更新」，无需导入订单即可打开。',
+      '新增内置版本时间线，可查看从首个可追溯正式版本到当前版本的更新时间与简要日志。',
+      '从 v6.5.7 起发布时刻固定记录到分钟，并与 GitHub CHANGELOG 同步。'
     ]},
     {label:'保留', items:[
-      'FACT 回填继续保持原始工作表格式，仅更新统计数据。',
-      '继续保留三态主题、版本首次更新日志和 GitHub CHANGELOG 发布规范。'
+      'FACT 强制重算并保持原格式、欧洲小数逗号、三态主题和专业会计导出逻辑继续保留。'
     ]}
-
   ]
 };
 function showReleaseNotesIfNeeded(){
@@ -418,12 +416,12 @@ els.dismissError.addEventListener('click',hideError); els.searchInput.addEventLi
 [els.heroImportButton,els.inlineImportButton,els.navImportButton].forEach(btn=>btn?.addEventListener('click',reimportFlow));
 els.reimportButton.addEventListener('click',reimportFlow); els.sidebarResetButton.addEventListener('click',reimportFlow); els.clearButton.addEventListener('click',clearFlow);
 document.addEventListener('keydown',e=>{const m=document.getElementById('confirmModal');if(e.key==='Escape'&&m&&!m.hidden)closeConfirm()});
-document.getElementById('sideNav').addEventListener('click',e=>{const btn=e.target.closest('[data-view]');if(btn&&classified)setView(btn.dataset.view)});
+document.getElementById('sideNav').addEventListener('click',e=>{const btn=e.target.closest('[data-view]');if(!btn)return;const view=btn.dataset.view;if(view==='history'){els.importLanding.hidden=true;els.appViews.hidden=false;setView('history');return}if(classified){setView(view);return}if(view==='dashboard'){els.appViews.hidden=true;els.importLanding.hidden=false;document.querySelectorAll('.nav-item[data-view]').forEach(item=>item.classList.toggle('active',item.dataset.view==='dashboard'))}});
 document.addEventListener('click',e=>{const btn=e.target.closest('[data-go-view]');if(btn&&classified)setView(btn.dataset.goView)});
 document.addEventListener('click',e=>{const btn=e.target.closest('.review-save');if(btn){const editor=btn.closest('.review-editor');if(editor)saveReviewRow(editor)}});
 
 
-// v6.5.6 theme controller: auto / light / dark
+// v6.5.7 theme controller: auto / light / dark
 const themeButton=document.getElementById('themeToggleButton');
 const themeLabel=document.getElementById('themeLabel');
 const themeMedia=window.matchMedia('(prefers-color-scheme: dark)');
@@ -459,3 +457,34 @@ if(themeMedia.addEventListener)themeMedia.addEventListener('change',onSystemThem
 applyTheme(getThemePreference(),{persist:false});
 
 resetState();
+
+
+// v6.5.7 — built-in version history (mirrors GitHub CHANGELOG)
+const WRITE_HISTORY = [
+  {version:'6.5.7',time:'2026-08-09 00:10',title:'历史更新中心',items:['左侧菜单新增「历史更新」，无需导入订单即可查看。','按时间倒序展示所有可追溯正式版本的更新时间与更新摘要。','从本版本开始，发布时间固定精确记录到分钟，并与 GitHub CHANGELOG 同步。']},
+  {version:'6.5.6',time:'2026-08-09 00:05',title:'欧洲数字格式统一',items:['所有用户可见小数统一使用逗号作为小数分隔符。','WebApp、会计 Excel 与金额/百分比显示统一采用法国/欧洲数字格式。']},
+  {version:'6.5.5',time:'2026-08-08 23:32',title:'FACT 原格式回填',items:['无论 FACT 原有统计是否为空，导出前均清空旧统计并按 WebApp 当前分析重新计算。','只修改 FACT 统计值，保留原工作表样式、列宽、行高、边框、合并单元格和工作簿其他内容。','导出升级为专业会计报表 + 已回填 FACT 的结算交付包。']},
+  {version:'6.5.4',time:'2026-08-08 · 时间未记录',title:'版本发布机制',items:['每个新版本首次打开自动显示更新日志；阅读后同浏览器不重复弹出。','新增 CHANGELOG.md，并要求 README、版本号与部署脚本同步更新。']},
+  {version:'6.5.2',time:'2026-08-08 22:37',title:'三态主题',items:['新增自动 / 浅色 / 深色三态主题切换。','自动模式实时跟随 macOS、iPadOS、iOS 系统主题；手动选择写入本地记忆。']},
+  {version:'6.5.1',time:'2026-08-08 21:45',title:'品牌与文案修正',items:['左上角使用选定的 Version C 简笔熊猫头像。','顶部品牌署名改为 Designed by NEOVORA，并精简英雄页说明。']},
+  {version:'6.5',time:'2026-08-08 21:32',title:'英雄页重构',items:['英雄页移除熊猫照片/熊猫头，改为黑白灰会计报表抽象视觉。','继续沿用克制的灰阶工作台设计语言。']},
+  {version:'6.1',time:'2026-08-08 21:20',title:'灰阶工作台视觉',items:['界面重构为严格黑 / 白 / 灰视觉体系。','导航、卡片、按钮、徽标和弹窗移除彩色强调色。']},
+  {version:'6.0',time:'2026-08-08 · 时间未记录',title:'全设备响应式',items:['适配桌面、iPad 横竖屏与 iPhone Safari。','修复 KPI、金额、文件名、商品名及表格文本溢出，移动端表格支持触控横向滚动。']},
+  {version:'5.3.3',time:'2026-08-08 · 时间未记录',title:'专业会计工作簿',items:['导出结构改为一个 Sheet 只承担一个用途。','统一居中、列宽、冻结表头、筛选与金额格式，减少文字遮挡。']},
+  {version:'5.3.2',time:'2026-08-08 · 时间未记录',title:'前端启动稳定化',items:['移除脆弱的 ES Module 启动依赖，主程序与 Worker 改为稳定 bundle。']},
+  {version:'5.3.1',time:'2026-08-08 · 时间未记录',title:'全按钮失效 Hotfix',items:['修复 JavaScript 解析错误导致整个 UI 事件层未启动的问题。']},
+  {version:'5.3.0',time:'2026-08-08 · 时间未记录',title:'待复核可编辑',items:['待复核订单可直接修改商品名、SKU 和分类并保存后重新统计。','重写清空数据确认流程，并重构结算摘要。']},
+  {version:'5.2.2',time:'2026-08-08 · 时间未记录',title:'页面层重建',items:['恢复正确英雄页结构，修复弹窗锁死、熊猫资源丢失和旧 UI 混用问题。','引入资源版本指纹与更可靠的页面启动机制。']},
+  {version:'5.2.1',time:'2026-08-08 · 时间未记录',title:'弹窗 Hotfix',items:['修复 CSS 覆盖 hidden 状态导致清空确认弹窗始终显示的问题。']},
+  {version:'5.2',time:'2026-08-08 · 时间未记录',title:'FACT 风格分类汇总',items:['新增 Quantity、COGs、Shipping、COGs + Shipping、Amount 的 FACT 风格汇总。','增加国家级 FACT 明细结构。']},
+  {version:'5.1',time:'2026-08-08 · 时间未记录',title:'FACT 解析修复',items:['修复带样式空单元格导致的 FACT 列错位。','在不把 FACT 当订单的前提下可靠读取成本结构。']},
+  {version:'5.0',time:'2026-08-08 · 时间未记录',title:'首次正式英雄页',items:['加入明显的英雄页导出操作，并进行首次大规模 UI 重构。','会计导出拆分为摘要、明细、复核、审计和导入日志层。']},
+  {version:'4.1',time:'2026-08-08 · 时间未记录',title:'首个可追溯正式版本',items:['建立真实 WRITE 订单工作簿的稳定本地浏览器导入流程。','加入 GitHub 发布与 Cloudflare Pages 部署脚本。']}
+];
+function renderReleaseHistory(){
+  const host=document.getElementById('releaseHistory');
+  if(!host)return;
+  document.getElementById('historyCount').textContent=`${WRITE_HISTORY.length} 个版本`;
+  host.innerHTML=WRITE_HISTORY.map((entry,index)=>`<article class="history-item ${index===0?'current':''}"><div class="history-meta"><span class="history-version">v${escapeHtml(entry.version)}</span><time class="history-time">${escapeHtml(entry.time)}</time></div><div class="history-body"><h3>${escapeHtml(entry.title)}</h3><ul>${entry.items.map(item=>`<li>${escapeHtml(item)}</li>`).join('')}</ul></div></article>`).join('');
+}
+renderReleaseHistory();

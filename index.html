@@ -18,15 +18,15 @@
   }catch(e){document.documentElement.dataset.theme='light';document.documentElement.dataset.themePreference='auto';}
 })();
 </script>
-<link href="./src/styles.css?v=6.5.6" rel="stylesheet"/>
+<link href="./src/styles.css?v=6.5.7" rel="stylesheet"/>
 <style>[hidden]{display:none!important}</style>
 </head>
-<body data-release="6.5.6">
+<body data-release="6.5.7">
 <div class="app-shell">
 <aside class="sidebar">
 <div class="brand">
 <img class="brand-logo brand-logo-c" src="./assets/panda-logo-c-image2.png" alt="WRITE 熊猫简笔画 Logo"/>
-<div class="brand-copy"><strong>WRITE</strong><span>Settlement Manager</span><small>v6.5.6</small></div>
+<div class="brand-copy"><strong>WRITE</strong><span>Settlement Manager</span><small>v6.5.7</small></div>
 </div>
 <nav class="side-nav" id="sideNav">
 <button class="nav-item active" data-view="dashboard"><span>⌂</span>首页</button>
@@ -36,6 +36,7 @@
 <button class="nav-item" data-view="review"><span>◎</span>待复核 <b hidden="" id="navReviewCount">0</b></button>
 <button class="nav-item" data-view="imports"><span>↧</span>导入记录</button>
 <button class="nav-item" data-view="export"><span>⇩</span>导出报表</button>
+<button class="nav-item" data-view="history"><span>↺</span>历史更新</button>
 <button class="nav-item theme-cycle" id="themeToggleButton" type="button" title="切换主题：自动 / 浅色 / 深色"><span id="themeIcon">◐</span><span class="theme-label" id="themeLabel">主题：自动</span></button>
 </nav>
 <div class="side-tip"><b>使用提示</b><ol><li>支持 Excel / ZIP</li><li>自动忽略 FACT 订单页</li><li>FACT 成本同步进入报表</li></ol></div>
@@ -167,11 +168,22 @@
 <section class="view" data-view-panel="review"><div class="page-head"><div><span class="eyebrow">REVIEW</span><h1>待复核</h1><p>直接修正产品名称、SKU 或指定分类；保存后会立即重新统计，英雄页导出使用修正后的结果。</p></div></div><section class="panel"><div class="review-help">逐条核对后点击「保存并重新分类」。若你明确知道商品类型，可以直接选择分类，不需要等待自动规则识别。保存成功后，该条如果已能分类，会自动从待复核列表消失。</div><div id="unknownList"></div><div class="empty" hidden="" id="emptyReview">✓ 没有待复核商品，可以直接导出正式结算表。</div></section></section>
 <section class="view" data-view-panel="imports"><div class="page-head"><div><span class="eyebrow">IMPORT LOG</span><h1>导入记录</h1><p>每个 Sheet 的识别与处理原因。</p></div></div><section class="panel"><div id="sheetList"></div></section></section>
 <section class="view" data-view-panel="export"><div class="page-head"><div><span class="eyebrow">EXPORT</span><h1>导出报表</h1><p>FACT 分类汇总、会计总览、订单、商品、待复核和审计数据。</p></div></div><section class="panel export-panel"><div><b>WRITE 会计结算报表</b><p>8 个工作表 · 第一页为清晰结算摘要，含 FACT 分类汇总</p></div><button class="export-hero small" id="exportButton">⇩ 导出 Excel</button></section></section>
+<section class="view" data-view-panel="history">
+  <div class="page-head history-page-head">
+    <div><span class="eyebrow">VERSION HISTORY</span><h1>历史更新</h1><p>从首个可追溯正式版本到当前版本的发布时间与主要变更。</p></div>
+    <div class="history-current"><span>当前版本</span><strong>v6.5.7</strong></div>
+  </div>
+  <section class="panel history-panel">
+    <div class="history-toolbar"><div><b>WRITE Settlement Manager</b><p>自 v6.5.7 起，发布时间精确记录到分钟；早期无法可靠还原分钟的版本标记为“时间未记录”。</p></div><span id="historyCount">19 个版本</span></div>
+    <div class="release-history" id="releaseHistory"></div>
+  </section>
+</section>
+
 </div>
 </main>
 </section>
 </div>
-<script defer="" src="./src/app.bundle.js?v=6.5.6"></script>
+<script defer="" src="./src/app.bundle.js?v=6.5.7"></script>
 <script>
 window.__WRITE_APP_READY__ = false;
 setTimeout(function(){
@@ -179,7 +191,7 @@ setTimeout(function(){
     var box=document.createElement('div');
     box.id='bootFailure';
     box.style.cssText='position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:99999;background:#f2f2f3;color:#303136;border:1px solid #d4d6da;border-radius:12px;padding:12px 16px;font:600 14px -apple-system,BlinkMacSystemFont,sans-serif;box-shadow:0 8px 30px rgba(0,0,0,.12)';
-    box.textContent='WRITE v6.5.6 脚本未启动，请刷新页面或检查部署文件。';
+    box.textContent='WRITE v6.5.7 脚本未启动，请刷新页面或检查部署文件。';
     document.body.appendChild(box);
   }
 },1800);

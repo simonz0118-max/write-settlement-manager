@@ -1,3 +1,7 @@
-WRITE Settlement Manager v6.5.6
-Release date: 2026-08-09
-Numeric locale: fr-FR (decimal comma)
+WRITE Settlement Manager v6.5.7
+Release time: 2026-08-09 00:10 Europe/Paris
+
+Highlights:
+- Built-in historical update page in sidebar
+- Full traceable version timeline with timestamps/notes
+- History page and GitHub CHANGELOG are mandatory synchronized release artifacts

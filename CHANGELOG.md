@@ -1,6 +1,16 @@
 # CHANGELOG
 
-## v6.5.6 — 2026-08-09
+## v6.5.7 — 2026-08-09 00:10 (Europe/Paris)
+
+### Added
+- 左侧导航新增 `历史更新` 页面，无需导入订单即可访问。
+- 内置版本时间线，按最新到最旧展示版本号、更新时间与简要更新日志。
+- 自 v6.5.7 起，发布时间固定精确记录到分钟；早期无法可靠还原分钟的版本明确标记为“时间未记录”。
+
+### Release policy
+- 历史更新页、`CHANGELOG.md`、`README.md`、`README_CN.md`、`RELEASE.txt` 和发布脚本必须在每次版本发布时同步更新。
+
+## v6.5.6 — 2026-08-09 00:05 (Europe/Paris)
 
 ### Changed
 - 全部用户可见小数统一采用法国/欧洲数字格式：小数分隔符使用 `,`，千位使用空格。
@@ -115,6 +125,18 @@ All notable changes to WRITE Settlement Manager are recorded here.
 
 ### Changed
 - Redesigned accounting summary to show sales, FACT cost, estimated gross profit, and gross margin first.
+
+## v5.2.2 — 2026-08-08
+
+### Fixed
+- Rebuilt the page layer from the correct V5 hero baseline after mixed old/new UI assets caused layout regressions.
+- Removed preloaded confirmation modal behavior that could lock the page and stabilized versioned front-end assets.
+
+## v5.2.1 — 2026-08-08
+
+### Fixed
+- Fixed CSS overriding the `hidden` state of the clear-data confirmation modal.
+- Added startup protection so the modal remains closed until explicitly requested.
 
 ## v5.2 — 2026-08-08
 

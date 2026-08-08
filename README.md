@@ -1,8 +1,10 @@
 # WRITE Settlement Manager
 
-## Current release — v6.5.6
+## Current release — v6.5.7
 
-### V6.5.6 highlights
+### V6.5.7 highlights
+- Built-in version history page in the left navigation, available before order import.
+- Release timeline shows update time and concise notes for every traceable formal release.
 - All visible decimals use the French/European comma decimal separator.
 - WebApp and professional accounting Excel exports use consistent French numeric presentation.
 - FACT preserves its original formatting while statistical values are refreshed.
