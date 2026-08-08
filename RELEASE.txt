@@ -1,7 +1,1 @@
-WRITE Settlement Manager v5.3.3
-Professional Accountant Export Layout
-- One worksheet = one accounting purpose
-- All spreadsheet content centered horizontally and vertically
-- Wider columns, no cramped mixed-table summary page
-- Dedicated order accounting category summary sheet
-- FACT summary and FACT country detail remain independent
+WRITE Settlement Manager v6.0
