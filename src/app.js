@@ -350,24 +350,23 @@ function exportAccounting(){
     {name:'90_订单审计',rows:auditRows,widths:[20,15,20,12,12,42,20,10,26,20,20],headerRows:[1],freezeRow:1,freezeCol:1,autoFilterRow:1,currencyColumns:[2],integerColumns:[8],bandedRows:true},
     {name:'99_导入日志',rows:logRows,widths:[44,22,18,12,48,20],headerRows:[1],freezeRow:1,autoFilterRow:1,integerColumns:[4,6],wrapColumns:[5],bandedRows:true}
   ]);
-  downloadBlob(blob,`WRITE_会计结算_${new Date().toISOString().slice(0,10)}.xlsx`);
+  downloadBlob(blob,`WRITE_会计结算_${currentOrderRangeLabel()}_${new Date().toISOString().slice(0,10)}.xlsx`);
 }
 function reimportFlow(){
   if(!classified){els.fileInput.click();return}
   openConfirm({title:'重新导入数据？',text:'当前统计结果会被清空，然后打开文件选择器重新导入。原始文件不会被修改。',confirmText:'清空并重新导入',action:()=>{
-// v6.5.7 release notes controller — show once per release per browser
+// v6.5.8 release notes controller — show once per release per browser
 const WRITE_RELEASE = {
-  version: document.body.dataset.release || '6.5.7',
-  date: '2026-08-09 00:10',
-  title: 'WRITE Settlement Manager v6.5.7',
+  version: document.body.dataset.release || '6.5.8',
+  date: '2026-08-09 00:14',
+  title: 'WRITE Settlement Manager v6.5.8',
   sections: [
-    {label:'新增', items:[
-      '左侧菜单新增「历史更新」，无需导入订单即可打开。',
-      '新增内置版本时间线，可查看从首个可追溯正式版本到当前版本的更新时间与简要日志。',
-      '从 v6.5.7 起发布时刻固定记录到分钟，并与 GitHub CHANGELOG 同步。'
+    {label:'修复', items:[
+      '修复 FACT / Commercial Invoice 中部分小数实际为文本、导致 Excel 公式无法计算的问题。',
+      '回填时 COGs、Shipping 等运算字段统一写为真正的数值单元格，同时保持法国/欧洲小数逗号显示。'
     ]},
-    {label:'保留', items:[
-      'FACT 强制重算并保持原格式、欧洲小数逗号、三态主题和专业会计导出逻辑继续保留。'
+    {label:'优化', items:[
+      '导出交付包、会计报表和回填 FACT 文件名自动标注本批订单号范围。'
     ]}
   ]
 };
@@ -421,7 +420,7 @@ document.addEventListener('click',e=>{const btn=e.target.closest('[data-go-view]
 document.addEventListener('click',e=>{const btn=e.target.closest('.review-save');if(btn){const editor=btn.closest('.review-editor');if(editor)saveReviewRow(editor)}});
 
 
-// v6.5.7 theme controller: auto / light / dark
+// v6.5.8 theme controller: auto / light / dark
 const themeButton=document.getElementById('themeToggleButton');
 const themeLabel=document.getElementById('themeLabel');
 const themeMedia=window.matchMedia('(prefers-color-scheme: dark)');
@@ -459,8 +458,9 @@ applyTheme(getThemePreference(),{persist:false});
 resetState();
 
 
-// v6.5.7 — built-in version history (mirrors GitHub CHANGELOG)
+// v6.5.8 — built-in version history (mirrors GitHub CHANGELOG)
 const WRITE_HISTORY = [
+  {version:'6.5.8',time:'2026-08-09 00:14',title:'发票数值类型与订单范围',items:['修复 FACT / Commercial Invoice 中部分小数被保存为文本导致 Excel 计算失败的问题。','COGs、Shipping 等运算字段回填为真正数值，显示继续采用法国/欧洲小数逗号。','导出 ZIP、会计报表与回填 FACT 文件名自动包含订单号范围。']},
   {version:'6.5.7',time:'2026-08-09 00:10',title:'历史更新中心',items:['左侧菜单新增「历史更新」，无需导入订单即可查看。','按时间倒序展示所有可追溯正式版本的更新时间与更新摘要。','从本版本开始，发布时间固定精确记录到分钟，并与 GitHub CHANGELOG 同步。']},
   {version:'6.5.6',time:'2026-08-09 00:05',title:'欧洲数字格式统一',items:['所有用户可见小数统一使用逗号作为小数分隔符。','WebApp、会计 Excel 与金额/百分比显示统一采用法国/欧洲数字格式。']},
   {version:'6.5.5',time:'2026-08-08 23:32',title:'FACT 原格式回填',items:['无论 FACT 原有统计是否为空，导出前均清空旧统计并按 WebApp 当前分析重新计算。','只修改 FACT 统计值，保留原工作表样式、列宽、行高、边框、合并单元格和工作簿其他内容。','导出升级为专业会计报表 + 已回填 FACT 的结算交付包。']},

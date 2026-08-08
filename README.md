@@ -1,8 +1,15 @@
 # WRITE Settlement Manager
 
-## Current release — v6.5.7
+## Current release — v6.5.8
 
-### V6.5.7 highlights
+## v6.5.8 — 2026-08-09 00:14 (Europe/Paris)
+
+- 修复 FACT / Commercial Invoice 中部分小数被保存为文本、导致 Excel 公式无法计算的问题。
+- FACT 的 COGs / Shipping / 非公式 Unit Total 会强制写成真正的数值单元格；显示仍遵循法国/欧洲小数逗号。
+- 导出交付包、专业会计表和回填 FACT 文件名自动包含本批订单号范围。
+
+
+### V6.5.8 highlights
 - Built-in version history page in the left navigation, available before order import.
 - Release timeline shows update time and concise notes for every traceable formal release.
 - All visible decimals use the French/European comma decimal separator.

@@ -131,7 +131,7 @@ function buildXlsx(sheets){const entries=[],workbookSheets=sheets.map((s,i)=>`<s
 function downloadBlob(blob,filename){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=filename;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000)}
 
 
-// v6.5.7 FACT template preservation + backfill engine.
+// v6.5.8 FACT template preservation + backfill engine.
 // The original XLSX is treated as a template. Only FACT data cell VALUES are replaced;
 // styles, borders, merged cells, row heights, column widths, formulas/layout and all other package parts are preserved.
 
@@ -288,6 +288,10 @@ function readNumericCell(xml,ref){
   const re=new RegExp(`<c[^>]*\\br="${escapeRegExp(ref)}"[^>]*>[\\s\\S]*?<v[^>]*>([^<]*)<\\/v>[\\s\\S]*?<\\/c>`);
   const m=re.exec(xml);const n=m?Number(m[1]):NaN;return Number.isFinite(n)?n:null;
 }
+function cellHasFormula(xml,ref){
+  const re=new RegExp(`<c[^>]*\br="${escapeRegExp(ref)}"[^>]*>[\s\S]*?<f(?:\s[^>]*)?>[\s\S]*?<\/f>[\s\S]*?<\/c>`);
+  return re.test(xml);
+}
 function patchFactXml(xml,factRows,workbookName){
   const {plan,total}=buildFactBackfillPlan(workbookName,factRows);
   const oldTotal=factRows.reduce((a,r)=>a+(Number(r.amount)||0),0);
@@ -295,6 +299,12 @@ function patchFactXml(xml,factRows,workbookName){
   for(const r of factRows){
     const row=Number(r.sourceRow),v=plan.get(row)||{quantity:0,amount:0};
     out=replaceNumericCell(out,`D${row}`,v.quantity>0?v.quantity:'');
+    // V6.5.8: FACT templates sometimes store decimal-looking COGs/Shipping cells as shared strings.
+    // Excel then treats them as text and formulas such as E+F fail. Re-write numeric inputs as real
+    // XLSX numeric cells while keeping the original cell style/position unchanged.
+    if(Number.isFinite(Number(r.cogs)))out=replaceNumericCell(out,`E${row}`,Number(r.cogs));
+    if(Number.isFinite(Number(r.shipping)))out=replaceNumericCell(out,`F${row}`,Number(r.shipping));
+    if(Number.isFinite(Number(r.unitTotal))&&!cellHasFormula(out,`G${row}`))out=replaceNumericCell(out,`G${row}`,Number(r.unitTotal));
     out=replaceNumericCell(out,`H${row}`,v.amount);
   }
   // Preserve total-cell formatting by replacing only values of cells that held the previous FACT total.
@@ -430,7 +440,7 @@ function closeConfirm(){
 
 function startImport(fileList){
   const files=[...fileList].filter(f=>/\.(xlsx|zip)$/i.test(f.name)); if(!files.length||busy)return;
-  worker?.terminate(); worker=new Worker('./src/workers/import.worker.bundle.js?v=6.5.7'); importStartedAt=performance.now(); importedFileNames=files.map(f=>f.name);
+  worker?.terminate(); worker=new Worker('./src/workers/import.worker.bundle.js?v=6.5.8'); importStartedAt=performance.now(); importedFileNames=files.map(f=>f.name);
   setBusy(true); hideError(); els.importLanding.hidden=false; els.appViews.hidden=true; els.topActions.hidden=true;
   els.currentFile.textContent='准备读取…'; els.progressFill.style.width='0%'; els.progressText.textContent='0% · 大文件在独立线程运行';
   worker.onmessage=({data})=>{
@@ -619,6 +629,29 @@ function buildFactExportData(){
   return {factRows,active,totalAmount,totalQty,cogsTotal,shippingTotal,unallocated,summary,countries,countryOrder};
 }
 
+function localDateStamp(){
+  try{return new Intl.DateTimeFormat('en-CA',{year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());}
+  catch(e){const d=new Date(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0');return `${d.getFullYear()}-${m}-${day}`;}
+}
+function orderSequenceNumber(orderId){
+  const raw=String(orderId??'').trim();
+  const suffix=raw.match(/(?:^|[-_])(\d{4,7})$/);
+  if(suffix)return Number(suffix[1]);
+  return /^\d{4,9}$/.test(raw)?Number(raw):null;
+}
+function currentOrderRangeLabel(){
+  // Prefer the explicit invoice batch range embedded in source workbook names, e.g. (26172-26532).
+  // This is more reliable than scanning arbitrary historical/reference IDs that may also exist in a workbook.
+  const namedRanges=(sourceWorkbooks||[]).map(w=>String(w?.name||'').match(/\((\d{4,9})\s*[-–—]\s*(\d{4,9})\)/)).filter(Boolean);
+  if(namedRanges.length){
+    const starts=namedRanges.map(m=>Number(m[1])).filter(Number.isFinite),ends=namedRanges.map(m=>Number(m[2])).filter(Number.isFinite);
+    if(starts.length&&ends.length){const min=Math.min(...starts),max=Math.max(...ends);return min===max?String(min):`${min}-${max}`;}
+  }
+  const nums=(classified?.orders||[]).map(o=>orderSequenceNumber(o.orderId)).filter(Number.isFinite);
+  if(!nums.length)return '订单范围未知';
+  const min=Math.min(...nums),max=Math.max(...nums);
+  return min===max?String(min):`${min}-${max}`;
+}
 function buildAccountingReport(){
   if(!classified)return;
   const totalAmount=classified.orders.reduce((a,o)=>a+(Number(o.orderAmount)||0),0);
@@ -705,7 +738,7 @@ function buildAccountingReport(){
     {name:'90_订单审计',rows:auditRows,widths:[22,17,22,14,14,54,24,12,28,22,22],headerRows:[1],freezeRow:1,freezeCol:1,autoFilterRow:1,currencyColumns:[2],integerColumns:[8],bandedRows:true},
     {name:'99_导入日志',rows:logRows,widths:[56,26,20,14,56,20],headerRows:[1],freezeRow:1,autoFilterRow:1,integerColumns:[4,6],bandedRows:true}
   ]);
-  return {blob,fileName:`WRITE_会计结算_${new Date().toISOString().slice(0,10)}.xlsx`};
+  return {blob,fileName:`WRITE_会计结算_${currentOrderRangeLabel()}_${localDateStamp()}.xlsx`};
 }
 
 async function exportAccounting(){
@@ -717,10 +750,10 @@ async function exportAccounting(){
     const updated=[];
     for(const wb of factBooks){
       const patched=await rebuildFactWorkbook(wb.blob,wb.name);
-      updated.push({name:`FACT_已回填_${basename(wb.name)}`,data:patched});
+      updated.push({name:`FACT_已回填_${currentOrderRangeLabel()}_${basename(wb.name)}`,data:patched});
     }
     const packageBlob=await zipStoreBlobs([{name:report.fileName,data:report.blob},...updated]);
-    downloadBlob(packageBlob,`WRITE_结算交付包_${new Date().toISOString().slice(0,10)}.zip`);
+    downloadBlob(packageBlob,`WRITE_结算交付包_${currentOrderRangeLabel()}_${localDateStamp()}.zip`);
   }catch(err){
     console.error(err);
     showError(`FACT 回填导出失败：${err?.message||err}`);
@@ -751,7 +784,7 @@ document.addEventListener('click',e=>{const btn=e.target.closest('[data-go-view]
 document.addEventListener('click',e=>{const btn=e.target.closest('.review-save');if(btn){const editor=btn.closest('.review-editor');if(editor)saveReviewRow(editor)}});
 
 
-// v6.5.7 theme controller: auto / light / dark
+// v6.5.8 theme controller: auto / light / dark
 const themeButton=document.getElementById('themeToggleButton');
 const themeLabel=document.getElementById('themeLabel');
 const themeMedia=window.matchMedia('(prefers-color-scheme: dark)');
@@ -787,19 +820,18 @@ if(themeMedia.addEventListener)themeMedia.addEventListener('change',onSystemThem
 applyTheme(getThemePreference(),{persist:false});
 
 
-// v6.5.7 release notes controller — show once per release per browser
+// v6.5.8 release notes controller — show once per release per browser
 const WRITE_RELEASE = {
-  version: document.body.dataset.release || '6.5.7',
-  date: '2026-08-09 00:10',
-  title: 'WRITE Settlement Manager v6.5.7',
+  version: document.body.dataset.release || '6.5.8',
+  date: '2026-08-09 00:14',
+  title: 'WRITE Settlement Manager v6.5.8',
   sections: [
-    {label:'新增', items:[
-      '左侧菜单新增「历史更新」，无需导入订单即可打开。',
-      '新增内置版本时间线，可查看从首个可追溯正式版本到当前版本的更新时间与简要日志。',
-      '从 v6.5.7 起发布时刻固定记录到分钟，并与 GitHub CHANGELOG 同步。'
+    {label:'修复', items:[
+      '修复 FACT / Commercial Invoice 中部分小数实际为文本、导致 Excel 公式无法计算的问题。',
+      '回填时 COGs、Shipping 等运算字段统一写为真正的数值单元格，同时保持法国/欧洲小数逗号显示。'
     ]},
-    {label:'保留', items:[
-      'FACT 强制重算并保持原格式、欧洲小数逗号、三态主题和专业会计导出逻辑继续保留。'
+    {label:'优化', items:[
+      '导出交付包、会计报表和回填 FACT 文件名自动标注本批订单号范围。'
     ]}
   ]
 };
@@ -835,8 +867,9 @@ document.documentElement.dataset.writeReady='true';
 
 
 
-// v6.5.7 — built-in version history (mirrors GitHub CHANGELOG)
+// v6.5.8 — built-in version history (mirrors GitHub CHANGELOG)
 const WRITE_HISTORY = [
+  {version:'6.5.8',time:'2026-08-09 00:14',title:'发票数值类型与订单范围',items:['修复 FACT / Commercial Invoice 中部分小数被保存为文本导致 Excel 计算失败的问题。','COGs、Shipping 等运算字段回填为真正数值，显示继续采用法国/欧洲小数逗号。','导出 ZIP、会计报表与回填 FACT 文件名自动包含订单号范围。']},
   {version:'6.5.7',time:'2026-08-09 00:10',title:'历史更新中心',items:['左侧菜单新增「历史更新」，无需导入订单即可查看。','按时间倒序展示所有可追溯正式版本的更新时间与更新摘要。','从本版本开始，发布时间固定精确记录到分钟，并与 GitHub CHANGELOG 同步。']},
   {version:'6.5.6',time:'2026-08-09 00:05',title:'欧洲数字格式统一',items:['所有用户可见小数统一使用逗号作为小数分隔符。','WebApp、会计 Excel 与金额/百分比显示统一采用法国/欧洲数字格式。']},
   {version:'6.5.5',time:'2026-08-08 23:32',title:'FACT 原格式回填',items:['无论 FACT 原有统计是否为空，导出前均清空旧统计并按 WebApp 当前分析重新计算。','只修改 FACT 统计值，保留原工作表样式、列宽、行高、边框、合并单元格和工作簿其他内容。','导出升级为专业会计报表 + 已回填 FACT 的结算交付包。']},
