@@ -1,4 +1,4 @@
-import { classifyOrders } from './lib/accounting.js';
+import { classifyOrders, LINE_CATEGORIES } from './lib/accounting.js';
 import { buildXlsx, downloadBlob } from './lib/xlsxWriter.js';
 
 const $ = (id) => document.getElementById(id);
@@ -61,6 +61,7 @@ function ensureConfirmModal(){
   els.modalCancel=modal.querySelector('#modalCancel');
   els.modalConfirm=modal.querySelector('#modalConfirm');
   els.modalCancel.addEventListener('click',closeConfirm);
+  els.modalConfirm.addEventListener('click',()=>{const action=modalAction; closeConfirm(); if(typeof action==='function') action();});
   modal.addEventListener('click',e=>{if(e.target===modal)closeConfirm()});
   return modal;
 }
@@ -139,9 +140,38 @@ function renderProductSummary(giftQty){
     `<div class="product-row"><strong>赠品合计</strong><span>${numberFormat.format(giftQty)} 件</span><small>🎁 / 100% off 自动识别</small><small>单独标记</small></div>`;
 }
 
+function reviewCategoryOptions(selected='AUTO'){
+  const options=[['AUTO','自动识别'],...LINE_CATEGORIES.filter(x=>x.code!=='OTHER').map(x=>[x.code,x.label])];
+  return options.map(([code,label])=>`<option value="${code}" ${selected===code?'selected':''}>${escapeHtml(label)}</option>`).join('');
+}
 function renderUnknown(){
   const unknown=classified.unknown||[]; els.emptyReview.hidden=unknown.length>0;
-  els.unknownList.innerHTML=unknown.map(x=>`<div class="unknown-row"><code>${escapeHtml(x.orderId)}</code><span>${escapeHtml(x.productName||'(无产品名)')}</span><small>${escapeHtml(x.sku||'(无 SKU)')}</small></div>`).join('');
+  els.unknownList.innerHTML=unknown.map(x=>{
+    const order=orders.find(o=>String(o.orderId)===String(x.orderId))||{};
+    const forced=order.manualLineCategories?.[x.lineNo]||'AUTO';
+    return `<div class="review-editor" data-order-id="${escapeHtml(x.orderId)}" data-line-no="${x.lineNo||1}">
+      <div class="review-id"><strong>${escapeHtml(x.orderId)}</strong><small>第 ${x.lineNo||1} 个商品 · ${escapeHtml(order.country||x.country||'—')}</small></div>
+      <label><span>产品名称</span><input class="review-name" value="${escapeHtml(x.productName||'')}" placeholder="补充或修改产品名称" /></label>
+      <label><span>SKU</span><input class="review-sku" value="${escapeHtml(x.sku||'')}" placeholder="补充或修改 SKU" /></label>
+      <label><span>分类</span><select class="review-category">${reviewCategoryOptions(forced)}</select></label>
+      <button class="review-save" type="button">保存并重新分类</button>
+    </div>`;
+  }).join('');
+}
+function setLineValue(order,key,lineNo,value){
+  const arr=String(order[key]||'').split(/
+/); while(arr.length<lineNo)arr.push(''); arr[lineNo-1]=String(value||'').trim(); order[key]=arr.join('
+');
+}
+function saveReviewRow(editor){
+  const orderId=editor.dataset.orderId, lineNo=Number(editor.dataset.lineNo)||1;
+  const order=orders.find(o=>String(o.orderId)===String(orderId)); if(!order)return;
+  setLineValue(order,'productNames',lineNo,editor.querySelector('.review-name').value);
+  setLineValue(order,'skuLines',lineNo,editor.querySelector('.review-sku').value);
+  const chosen=editor.querySelector('.review-category').value;
+  order.manualLineCategories={...(order.manualLineCategories||{})};
+  if(chosen==='AUTO') delete order.manualLineCategories[lineNo]; else order.manualLineCategories[lineNo]=chosen;
+  classified=classifyOrders(orders); renderResults(); setView('review');
 }
 
 function renderSheets(){
@@ -246,134 +276,78 @@ function exportAccounting(){
   const reviewOrders=classified.orders.filter(o=>o.classificationStatus==='需复核');
   const reportDate=new Date().toLocaleString('zh-CN',{hour12:false});
   const sourceNames=[...new Set(sheets.map(x=>x.sourceFile).filter(Boolean))];
-  const importedSheets=sheets.filter(s=>s.status==='imported');
   const factSheets=sheets.filter(s=>s.status==='ignored_fact');
   const totalItemQty=classified.lineItems.reduce((a,x)=>a+(Number(x.quantity)||1),0);
   const giftQty=classified.lineItems.filter(x=>x.isFree).reduce((a,x)=>a+(Number(x.quantity)||1),0);
   const factData=buildFactExportData();
+  const grossProfit=totalAmount-factData.totalAmount;
+  const grossMargin=totalAmount?grossProfit/totalAmount:0;
 
-  const overview=[
-    ['WRITE Settlement Manager — 会计结算总览','','','','',''],
-    [`生成时间：${reportDate}｜数据源：${sourceNames.length===1?sourceNames[0]:`${sourceNames.length} 个文件`}｜本工作簿用于结算、复核与审计。`,'','','','',''],
+  const summary=[
+    ['WRITE Settlement Manager — 结算摘要','','','','','',''],
+    [`生成时间：${reportDate}｜数据源：${sourceNames.length===1?sourceNames[0]:`${sourceNames.length} 个文件`}｜先看本页，明细与审计位于后续工作表。`,'','','','','',''],
     [],
-    ['核心指标','数值','说明','','',''],
-    ['去重后订单',classified.orders.length,'最终用于结算的唯一订单','','',''],
-    ['订单总额',totalAmount,'订单级金额合计','','',''],
-    ['商品件数',totalItemQty,'订单商品行数量合计','','',''],
-    ['赠品件数',giftQty,'🎁 / 100% off 自动识别','','',''],
-    ['待复核订单',reviewOrders.length,'结账前建议人工确认','','',''],
-    ['重复订单已去重',duplicateCount,'已从最终结算订单中排除','','',''],
-    ['FACT 成本总额',factData.totalAmount,'来自 FACT 页 Amount (€) 汇总','','',''],
-    ['FACT 分类数量',factData.summary.length,'按 FACT Description 合并后的分类数','','',''],
+    ['一、结算核心指标','','','','','',''],
+    ['指标','数值','口径 / 说明','','','',''],
+    ['销售订单总额',totalAmount,'去重后订单金额合计','','','',''],
+    ['FACT 成本总额',factData.totalAmount,'来自 FACT 页 Amount (€) 合计','','','',''],
+    ['估算毛利',grossProfit,'销售订单总额 - FACT 成本总额','','','',''],
+    ['估算毛利率',grossMargin,'估算毛利 ÷ 销售订单总额','','','',''],
+    ['去重后订单数',classified.orders.length,'最终纳入结算的唯一订单','','','',''],
+    ['商品件数',totalItemQty,'所有商品行数量合计','','','',''],
+    ['赠品件数',giftQty,'🎁 / 100% off 自动识别','','','',''],
+    ['待复核订单',reviewOrders.length,'建议归零后再正式交会计','','','',''],
     [],
-    ['订单级会计分类','订单数','订单金额','占比','待复核','说明'],
+    ['二、FACT 分类汇总（与 FACT 页面相同口径）','','','','','',''],
+    ['No','Description','Quantity','COGs (€)','Shipping (€)','COGs + Shipping (€)','Amount (€)']
   ];
-  const orderHeaderRow=overview.length;
-  const orderSectionStart=overview.length+1;
-  for(const r of classified.orderSummary) overview.push([r.category,r.orders,r.amount,totalAmount?r.amount/totalAmount:0,r.review||0,'']);
-  const orderTotalRow=overview.length+1;
-  overview.push(['合计',classified.orders.length,totalAmount,1,reviewOrders.length,'']);
-  overview.push([]);
-  const productHeaderRow=overview.length+1;
-  overview.push(['商品级分类','商品件数','赠品件数','付费件数','涉及订单数','说明']);
-  for(const r of classified.lineSummary){
-    overview.push([r.category,r.quantity,r.freeQuantity,Math.max(0,(Number(r.quantity)||0)-(Number(r.freeQuantity)||0)),r.orders,r.category==='待确认'?'需人工确认':'']);
-  }
+  const factStart=summary.length+1; let no=1;
+  for(const r of factData.summary) summary.push([no++,r.description,r.quantity,r.avgCogs,r.avgShipping,r.avgUnit,r.amount]);
+  const factTotalRow=summary.length+1;
+  summary.push(['','TOTAL / 合计',factData.totalQty,factData.totalQty?factData.cogsTotal/factData.totalQty:0,factData.totalQty?factData.shippingTotal/factData.totalQty:0,factData.totalQty?(factData.cogsTotal+factData.shippingTotal)/factData.totalQty:0,factData.totalAmount]);
+  summary.push([]);
+  const orderTitleRow=summary.length+1; summary.push(['三、订单会计分类汇总','','','','','','']);
+  const orderHeaderRow=summary.length+1; summary.push(['会计分类','订单数','订单金额','金额占比','待复核','','']);
+  const orderStart=summary.length+1;
+  for(const r of classified.orderSummary) summary.push([r.category,r.orders,r.amount,totalAmount?r.amount/totalAmount:0,r.review||0,'','']);
+  const orderTotalRow=summary.length+1; summary.push(['合计',classified.orders.length,totalAmount,1,reviewOrders.length,'','']);
+
+  const factSummaryRows=[['No','Description','Quantity','COGs (€)','Shipping (€)','COGs + Shipping (€)','Amount (€)']]; no=1;
+  for(const r of factData.summary) factSummaryRows.push([no++,r.description,r.quantity,r.avgCogs,r.avgShipping,r.avgUnit,r.amount]);
+  factSummaryRows.push(['','TOTAL / 合计',factData.totalQty,factData.totalQty?factData.cogsTotal/factData.totalQty:0,factData.totalQty?factData.shippingTotal/factData.totalQty:0,factData.totalQty?(factData.cogsTotal+factData.shippingTotal)/factData.totalQty:0,factData.totalAmount]);
+
+  const factDetailRows=[['国家/地区','No','Description','Quantity','COGs (€)','Shipping (€)','COGs + Shipping (€)','Amount (€)']];
+  for(const country of factData.countryOrder){ for(const r of factData.countries.get(country)||[]) factDetailRows.push([country,r.no||'',r.description||'',r.quantity??'',r.cogs??'',r.shipping??'',r.unitTotal??'',r.amount??'']); }
 
   const orderRows=[['订单号','日期','客户','国家/地区','订单金额','会计分类','状态','商品件数','含赠品','运单号']];
-  for(const o of classified.orders){
-    orderRows.push([o.orderId,o.orderTime||'',o.buyerName||'',o.country||'',Number(o.orderAmount)||0,o.accountingCategory,o.classificationStatus,Number(o.productCount)||0,o.hasGift?'是':'否',o.trackingNo||'']);
-  }
+  for(const o of classified.orders) orderRows.push([o.orderId,o.orderTime||'',o.buyerName||'',o.country||'',Number(o.orderAmount)||0,o.accountingCategory,o.classificationStatus,Number(o.productCount)||0,o.hasGift?'是':'否',o.trackingNo||'']);
 
   const productMap=new Map();
-  for(const x of classified.lineItems){
-    const key=[x.categoryLabel||'待确认',x.productName||'',x.sku||''].join('\u0001');
-    const cur=productMap.get(key)||{category:x.categoryLabel||'待确认',product:x.productName||'',sku:x.sku||'',qty:0,free:0,orders:new Set()};
-    const qty=Number(x.quantity)||1;cur.qty+=qty;if(x.isFree)cur.free+=qty;cur.orders.add(x.orderId);productMap.set(key,cur);
-  }
+  for(const x of classified.lineItems){const key=[x.categoryLabel||'待确认',x.productName||'',x.sku||''].join('\u0001');const cur=productMap.get(key)||{category:x.categoryLabel||'待确认',product:x.productName||'',sku:x.sku||'',qty:0,free:0,orders:new Set()};const qty=Number(x.quantity)||1;cur.qty+=qty;if(x.isFree)cur.free+=qty;cur.orders.add(x.orderId);productMap.set(key,cur)}
   const productRows=[['商品分类','产品名称','SKU','总件数','付费件数','赠品件数','涉及订单数']];
   [...productMap.values()].sort((a,b)=>b.qty-a.qty||a.category.localeCompare(b.category)).forEach(x=>productRows.push([x.category,x.product,x.sku,x.qty,Math.max(0,x.qty-x.free),x.free,x.orders.size]));
 
   const byId=new Map(classified.orders.map(o=>[o.orderId,o]));
-  const reviewRows=[['订单号','订单金额','客户','国家/地区','未识别产品','SKU','来源文件','来源 Sheet','源行号']];
-  for(const x of classified.unknown){const o=byId.get(x.orderId)||{};reviewRows.push([x.orderId,Number(o.orderAmount)||0,o.buyerName||'',o.country||x.country||'',x.productName||'',x.sku||'',o.sourceFile||x.sourceFile||'',o.sourceSheet||x.sourceSheet||'',o.sourceRow||''])}
-  if(reviewRows.length===1)reviewRows.push(['—',0,'','','无待复核商品','','','','']);
+  const reviewRows=[['订单号','订单金额','客户','国家/地区','待确认产品','SKU','建议处理']];
+  for(const x of classified.unknown){const o=byId.get(x.orderId)||{};reviewRows.push([x.orderId,Number(o.orderAmount)||0,o.buyerName||'',o.country||x.country||'',x.productName||'',x.sku||'','请在 WebApp「待复核」页修改并保存'])}
+  if(reviewRows.length===1)reviewRows.push(['—',0,'','','无待复核商品','','全部已完成分类']);
 
-  const auditRows=[['订单号','订单金额','会计分类','分类状态','来源文件','来源 Sheet','源行号','店铺账号','付款时间','发货时间']];
-  for(const o of classified.orders) auditRows.push([o.orderId,Number(o.orderAmount)||0,o.accountingCategory,o.classificationStatus,o.sourceFile||'',o.sourceSheet||'',o.sourceRow||'',o.storeAccount||'',o.paidTime||'',o.shippedTime||'']);
-
-  const logRows=[['来源文件','Sheet','处理状态','订单行数','处理说明','解压读取字节']];
-  for(const x of sheets) logRows.push([x.sourceFile,x.sheetName,x.status,x.orderCount,x.reason,x.inflatedBytes||0]);
-
-  const factRows=[
-    ['WRITE Settlement Manager — FACT 分类汇总统计','','','','','',''],
-    [`生成时间：${reportDate}｜来源：${factSheets.length} 个 FACT Sheet｜口径与原 FACT 一致：Quantity × (COGs + Shipping) = Amount；跨国家汇总的单价为数量加权平均。`,'','','','','',''],
-    [],
-    ['FACT 分类汇总（全局）','','','','','',''],
-    ['No','Description','Quantity','COGs (€)','Shipping (€)','COGs + Shipping (€)','Amount (€)']
-  ];
-  const factSummaryHeaderRow=factRows.length;
-  const factSummaryStart=factRows.length+1;
-  let factNo=1;
-  for(const r of factData.summary){
-    factRows.push([factNo++,r.description,r.quantity,r.avgCogs,r.avgShipping,r.avgUnit,r.amount]);
-  }
-  const factSummaryTotalRow=factRows.length+1;
-  const weightedCogs=factData.totalQty?factData.cogsTotal/factData.totalQty:0;
-  const weightedShipping=factData.totalQty?factData.shippingTotal/factData.totalQty:0;
-  const weightedUnit=factData.totalQty?(factData.cogsTotal+factData.shippingTotal)/factData.totalQty:0;
-  factRows.push(['','TOTAL / 合计',factData.totalQty,weightedCogs,weightedShipping,weightedUnit,factData.totalAmount]);
-  factRows.push([]);
-  const factCheckTitleRow=factRows.length+1;
-  factRows.push(['FACT 关键核对','','','','','','']);
-  factRows.push(['FACT Sheet 数',factSheets.length,'','','','','']);
-  factRows.push(['FACT 分类数',factData.summary.length,'','','','','']);
-  factRows.push(['Quantity 合计',factData.totalQty,'','','','','']);
-  factRows.push(['COGs 成本合计',factData.cogsTotal,'','','','','']);
-  factRows.push(['Shipping 成本合计',factData.shippingTotal,'','','','','']);
-  factRows.push(['FACT Amount 合计',factData.totalAmount,'','','','','']);
-  factRows.push(['成本差额',factData.unallocated,'Amount - COGs总额 - Shipping总额；正常应接近 0','','','','']);
-  factRows.push([]);
-  const factDetailTitleRow=factRows.length+1;
-  factRows.push(['FACT 原始明细（按国家/地区）','','','','','','']);
-  const factDetailHeaderRow=factRows.length+1;
-  factRows.push(['No','Description','Quantity','COGs (€)','Shipping (€)','COGs + Shipping (€)','Amount (€)']);
-  const factCountryRows=[];
-  const factDetailDataStart=factRows.length+1;
-  for(const country of factData.countryOrder){
-    const group=factData.countries.get(country)||[];
-    factCountryRows.push(factRows.length+1);
-    factRows.push([country,'','','','','','']);
-    for(const r of group){
-      factRows.push([r.no||'',r.description||'',r.quantity??'',r.cogs??'',r.shipping??'',r.unitTotal??'',r.amount??'']);
-    }
-  }
-  const factDetailEnd=factRows.length;
+  const auditRows=[['订单号','订单金额','会计分类','分类状态','人工修正','来源文件','来源 Sheet','源行号','店铺账号','付款时间','发货时间']];
+  for(const o of classified.orders) auditRows.push([o.orderId,Number(o.orderAmount)||0,o.accountingCategory,o.classificationStatus,Object.keys(o.manualLineCategories||{}).length?'是':'否',o.sourceFile||'',o.sourceSheet||'',o.sourceRow||'',o.storeAccount||'',o.paidTime||'',o.shippedTime||'']);
+  const logRows=[['来源文件','Sheet','处理状态','订单行数','处理说明','解压读取字节']]; for(const x of sheets)logRows.push([x.sourceFile,x.sheetName,x.status,x.orderCount,x.reason,x.inflatedBytes||0]);
 
   const blob=buildXlsx([
-    {name:'00_FACT分类汇总',rows:factRows,widths:[9,42,13,15,17,21,19],titleRow:1,subtitleRow:2,
-      sectionRows:[4,factSummaryHeaderRow,factCheckTitleRow,factDetailTitleRow,factDetailHeaderRow,...factCountryRows],
-      totalRows:[factSummaryTotalRow],freezeRow:factSummaryHeaderRow,freezeCol:2,
-      merges:['A1:G1','A2:G2','A4:G4',`A${factCheckTitleRow}:G${factCheckTitleRow}`,`A${factDetailTitleRow}:G${factDetailTitleRow}`],
-      formatRules:[
-        {r1:factSummaryStart,r2:factSummaryTotalRow,c1:1,c2:1,kind:'int'},
-        {r1:factSummaryStart,r2:factSummaryTotalRow,c1:3,c2:3,kind:'int'},
-        {r1:factSummaryStart,r2:factSummaryTotalRow,c1:4,c2:7,kind:'currency'},
-        {r1:factCheckTitleRow+1,r2:factCheckTitleRow+3,c1:2,c2:2,kind:'int'},
-        {r1:factCheckTitleRow+4,r2:factCheckTitleRow+7,c1:2,c2:2,kind:'currency'},
-        {r1:factDetailHeaderRow+1,r2:factDetailEnd,c1:1,c2:1,kind:'int'},
-        {r1:factDetailHeaderRow+1,r2:factDetailEnd,c1:3,c2:3,kind:'int'},
-        {r1:factDetailHeaderRow+1,r2:factDetailEnd,c1:4,c2:7,kind:'currency'}
-      ],wrapColumns:[2]},
-    {name:'01_结算总览',rows:overview,widths:[28,18,22,14,14,30],titleRow:1,subtitleRow:2,sectionRows:[4,orderHeaderRow,productHeaderRow],totalRows:[orderTotalRow],freezeRow:orderHeaderRow,freezeCol:1,merges:['A1:F1','A2:F2'],formatRules:[
-      {r1:6,r2:6,c1:2,c2:2,kind:'currency'},{r1:5,r2:5,c1:2,c2:2,kind:'int'},{r1:7,r2:10,c1:2,c2:2,kind:'int'},{r1:11,r2:11,c1:2,c2:2,kind:'currency'},{r1:12,r2:12,c1:2,c2:2,kind:'int'},
-      {r1:orderSectionStart,r2:orderTotalRow,c1:2,c2:2,kind:'int'},{r1:orderSectionStart,r2:orderTotalRow,c1:3,c2:3,kind:'currency'},{r1:orderSectionStart,r2:orderTotalRow,c1:4,c2:4,kind:'percent'},{r1:orderSectionStart,r2:orderTotalRow,c1:5,c2:5,kind:'int'},
-      {r1:productHeaderRow+1,r2:overview.length,c1:2,c2:5,kind:'int'}
-    ]},
-    {name:'02_订单明细',rows:orderRows,widths:[20,20,22,13,15,20,12,11,10,24],headerRows:[1],freezeRow:1,freezeCol:2,autoFilterRow:1,currencyColumns:[5],integerColumns:[8],centerColumns:[4,7,9],bandedRows:true},
-    {name:'03_商品汇总',rows:productRows,widths:[18,46,30,12,12,12,14],headerRows:[1],freezeRow:1,freezeCol:1,autoFilterRow:1,integerColumns:[4,5,6,7],wrapColumns:[2,3],bandedRows:true},
-    {name:'04_待复核',rows:reviewRows,widths:[20,15,22,14,46,30,44,20,10],headerRows:[1],freezeRow:1,freezeCol:2,autoFilterRow:1,currencyColumns:[2],integerColumns:[9],wrapColumns:[5,6,7],reviewMode:true,bandedRows:true},
-    {name:'90_订单审计',rows:auditRows,widths:[20,15,20,12,44,20,10,28,20,20],headerRows:[1],freezeRow:1,freezeCol:1,autoFilterRow:1,currencyColumns:[2],integerColumns:[7],bandedRows:true},
+    {name:'00_结算摘要',rows:summary,widths:[30,18,20,17,17,20,20],titleRow:1,subtitleRow:2,sectionRows:[4,15,orderTitleRow],headerRows:[5,16,orderHeaderRow],totalRows:[factTotalRow,orderTotalRow],freezeRow:16,freezeCol:2,merges:['A1:G1','A2:G2','A4:G4','A15:G15',`A${orderTitleRow}:G${orderTitleRow}`],formatRules:[
+      {r1:6,r2:8,c1:2,c2:2,kind:'currency'},{r1:9,r2:9,c1:2,c2:2,kind:'percent'},{r1:10,r2:13,c1:2,c2:2,kind:'int'},
+      {r1:factStart,r2:factTotalRow,c1:1,c2:1,kind:'int'},{r1:factStart,r2:factTotalRow,c1:3,c2:3,kind:'int'},{r1:factStart,r2:factTotalRow,c1:4,c2:7,kind:'currency'},
+      {r1:orderStart,r2:orderTotalRow,c1:2,c2:2,kind:'int'},{r1:orderStart,r2:orderTotalRow,c1:3,c2:3,kind:'currency'},{r1:orderStart,r2:orderTotalRow,c1:4,c2:4,kind:'percent'},{r1:orderStart,r2:orderTotalRow,c1:5,c2:5,kind:'int'}
+    ],wrapColumns:[1,2,3]},
+    {name:'01_FACT分类汇总',rows:factSummaryRows,widths:[9,42,13,15,17,21,19],headerRows:[1],totalRows:[factSummaryRows.length],freezeRow:1,freezeCol:2,autoFilterRow:1,integerColumns:[1,3],currencyColumns:[4,5,6,7],wrapColumns:[2],bandedRows:true},
+    {name:'02_FACT国家明细',rows:factDetailRows,widths:[18,9,42,13,15,17,21,19],headerRows:[1],freezeRow:1,freezeCol:3,autoFilterRow:1,integerColumns:[2,4],currencyColumns:[5,6,7,8],wrapColumns:[3],bandedRows:true},
+    {name:'03_订单明细',rows:orderRows,widths:[20,20,22,13,15,20,12,11,10,24],headerRows:[1],freezeRow:1,freezeCol:2,autoFilterRow:1,currencyColumns:[5],integerColumns:[8],centerColumns:[4,7,9],bandedRows:true},
+    {name:'04_商品汇总',rows:productRows,widths:[18,46,30,12,12,12,14],headerRows:[1],freezeRow:1,freezeCol:1,autoFilterRow:1,integerColumns:[4,5,6,7],wrapColumns:[2,3],bandedRows:true},
+    {name:'05_待复核',rows:reviewRows,widths:[20,15,22,14,46,30,38],headerRows:[1],freezeRow:1,freezeCol:2,autoFilterRow:1,currencyColumns:[2],wrapColumns:[5,6,7],reviewMode:true,bandedRows:true},
+    {name:'90_订单审计',rows:auditRows,widths:[20,15,20,12,12,42,20,10,26,20,20],headerRows:[1],freezeRow:1,freezeCol:1,autoFilterRow:1,currencyColumns:[2],integerColumns:[8],bandedRows:true},
     {name:'99_导入日志',rows:logRows,widths:[44,22,18,12,48,20],headerRows:[1],freezeRow:1,autoFilterRow:1,integerColumns:[4,6],wrapColumns:[5],bandedRows:true}
   ]);
   downloadBlob(blob,`WRITE_会计结算_${new Date().toISOString().slice(0,10)}.xlsx`);
@@ -400,5 +374,6 @@ els.reimportButton.addEventListener('click',reimportFlow); els.sidebarResetButto
 document.addEventListener('keydown',e=>{const m=document.getElementById('confirmModal');if(e.key==='Escape'&&m&&!m.hidden)closeConfirm()});
 document.getElementById('sideNav').addEventListener('click',e=>{const btn=e.target.closest('[data-view]');if(btn&&classified)setView(btn.dataset.view)});
 document.addEventListener('click',e=>{const btn=e.target.closest('[data-go-view]');if(btn&&classified)setView(btn.dataset.goView)});
+document.addEventListener('click',e=>{const btn=e.target.closest('.review-save');if(btn){const editor=btn.closest('.review-editor');if(editor)saveReviewRow(editor)}});
 
 resetState();

@@ -36,12 +36,16 @@ export function classifyLine(productName='', sku='') {
 export function parseLineItems(order) {
   const names = norm(order.productNames).split(/\n+/).map(x=>x.trim());
   const skus = norm(order.skuLines).split(/\n+/).map(x=>x.trim());
+  const manual = order.manualLineCategories || {};
   const count = Math.max(names.filter(Boolean).length ? names.length : 0, skus.filter(Boolean).length ? skus.length : 0, 1);
   const items=[];
   for(let i=0;i<count;i++) {
     const productName=names[i]||''; const sku=skus[i]||'';
     if(!productName && !sku && count>1) continue;
-    items.push({ ...classifyLine(productName,sku), productName, sku, lineNo:i+1 });
+    const auto=classifyLine(productName,sku);
+    const forced=manual[i+1];
+    const resolved=forced && LABEL[forced] ? {...auto,category:forced,categoryLabel:LABEL[forced],manualCategory:true} : auto;
+    items.push({ ...resolved, productName, sku, lineNo:i+1 });
   }
   return items;
 }

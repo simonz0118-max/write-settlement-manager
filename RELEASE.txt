@@ -1,2 +1,5 @@
-WRITE Settlement Manager V5.2.2
-Build: modal-dynamic + embedded-panda + no-store
+WRITE Settlement Manager v5.3.0
+- Larger UI typography and spacing
+- Editable review rows with save/reclassify
+- Fixed clear confirmation action
+- Reworked accounting export with readable settlement summary and FACT classification summary
