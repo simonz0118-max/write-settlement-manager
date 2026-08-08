@@ -511,6 +511,42 @@ document.getElementById('sideNav').addEventListener('click',e=>{const btn=e.targ
 document.addEventListener('click',e=>{const btn=e.target.closest('[data-go-view]');if(btn&&classified)setView(btn.dataset.goView)});
 document.addEventListener('click',e=>{const btn=e.target.closest('.review-save');if(btn){const editor=btn.closest('.review-editor');if(editor)saveReviewRow(editor)}});
 
+
+// v6.5.2 theme controller: auto / light / dark
+const themeButton=document.getElementById('themeToggleButton');
+const themeLabel=document.getElementById('themeLabel');
+const themeMedia=window.matchMedia('(prefers-color-scheme: dark)');
+function getThemePreference(){
+  const value=localStorage.getItem('write-theme')||'auto';
+  return /^(auto|light|dark)$/.test(value)?value:'auto';
+}
+function resolvedTheme(pref){return pref==='auto'?(themeMedia.matches?'dark':'light'):pref}
+function applyTheme(pref,{persist=true}={}){
+  const safe=/^(auto|light|dark)$/.test(pref)?pref:'auto';
+  if(persist)localStorage.setItem('write-theme',safe);
+  const resolved=resolvedTheme(safe);
+  document.documentElement.dataset.theme=resolved;
+  document.documentElement.dataset.themePreference=safe;
+  document.documentElement.style.colorScheme=resolved;
+  const meta=document.querySelector('meta[name="theme-color"]');
+  if(meta)meta.setAttribute('content',resolved==='dark'?'#1c1c1f':'#ffffff');
+  if(themeButton){
+    themeButton.dataset.themePref=safe;
+    themeButton.setAttribute('aria-label',`当前主题：${safe==='auto'?'自动':safe==='light'?'浅色':'深色'}；点击切换`);
+    themeButton.title=`主题：${safe==='auto'?'自动跟随系统':safe==='light'?'浅色':'深色'}（点击切换）`;
+  }
+  if(themeLabel)themeLabel.textContent=`主题：${safe==='auto'?'自动':safe==='light'?'浅色':'深色'}`;
+}
+function cycleTheme(){
+  const current=getThemePreference();
+  const next=current==='auto'?'light':current==='light'?'dark':'auto';
+  applyTheme(next);
+}
+themeButton?.addEventListener('click',cycleTheme);
+const onSystemThemeChange=()=>{if(getThemePreference()==='auto')applyTheme('auto',{persist:false})};
+if(themeMedia.addEventListener)themeMedia.addEventListener('change',onSystemThemeChange);else themeMedia.addListener(onSystemThemeChange);
+applyTheme(getThemePreference(),{persist:false});
+
 resetState();
 window.__WRITE_APP_READY__=true;
 document.documentElement.dataset.writeReady='true';

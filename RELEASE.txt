@@ -1,2 +1,5 @@
-WRITE Settlement Manager v6.5.1
-Grayscale oMLX-inspired visual system + shared panda identity + responsive desktop/iPad/iPhone UI.
+WRITE Settlement Manager v6.5.2
+- 自动跟随系统浅色/深色
+- 支持手动浅色/深色/自动三态切换
+- 主题偏好保存在本机浏览器
+- iPad/iPhone 主题按钮随导航适配
