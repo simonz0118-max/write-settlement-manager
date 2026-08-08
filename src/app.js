@@ -1,0 +1,236 @@
+import { classifyOrders } from './lib/accounting.js';
+import { buildXlsx, downloadBlob } from './lib/xlsxWriter.js';
+
+const $ = (id) => document.getElementById(id);
+const els = {
+  dropzone:$('dropzone'), fileInput:$('fileInput'), chooseButton:$('chooseButton'), idleState:$('idleState'), busyState:$('busyState'),
+  currentFile:$('currentFile'), progressFill:$('progressFill'), progressText:$('progressText'), errorCard:$('errorCard'), errorText:$('errorText'), dismissError:$('dismissError'),
+  importLanding:$('importLanding'), appViews:$('appViews'), topActions:$('topActions'), metricOrders:$('metricOrders'), metricAmount:$('metricAmount'), metricSheets:$('metricSheets'), metricFacts:$('metricFacts'), metricDuplicates:$('metricDuplicates'), metricReview:$('metricReview'), metricGift:$('metricGift'),
+  accountingSummary:$('accountingSummary'), lineSummary:$('lineSummary'), importSummary:$('importSummary'), sheetList:$('sheetList'), recentOrdersBody:$('recentOrdersBody'), unknownList:$('unknownList'), emptyReview:$('emptyReview'),
+  searchInput:$('searchInput'), countrySelect:$('countrySelect'), categorySelect:$('categorySelect'), ordersBody:$('ordersBody'), resultCount:$('resultCount'), tableNote:$('tableNote'),
+  navReviewCount:$('navReviewCount'), quickReviewCount:$('quickReviewCount'), systemStatus:$('systemStatus'), lastImportText:$('lastImportText'), sidebarResetButton:$('sidebarResetButton'),
+  reimportButton:$('reimportButton'), clearButton:$('clearButton'), topExportButton:$('topExportButton'), quickExportButton:$('quickExportButton'), exportButton:$('exportButton'),
+  confirmModal:$('confirmModal'), modalTitle:$('modalTitle'), modalText:$('modalText'), modalCancel:$('modalCancel'), modalConfirm:$('modalConfirm')
+};
+
+const numberFormat = new Intl.NumberFormat('zh-CN');
+const moneyFormat = new Intl.NumberFormat('fr-FR',{style:'currency',currency:'EUR',minimumFractionDigits:2,maximumFractionDigits:2});
+const decimalFormat = new Intl.NumberFormat('zh-CN',{maximumFractionDigits:1});
+let worker=null, orders=[], sheets=[], classified=null, busy=false, duplicateCount=0, importStartedAt=0, importDuration=0, importedFileNames=[];
+let modalAction=null;
+
+function escapeHtml(v){return String(v??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}
+function formatBytes(n){const v=Number(n)||0;if(v<1024)return `${v} B`;if(v<1024**2)return `${decimalFormat.format(v/1024)} KB`;if(v<1024**3)return `${decimalFormat.format(v/1024**2)} MB`;return `${decimalFormat.format(v/1024**3)} GB`}
+function nowText(){return new Intl.DateTimeFormat('zh-CN',{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date())}
+
+function setBusy(v){busy=v;els.idleState.hidden=v;els.busyState.hidden=!v;els.dropzone.classList.toggle('busy',v)}
+function showError(m){els.errorText.textContent=m;els.errorCard.hidden=false}
+function hideError(){els.errorCard.hidden=true;els.errorText.textContent=''}
+
+function setView(view){
+  document.querySelectorAll('.nav-item[data-view]').forEach(btn=>btn.classList.toggle('active',btn.dataset.view===view));
+  document.querySelectorAll('.view[data-view-panel]').forEach(panel=>panel.classList.toggle('active',panel.dataset.viewPanel===view));
+}
+function resetState({showLanding=true}={}){
+  worker?.terminate(); worker=null; orders=[]; sheets=[]; classified=null; busy=false; duplicateCount=0; importDuration=0; importedFileNames=[];
+  setBusy(false); hideError(); els.progressFill.style.width='0%'; els.fileInput.value=''; els.searchInput.value='';
+  els.countrySelect.innerHTML='<option value="ALL">全部国家</option>'; els.categorySelect.innerHTML='<option value="ALL">全部会计分类</option>';
+  els.appViews.hidden=true; els.topActions.hidden=true; els.importLanding.hidden=!showLanding; els.sidebarResetButton.disabled=true;
+  els.systemStatus.textContent='等待导入'; els.lastImportText.textContent='本地处理 · 数据不上传'; document.querySelector('.system-card')?.classList.remove('ready');
+  els.navReviewCount.hidden=true; els.quickReviewCount.textContent='0'; setView('dashboard');
+}
+
+function openConfirm({title,text,confirmText='确认清空',action}){
+  els.modalTitle.textContent=title; els.modalText.textContent=text; els.modalConfirm.textContent=confirmText; modalAction=action; els.confirmModal.hidden=false;
+}
+function closeConfirm(){els.confirmModal.hidden=true;modalAction=null}
+
+function startImport(fileList){
+  const files=[...fileList].filter(f=>/\.(xlsx|zip)$/i.test(f.name)); if(!files.length||busy)return;
+  worker?.terminate(); worker=new Worker('./src/workers/import.worker.js',{type:'module'}); importStartedAt=performance.now(); importedFileNames=files.map(f=>f.name);
+  setBusy(true); hideError(); els.importLanding.hidden=false; els.appViews.hidden=true; els.topActions.hidden=true;
+  els.currentFile.textContent='准备读取…'; els.progressFill.style.width='0%'; els.progressText.textContent='0% · 大文件在独立线程运行';
+  worker.onmessage=({data})=>{
+    if(data.type==='file-start') els.currentFile.textContent=data.fileName;
+    if(data.type==='progress'){
+      const pct=Math.max(0,Math.min(100,Math.round((data.progress||0)*100)));
+      els.progressFill.style.width=`${pct}%`; els.progressText.textContent=`${pct}% · ${data.phase==='extract'?'正在从 ZIP 提取工作簿':'正在流式读取工作表'}`;
+      if(data.detail) els.currentFile.textContent=data.detail;
+    }
+    if(data.type==='complete'){
+      orders=data.orders||[]; sheets=data.sheets||[]; duplicateCount=data.duplicates||0; classified=classifyOrders(orders); importDuration=(performance.now()-importStartedAt)/1000;
+      els.progressFill.style.width='100%'; els.progressText.textContent='100% · 导入并分类完成'; els.currentFile.textContent='解析完成'; hideError(); setBusy(false); renderResults();
+      worker?.terminate(); worker=null;
+    }
+    if(data.type==='error'){
+      setBusy(false); showError(data.message||'未知导入错误'); worker?.terminate(); worker=null;
+    }
+  };
+  worker.onerror=e=>{setBusy(false);showError(e.message||'导入线程异常');worker?.terminate();worker=null};
+  worker.postMessage({files});
+}
+
+function renderResults(){
+  if(!classified)return;
+  const imported=sheets.filter(s=>s.status==='imported'), facts=sheets.filter(s=>s.status==='ignored_fact');
+  const amount=orders.reduce((a,o)=>a+(Number(o.orderAmount)||0),0), review=classified.orders.filter(o=>o.classificationStatus==='需复核').length;
+  const itemQty=classified.lineItems.reduce((a,b)=>a+(Number(b.quantity)||1),0), giftQty=classified.lineItems.filter(x=>x.isFree).reduce((a,b)=>a+(Number(b.quantity)||1),0);
+  const rawRows=imported.reduce((a,s)=>a+(Number(s.orderCount)||0),0), uniqueBooks=new Set(sheets.map(s=>s.sourceFile)).size, inflated=sheets.reduce((a,s)=>a+(Number(s.inflatedBytes)||0),0);
+
+  els.metricOrders.textContent=numberFormat.format(orders.length); els.metricAmount.textContent=moneyFormat.format(amount); els.metricSheets.textContent=numberFormat.format(imported.length);
+  els.metricFacts.textContent=numberFormat.format(facts.length); els.metricDuplicates.textContent=`${numberFormat.format(duplicateCount)} 个重复订单已去重`; els.metricReview.textContent=numberFormat.format(review); els.metricGift.textContent=numberFormat.format(itemQty);
+  els.navReviewCount.textContent=numberFormat.format(review); els.navReviewCount.hidden=review===0; els.quickReviewCount.textContent=numberFormat.format(review);
+  els.systemStatus.textContent='就绪'; els.lastImportText.textContent=`上次导入 · ${nowText()}`; document.querySelector('.system-card')?.classList.add('ready'); els.sidebarResetButton.disabled=false;
+
+  renderAccounting(amount); renderProductSummary(giftQty); renderUnknown(); renderSheets(); renderOrders(); renderRecent();
+  const countries=[...new Set(classified.orders.map(o=>o.country).filter(Boolean))].sort();
+  els.countrySelect.innerHTML='<option value="ALL">全部国家</option>'+countries.map(c=>`<option>${escapeHtml(c)}</option>`).join('');
+  const cats=[...new Set(classified.orders.map(o=>o.accountingCategory))];
+  els.categorySelect.innerHTML='<option value="ALL">全部会计分类</option>'+cats.map(c=>`<option>${escapeHtml(c)}</option>`).join('');
+
+  const fileLabel=importedFileNames.length===1?importedFileNames[0]:`${importedFileNames.length} 个上传文件`;
+  const summaryData=[['文件',fileLabel],['Excel 工作簿',`${uniqueBooks} 个`],['订单 Sheet',`${imported.length} 个`],['忽略 FACT Sheet',`${facts.length} 个`],['原始订单行',`${numberFormat.format(rawRows)} 行`],['重复订单',`${numberFormat.format(duplicateCount)} 个`],['解析数据量',formatBytes(inflated)],['处理耗时',`${importDuration.toFixed(2)} 秒`]];
+  els.importSummary.innerHTML=summaryData.map(([k,v])=>`<div><dt>${escapeHtml(k)}</dt><dd>${escapeHtml(v)}</dd></div>`).join('');
+
+  els.importLanding.hidden=true; els.appViews.hidden=false; els.topActions.hidden=false; hideError(); setView('dashboard');
+}
+
+function renderAccounting(totalAmount){
+  const rows=classified.orderSummary;
+  els.accountingSummary.innerHTML=rows.map(r=>{
+    const share=totalAmount>0?(r.amount/totalAmount*100):0;
+    return `<div class="summary-row"><strong>${escapeHtml(r.category)}</strong><span>${numberFormat.format(r.orders)}</span><b>${escapeHtml(moneyFormat.format(r.amount))}</b><small>${share.toFixed(1)}%</small><i class="share-track" style="width:${Math.min(100,share)}%"></i></div>`;
+  }).join('')+`<div class="summary-row total"><strong>合计</strong><span>${numberFormat.format(classified.orders.length)}</span><b>${escapeHtml(moneyFormat.format(totalAmount))}</b><small>100%</small></div>`;
+}
+
+function renderProductSummary(giftQty){
+  els.lineSummary.innerHTML=classified.lineSummary.map(r=>`<div class="product-row"><strong>${escapeHtml(r.category)}</strong><span>${numberFormat.format(r.quantity)} 件</span><small>${numberFormat.format(r.orders)} 个订单涉及</small><small>${r.freeQuantity?`赠品 ${numberFormat.format(r.freeQuantity)} 件`:'—'}</small></div>`).join('')+
+    `<div class="product-row"><strong>赠品合计</strong><span>${numberFormat.format(giftQty)} 件</span><small>🎁 / 100% off 自动识别</small><small>单独标记</small></div>`;
+}
+
+function renderUnknown(){
+  const unknown=classified.unknown||[]; els.emptyReview.hidden=unknown.length>0;
+  els.unknownList.innerHTML=unknown.map(x=>`<div class="unknown-row"><code>${escapeHtml(x.orderId)}</code><span>${escapeHtml(x.productName||'(无产品名)')}</span><small>${escapeHtml(x.sku||'(无 SKU)')}</small></div>`).join('');
+}
+
+function renderSheets(){
+  els.sheetList.innerHTML=sheets.map(s=>{
+    const status=s.status==='imported'?'imported':s.status==='ignored_fact'?'ignored_fact':'ignored_non_order';
+    const icon=s.status==='imported'?'✓':s.status==='ignored_fact'?'F':'–';
+    const badge=s.status==='imported'?`${numberFormat.format(s.orderCount)} 单`:s.status==='ignored_fact'?'FACT · 忽略':'非订单 · 忽略';
+    return `<div class="sheet-row"><div class="sheet-icon ${status}">${icon}</div><div class="sheet-main"><strong>${escapeHtml(s.sheetName)}</strong><span>${escapeHtml(s.sourceFile)}</span></div><div class="sheet-reason">${escapeHtml(s.reason)}</div><div class="badge ${status}">${escapeHtml(badge)}</div></div>`;
+  }).join('');
+}
+
+function renderRecent(){
+  els.recentOrdersBody.innerHTML=classified.orders.slice(-5).reverse().map(o=>`<tr><td class="mono">${escapeHtml(o.orderId)}</td><td>${escapeHtml(o.buyerName||'—')}</td><td>${escapeHtml(o.country||'—')}</td><td>${o.orderAmount==null?'—':escapeHtml(moneyFormat.format(o.orderAmount))}</td><td><span class="tag">${escapeHtml(o.accountingCategory)}</span></td></tr>`).join('');
+}
+
+function renderOrders(){
+  if(!classified)return; const q=els.searchInput.value.trim().toLowerCase(), country=els.countrySelect.value, cat=els.categorySelect.value;
+  const filtered=classified.orders.filter(o=>{if(country!=='ALL'&&o.country!==country)return false;if(cat!=='ALL'&&o.accountingCategory!==cat)return false;if(!q)return true;return[o.orderId,o.buyerName,o.trackingNo,o.productNames,o.country,o.accountingCategory].some(v=>String(v||'').toLowerCase().includes(q))});
+  els.resultCount.textContent=`${numberFormat.format(filtered.length)} 条结果`;
+  els.ordersBody.innerHTML=filtered.slice(0,700).map(o=>{const product=String(o.productNames||'—').split('\n')[0];return `<tr><td class="mono">${escapeHtml(o.orderId)}</td><td>${o.orderAmount==null?'—':escapeHtml(moneyFormat.format(o.orderAmount))}</td><td>${escapeHtml(o.productCount??'—')}</td><td><span class="accounting-pill ${o.classificationStatus==='需复核'?'review':''}">${escapeHtml(o.accountingCategory)}</span></td><td>${escapeHtml(o.country||'—')}</td><td>${escapeHtml(o.buyerName||'—')}</td><td class="product-cell" title="${escapeHtml(o.productNames||'')}">${escapeHtml(product)}</td><td>${o.hasGift?'是':'—'}</td><td class="mono muted">${escapeHtml(o.trackingNo||'—')}</td></tr>`}).join('');
+  els.tableNote.hidden=filtered.length<=700; els.tableNote.textContent=filtered.length>700?`为保持页面流畅，当前预览前 700 条；全部 ${numberFormat.format(filtered.length)} 条已完成分类。`:'';
+}
+
+function exportAccounting(){
+  if(!classified)return;
+  const totalAmount=classified.orders.reduce((a,o)=>a+(Number(o.orderAmount)||0),0);
+  const reviewOrders=classified.orders.filter(o=>o.classificationStatus==='需复核');
+  const reportDate=new Date().toLocaleString('zh-CN',{hour12:false});
+  const sourceNames=[...new Set(sheets.map(x=>x.sourceFile).filter(Boolean))];
+  const importedSheets=sheets.filter(s=>s.status==='imported');
+  const factSheets=sheets.filter(s=>s.status==='ignored_fact');
+  const totalItemQty=classified.lineItems.reduce((a,x)=>a+(Number(x.quantity)||1),0);
+  const giftQty=classified.lineItems.filter(x=>x.isFree).reduce((a,x)=>a+(Number(x.quantity)||1),0);
+
+  const overview=[
+    ['WRITE Settlement Manager — 会计结算总览','','','','',''],
+    [`生成时间：${reportDate}｜数据源：${sourceNames.length===1?sourceNames[0]:`${sourceNames.length} 个文件`}｜本工作簿用于结算、复核与审计。`,'','','','',''],
+    [],
+    ['核心指标','数值','说明','','',''],
+    ['去重后订单',classified.orders.length,'最终用于结算的唯一订单','','',''],
+    ['订单总额',totalAmount,'订单级金额合计','','',''],
+    ['商品件数',totalItemQty,'订单商品行数量合计','','',''],
+    ['赠品件数',giftQty,'🎁 / 100% off 自动识别','','',''],
+    ['待复核订单',reviewOrders.length,'结账前建议人工确认','','',''],
+    ['重复订单已去重',duplicateCount,'已从最终结算订单中排除','','',''],
+    [],
+    ['订单级会计分类','订单数','订单金额','占比','待复核','说明'],
+  ];
+  const orderSectionStart=overview.length+1;
+  for(const r of classified.orderSummary) overview.push([r.category,r.orders,r.amount,totalAmount?r.amount/totalAmount:0,r.review||0,'']);
+  const orderTotalRow=overview.length+1;
+  overview.push(['合计',classified.orders.length,totalAmount,1,reviewOrders.length,'']);
+  overview.push([]);
+  const productHeaderRow=overview.length+1;
+  overview.push(['商品级分类','商品件数','赠品件数','付费件数','涉及订单数','说明']);
+  for(const r of classified.lineSummary){
+    overview.push([r.category,r.quantity,r.freeQuantity,Math.max(0,(Number(r.quantity)||0)-(Number(r.freeQuantity)||0)),r.orders,r.category==='待确认'?'需人工确认':'']);
+  }
+
+  const orderRows=[['订单号','日期','客户','国家/地区','订单金额','会计分类','状态','商品件数','含赠品','运单号']];
+  for(const o of classified.orders){
+    orderRows.push([o.orderId,o.orderTime||'',o.buyerName||'',o.country||'',Number(o.orderAmount)||0,o.accountingCategory,o.classificationStatus,Number(o.productCount)||0,o.hasGift?'是':'否',o.trackingNo||'']);
+  }
+
+  const productMap=new Map();
+  for(const x of classified.lineItems){
+    const key=[x.categoryLabel||'待确认',x.productName||'',x.sku||''].join('\u0001');
+    const cur=productMap.get(key)||{category:x.categoryLabel||'待确认',product:x.productName||'',sku:x.sku||'',qty:0,free:0,orders:new Set()};
+    const qty=Number(x.quantity)||1;cur.qty+=qty;if(x.isFree)cur.free+=qty;cur.orders.add(x.orderId);productMap.set(key,cur);
+  }
+  const productRows=[['商品分类','产品名称','SKU','总件数','付费件数','赠品件数','涉及订单数']];
+  [...productMap.values()].sort((a,b)=>b.qty-a.qty||a.category.localeCompare(b.category)).forEach(x=>productRows.push([x.category,x.product,x.sku,x.qty,Math.max(0,x.qty-x.free),x.free,x.orders.size]));
+
+  const byId=new Map(classified.orders.map(o=>[o.orderId,o]));
+  const reviewRows=[['订单号','订单金额','客户','国家/地区','未识别产品','SKU','来源文件','来源 Sheet','源行号']];
+  for(const x of classified.unknown){const o=byId.get(x.orderId)||{};reviewRows.push([x.orderId,Number(o.orderAmount)||0,o.buyerName||'',o.country||x.country||'',x.productName||'',x.sku||'',o.sourceFile||x.sourceFile||'',o.sourceSheet||x.sourceSheet||'',o.sourceRow||''])}
+  if(reviewRows.length===1)reviewRows.push(['—',0,'','','无待复核商品','','','','']);
+
+  const auditRows=[['订单号','订单金额','会计分类','分类状态','来源文件','来源 Sheet','源行号','店铺账号','付款时间','发货时间']];
+  for(const o of classified.orders) auditRows.push([o.orderId,Number(o.orderAmount)||0,o.accountingCategory,o.classificationStatus,o.sourceFile||'',o.sourceSheet||'',o.sourceRow||'',o.storeAccount||'',o.paidTime||'',o.shippedTime||'']);
+
+  const logRows=[['来源文件','Sheet','处理状态','订单行数','处理说明','解压读取字节']];
+  for(const x of sheets) logRows.push([x.sourceFile,x.sheetName,x.status,x.orderCount,x.reason,x.inflatedBytes||0]);
+
+  const blob=buildXlsx([
+    {name:'00_结算总览',rows:overview,widths:[28,18,22,14,14,30],titleRow:1,subtitleRow:2,sectionRows:[4,12,productHeaderRow],totalRows:[orderTotalRow],freezeRow:12,freezeCol:1,merges:['A1:F1','A2:F2'],formatRules:[
+      {r1:6,r2:6,c1:2,c2:2,kind:'currency'},{r1:5,r2:5,c1:2,c2:2,kind:'int'},{r1:7,r2:10,c1:2,c2:2,kind:'int'},
+      {r1:orderSectionStart,r2:orderTotalRow,c1:2,c2:2,kind:'int'},{r1:orderSectionStart,r2:orderTotalRow,c1:3,c2:3,kind:'currency'},{r1:orderSectionStart,r2:orderTotalRow,c1:4,c2:4,kind:'percent'},{r1:orderSectionStart,r2:orderTotalRow,c1:5,c2:5,kind:'int'},
+      {r1:productHeaderRow+1,r2:overview.length,c1:2,c2:5,kind:'int'}
+    ]},
+    {name:'01_订单明细',rows:orderRows,widths:[20,20,22,13,15,20,12,11,10,24],headerRows:[1],freezeRow:1,freezeCol:2,autoFilterRow:1,currencyColumns:[5],integerColumns:[8],centerColumns:[4,7,9],bandedRows:true},
+    {name:'02_商品汇总',rows:productRows,widths:[18,46,30,12,12,12,14],headerRows:[1],freezeRow:1,freezeCol:1,autoFilterRow:1,integerColumns:[4,5,6,7],wrapColumns:[2,3],bandedRows:true},
+    {name:'03_待复核',rows:reviewRows,widths:[20,15,22,14,46,30,44,20,10],headerRows:[1],freezeRow:1,freezeCol:2,autoFilterRow:1,currencyColumns:[2],integerColumns:[9],wrapColumns:[5,6,7],reviewMode:true,bandedRows:true},
+    {name:'90_订单审计',rows:auditRows,widths:[20,15,20,12,44,20,10,28,20,20],headerRows:[1],freezeRow:1,freezeCol:1,autoFilterRow:1,currencyColumns:[2],integerColumns:[7],bandedRows:true},
+    {name:'99_导入日志',rows:logRows,widths:[44,22,18,12,48,20],headerRows:[1],freezeRow:1,autoFilterRow:1,integerColumns:[4,6],wrapColumns:[5],bandedRows:true}
+  ]);
+  downloadBlob(blob,`WRITE_会计结算_${new Date().toISOString().slice(0,10)}.xlsx`);
+}
+function reimportFlow(){
+  if(!classified){els.fileInput.click();return}
+  openConfirm({title:'重新导入数据？',text:'当前统计结果会被清空，然后打开文件选择器重新导入。原始文件不会被修改。',confirmText:'清空并重新导入',action:()=>{resetState();setTimeout(()=>els.fileInput.click(),80)}});
+}
+function clearFlow(){
+  if(!classified)return;
+  openConfirm({title:'清空当前数据？',text:'订单、分类、导入记录和统计结果将从本页面清除。此操作不会删除你的原始 Excel / ZIP 文件。',confirmText:'确认清空',action:()=>resetState()});
+}
+
+els.chooseButton.addEventListener('click',e=>{e.stopPropagation();if(!busy)els.fileInput.click()});
+els.dropzone.addEventListener('click',()=>{if(!busy)els.fileInput.click()});
+els.fileInput.addEventListener('change',e=>startImport(e.target.files));
+els.dropzone.addEventListener('dragover',e=>{e.preventDefault();if(!busy)els.dropzone.classList.add('dragging')});
+els.dropzone.addEventListener('dragleave',()=>els.dropzone.classList.remove('dragging'));
+els.dropzone.addEventListener('drop',e=>{e.preventDefault();els.dropzone.classList.remove('dragging');startImport(e.dataTransfer.files)});
+els.dismissError.addEventListener('click',hideError); els.searchInput.addEventListener('input',renderOrders); els.countrySelect.addEventListener('change',renderOrders); els.categorySelect.addEventListener('change',renderOrders);
+[els.exportButton,els.topExportButton,els.quickExportButton].forEach(btn=>btn?.addEventListener('click',exportAccounting));
+els.reimportButton.addEventListener('click',reimportFlow); els.sidebarResetButton.addEventListener('click',reimportFlow); els.clearButton.addEventListener('click',clearFlow);
+els.modalCancel.addEventListener('click',closeConfirm); els.confirmModal.addEventListener('click',e=>{if(e.target===els.confirmModal)closeConfirm()});
+els.modalConfirm.addEventListener('click',()=>{const action=modalAction;closeConfirm();action?.()});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!els.confirmModal.hidden)closeConfirm()});
+document.getElementById('sideNav').addEventListener('click',e=>{const btn=e.target.closest('[data-view]');if(btn&&classified)setView(btn.dataset.view)});
+document.addEventListener('click',e=>{const btn=e.target.closest('[data-go-view]');if(btn&&classified)setView(btn.dataset.goView)});
+
+resetState();
