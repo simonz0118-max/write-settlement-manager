@@ -264,3 +264,8 @@ input,select,textarea{caret-color:#202124}
 }
 .hero-image img{display:none!important}
 .brand-logo-c{filter:none!important;mix-blend-mode:normal!important;object-fit:initial!important;border-radius:0!important}
+
+/* v6.5.1 — Image 2 Version C panda mark */
+.brand-logo-c{width:58px!important;height:58px!important;object-fit:contain!important;object-position:center!important;border-radius:0!important;filter:none!important;mix-blend-mode:normal!important;background:transparent!important}
+@media (prefers-color-scheme:dark){.brand-logo-c{filter:invert(1) grayscale(1) contrast(1.1)!important}}
+@media (max-width:1180px){.brand-logo-c{width:50px!important;height:50px!important}}
