@@ -352,7 +352,56 @@ function exportAccounting(){
 }
 function reimportFlow(){
   if(!classified){els.fileInput.click();return}
-  openConfirm({title:'重新导入数据？',text:'当前统计结果会被清空，然后打开文件选择器重新导入。原始文件不会被修改。',confirmText:'清空并重新导入',action:()=>{resetState();
+  openConfirm({title:'重新导入数据？',text:'当前统计结果会被清空，然后打开文件选择器重新导入。原始文件不会被修改。',confirmText:'清空并重新导入',action:()=>{
+// v6.5.4 release notes controller — show once per release per browser
+const WRITE_RELEASE = {
+  version: document.body.dataset.release || '6.5.4',
+  date: '2026-08-08',
+  title: 'WRITE Settlement Manager v6.5.4',
+  sections: [
+    {label:'新增', items:[
+      '新增版本更新日志弹窗：每个浏览器首次打开本版本时自动展示。',
+      '更新日志已读状态保存在本机浏览器；同一版本关闭后不再重复弹出。',
+      'GitHub 新增 CHANGELOG.md，并把更新日志纳入固定发布流程。'
+    ]},
+    {label:'优化', items:[
+      '保留自动 / 浅色 / 深色三态主题，并继续支持系统主题实时跟随。',
+      '统一 README、RELEASE、Git commit 与 Cloudflare 部署日志的版本号。',
+      '更新弹窗完整适配桌面、iPad 与 iPhone，并遵循当前黑白灰主题。'
+    ]},
+    {label:'发布规范', items:[
+      '以后每次版本更新必须同步维护 CHANGELOG.md、README.md、README_CN.md 和发布脚本文案。',
+      '新版本号变化后，更新日志会在同一浏览器再次自动显示一次。'
+    ]}
+  ]
+};
+function showReleaseNotesIfNeeded(){
+  const version=WRITE_RELEASE.version;
+  const key='write-release-seen';
+  let seen='';
+  try{seen=localStorage.getItem(key)||''}catch(e){}
+  if(seen===version)return;
+  const backdrop=document.createElement('div');
+  backdrop.className='release-notes-backdrop';
+  backdrop.setAttribute('role','dialog');
+  backdrop.setAttribute('aria-modal','true');
+  backdrop.setAttribute('aria-labelledby','releaseNotesTitle');
+  const sections=WRITE_RELEASE.sections.map(section=>`<section class="release-notes-section"><h3>${escapeHtml(section.label)}</h3><ul>${section.items.map(item=>`<li>${escapeHtml(item)}</li>`).join('')}</ul></section>`).join('');
+  backdrop.innerHTML=`<div class="release-notes-card"><div class="release-notes-head"><div><span>本次更新</span><h2 id="releaseNotesTitle">${escapeHtml(WRITE_RELEASE.title)}</h2><p>${escapeHtml(WRITE_RELEASE.date)} · Designed by NEOVORA</p></div><div class="release-version">v${escapeHtml(version)}</div></div><div class="release-notes-body">${sections}</div><div class="release-notes-foot"><small>关闭后，本浏览器在 v${escapeHtml(version)} 版本中不会再次自动弹出。</small><button type="button" class="release-ack">我知道了</button></div></div>`;
+  document.body.appendChild(backdrop);
+  document.body.classList.add('release-notes-open');
+  const close=()=>{
+    try{localStorage.setItem(key,version)}catch(e){}
+    backdrop.classList.add('closing');
+    document.body.classList.remove('release-notes-open');
+    setTimeout(()=>backdrop.remove(),160);
+  };
+  backdrop.querySelector('.release-ack')?.addEventListener('click',close);
+  setTimeout(()=>backdrop.querySelector('.release-ack')?.focus(),80);
+}
+
+resetState();
+showReleaseNotesIfNeeded();
 window.__WRITE_APP_READY__=true; document.documentElement.dataset.writeReady='true';setTimeout(()=>els.fileInput.click(),80)}});
 }
 function clearFlow(){
@@ -376,7 +425,7 @@ document.addEventListener('click',e=>{const btn=e.target.closest('[data-go-view]
 document.addEventListener('click',e=>{const btn=e.target.closest('.review-save');if(btn){const editor=btn.closest('.review-editor');if(editor)saveReviewRow(editor)}});
 
 
-// v6.5.2 theme controller: auto / light / dark
+// v6.5.4 theme controller: auto / light / dark
 const themeButton=document.getElementById('themeToggleButton');
 const themeLabel=document.getElementById('themeLabel');
 const themeMedia=window.matchMedia('(prefers-color-scheme: dark)');

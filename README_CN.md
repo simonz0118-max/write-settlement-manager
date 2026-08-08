@@ -1,4 +1,15 @@
-# WRITE Settlement Manager — Milestone 2
+# WRITE Settlement Manager
+
+## 当前版本 — v6.5.4
+
+- 每个新版本首次在同一浏览器打开时自动显示更新日志，阅读关闭后本版本不再重复弹出。
+- 保留“自动 / 浅色 / 深色”三态主题，并记住手动选择。
+- `CHANGELOG.md` 正式成为每次发布必须同步更新的文件。
+- UI、Git commit、Cloudflare 部署日志与 RELEASE 版本号统一。
+
+完整版本历史请查看 [CHANGELOG.md](./CHANGELOG.md)。
+
+— Milestone 2
 
 ## 启动
 Mac 双击 `start.command`，浏览器打开 `http://localhost:4173`。

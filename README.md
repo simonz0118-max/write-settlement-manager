@@ -1,5 +1,14 @@
 # WRITE Settlement Manager
 
+## Current release — v6.5.4
+
+- Release notes now appear once per new version in each browser.
+- Auto / Light / Dark theme control remains available and persistent.
+- `CHANGELOG.md` is now mandatory for every release.
+- Version text is synchronized across UI, Git commits, Cloudflare deployment messages, and release metadata.
+
+See [CHANGELOG.md](./CHANGELOG.md) for full history.
+
 ## Milestone 1 — Stable real-order import
 
 This version is built against the real WRITE workbooks supplied in `铅笔(1).zip`.

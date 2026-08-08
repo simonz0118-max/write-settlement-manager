@@ -1,5 +1,9 @@
-WRITE Settlement Manager v6.5.2
-- 自动跟随系统浅色/深色
-- 支持手动浅色/深色/自动三态切换
-- 主题偏好保存在本机浏览器
-- iPad/iPhone 主题按钮随导航适配
+WRITE Settlement Manager v6.5.4
+
+本次更新：
+- 新增每版本首次打开自动弹出的更新日志
+- 同一浏览器阅读关闭后，本版本不再重复弹出
+- 新增并补全 GitHub CHANGELOG.md
+- 保留自动 / 浅色 / 深色主题切换与本地记忆
+- 统一 UI、README、Git commit、Cloudflare 部署脚本版本号
+- 更新日志弹窗适配桌面、iPad、iPhone
