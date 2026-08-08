@@ -1,6 +1,11 @@
 # WRITE Settlement Manager
 
-## Current release — v6.5.5
+## Current release — v6.5.6
+
+### V6.5.6 highlights
+- All visible decimals use the French/European comma decimal separator.
+- WebApp and professional accounting Excel exports use consistent French numeric presentation.
+- FACT preserves its original formatting while statistical values are refreshed.
 
 - Release notes now appear once per new version in each browser.
 - Auto / Light / Dark theme control remains available and persistent.

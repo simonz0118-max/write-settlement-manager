@@ -13,9 +13,11 @@ const els = {
   confirmModal:null, modalTitle:null, modalText:null, modalCancel:null, modalConfirm:null
 };
 
-const numberFormat = new Intl.NumberFormat('zh-CN');
+const numberFormat = new Intl.NumberFormat('fr-FR');
 const moneyFormat = new Intl.NumberFormat('fr-FR',{style:'currency',currency:'EUR',minimumFractionDigits:2,maximumFractionDigits:2});
-const decimalFormat = new Intl.NumberFormat('zh-CN',{maximumFractionDigits:1});
+const decimalFormat = new Intl.NumberFormat('fr-FR',{maximumFractionDigits:1});
+const durationFormat = new Intl.NumberFormat('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2});
+const percentDisplayFormat = new Intl.NumberFormat('fr-FR',{minimumFractionDigits:1,maximumFractionDigits:1});
 let worker=null, orders=[], sheets=[], classified=null, busy=false, duplicateCount=0, importStartedAt=0, importDuration=0, importedFileNames=[];
 let modalAction=null;
 
@@ -121,7 +123,7 @@ function renderResults(){
   els.categorySelect.innerHTML='<option value="ALL">全部会计分类</option>'+cats.map(c=>`<option>${escapeHtml(c)}</option>`).join('');
 
   const fileLabel=importedFileNames.length===1?importedFileNames[0]:`${importedFileNames.length} 个上传文件`;
-  const summaryData=[['文件',fileLabel],['Excel 工作簿',`${uniqueBooks} 个`],['订单 Sheet',`${imported.length} 个`],['FACT 成本 Sheet',`${facts.length} 个`],['原始订单行',`${numberFormat.format(rawRows)} 行`],['重复订单',`${numberFormat.format(duplicateCount)} 个`],['解析数据量',formatBytes(inflated)],['处理耗时',`${importDuration.toFixed(2)} 秒`]];
+  const summaryData=[['文件',fileLabel],['Excel 工作簿',`${uniqueBooks} 个`],['订单 Sheet',`${imported.length} 个`],['FACT 成本 Sheet',`${facts.length} 个`],['原始订单行',`${numberFormat.format(rawRows)} 行`],['重复订单',`${numberFormat.format(duplicateCount)} 个`],['解析数据量',formatBytes(inflated)],['处理耗时',`${durationFormat.format(importDuration)} 秒`]];
   els.importSummary.innerHTML=summaryData.map(([k,v])=>`<div><dt>${escapeHtml(k)}</dt><dd>${escapeHtml(v)}</dd></div>`).join('');
 
   els.importLanding.hidden=true; els.appViews.hidden=false; els.topActions.hidden=false; hideError(); setView('dashboard');
@@ -131,7 +133,7 @@ function renderAccounting(totalAmount){
   const rows=classified.orderSummary;
   els.accountingSummary.innerHTML=rows.map(r=>{
     const share=totalAmount>0?(r.amount/totalAmount*100):0;
-    return `<div class="summary-row"><strong>${escapeHtml(r.category)}</strong><span>${numberFormat.format(r.orders)}</span><b>${escapeHtml(moneyFormat.format(r.amount))}</b><small>${share.toFixed(1)}%</small><i class="share-track" style="width:${Math.min(100,share)}%"></i></div>`;
+    return `<div class="summary-row"><strong>${escapeHtml(r.category)}</strong><span>${numberFormat.format(r.orders)}</span><b>${escapeHtml(moneyFormat.format(r.amount))}</b><small>${percentDisplayFormat.format(share)} %</small><i class="share-track" style="width:${Math.min(100,share)}%"></i></div>`;
   }).join('')+`<div class="summary-row total"><strong>合计</strong><span>${numberFormat.format(classified.orders.length)}</span><b>${escapeHtml(moneyFormat.format(totalAmount))}</b><small>100%</small></div>`;
 }
 
@@ -353,21 +355,22 @@ function exportAccounting(){
 function reimportFlow(){
   if(!classified){els.fileInput.click();return}
   openConfirm({title:'重新导入数据？',text:'当前统计结果会被清空，然后打开文件选择器重新导入。原始文件不会被修改。',confirmText:'清空并重新导入',action:()=>{
-// v6.5.5 release notes controller — show once per release per browser
+// v6.5.6 release notes controller — show once per release per browser
 const WRITE_RELEASE = {
-  version: document.body.dataset.release || '6.5.5',
-  date: '2026-08-08',
-  title: 'WRITE Settlement Manager v6.5.5',
+  version: document.body.dataset.release || '6.5.6',
+  date: '2026-08-09',
+  title: 'WRITE Settlement Manager v6.5.6',
   sections: [
-    {label:'新增', items:[
-      '新增 FACT 原格式回填：按照当前订单分析结果重新计算并写回 FACT。',
-      'FACT 已有统计数据时清空旧的 Quantity / Amount 后重新填入。',
-      '导出交付包同时包含专业会计统计表与 FACT 回填工作簿。'
+    {label:'格式统一', items:[
+      '所有用户可见小数统一使用法式逗号作为小数分隔符，例如 18 419,33 €。',
+      '百分比、处理耗时、文件大小等小数显示统一使用逗号，不再显示点号。',
+      '专业会计 Excel 保持真正数值类型，并采用法国区域数字格式显示。'
     ]},
     {label:'保留', items:[
-      'FACT 原有格式不调整，仅替换统计数据。',
-      '继续保留三态主题和每版本首次更新日志。'
+      'FACT 回填继续保持原始工作表格式，仅更新统计数据。',
+      '继续保留三态主题、版本首次更新日志和 GitHub CHANGELOG 发布规范。'
     ]}
+
   ]
 };
 function showReleaseNotesIfNeeded(){
@@ -420,7 +423,7 @@ document.addEventListener('click',e=>{const btn=e.target.closest('[data-go-view]
 document.addEventListener('click',e=>{const btn=e.target.closest('.review-save');if(btn){const editor=btn.closest('.review-editor');if(editor)saveReviewRow(editor)}});
 
 
-// v6.5.5 theme controller: auto / light / dark
+// v6.5.6 theme controller: auto / light / dark
 const themeButton=document.getElementById('themeToggleButton');
 const themeLabel=document.getElementById('themeLabel');
 const themeMedia=window.matchMedia('(prefers-color-scheme: dark)');

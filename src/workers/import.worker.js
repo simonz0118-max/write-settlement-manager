@@ -157,7 +157,7 @@ async function parseSheetStream(archive, entry, sharedStrings, sourceFile, sheet
       reason: nonEmptyRows ? '未检测到 WRITE 真实订单表头' : '空工作表' };
   }
   return { sourceFile, sheetName, status: 'imported', orderCount: orders.length, orders, inflatedBytes: inflated,
-    reason: `识别到真实订单表头，导入 ${orders.length.toLocaleString()} 行` };
+    reason: `识别到真实订单表头，导入 ${orders.length.toLocaleString('fr-FR')} 行` };
 }
 
 
@@ -226,7 +226,7 @@ async function parseFactSheetStream(archive, entry, sharedStrings, sourceFile, s
   }
   buffer += textDecoder.decode(); consume(); progressCb?.(inflated, entry.uncompressedSize || inflated);
   return { sourceFile, sheetName, status:'ignored_fact', orderCount:0, factRows, inflatedBytes:inflated,
-    reason:`FACT 成本页已解析：${factRows.length.toLocaleString()} 条分类明细（不作为订单导入）` };
+    reason:`FACT 成本页已解析：${factRows.length.toLocaleString('fr-FR')} 条分类明细（不作为订单导入）` };
 }
 
 async function parseXlsxBlob(blob, sourceFile, progressCb) {
