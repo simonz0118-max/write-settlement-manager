@@ -1,5 +1,136 @@
-import { classifyOrders, LINE_CATEGORIES } from './lib/accounting.js';
-import { buildXlsx, downloadBlob } from './lib/xlsxWriter.js';
+/* WRITE Settlement Manager v5.3.2 - single-file browser bundle */
+const norm = (v='') => String(v ?? '').trim();
+const low = (v='') => norm(v).toLowerCase();
+
+const LINE_CATEGORIES = [
+  ['PENCIL','铅笔','Le Crayon Intemporel / 铅笔本体'],
+  ['ENGRAVING','雕刻服务','Gravure Personnalisée / 雕刻'],
+  ['REFILL','普通笔芯','可替换普通笔芯'],
+  ['COLOR_REFILL','彩色笔芯','彩色笔芯 / Mines colorées'],
+  ['GIFT_BOX','礼盒','Coffret Cadeau / 礼盒'],
+  ['GIFT_CARD','礼品卡','Carte-cadeau'],
+  ['B2B','B2B / 专业订单','Commande Professionnelle'],
+  ['OTHER','待确认','未命中已知规则'],
+].map(([code,label,description])=>({code,label,description}));
+
+const LABEL = Object.fromEntries(LINE_CATEGORIES.map(x=>[x.code,x.label]));
+
+function quantityFromSku(sku='') {
+  const m = norm(sku).match(/\*(\d+(?:\.\d+)?)\s*$/);
+  return m ? Number(m[1]) : 1;
+}
+
+function classifyLine(productName='', sku='') {
+  const name = norm(productName), n = low(name), s = low(sku);
+  const isFree = /^🎁/.test(name) || /100%\s*off|gratuit|cadeau offert/.test(n);
+  let category = 'OTHER';
+  if (/commande professionnelle|professional order|cmd pro/.test(n)) category = 'B2B';
+  else if (/carte[- ]cadeau|gift\s*card/.test(n)) category = 'GIFT_CARD';
+  else if (/gravure|雕刻/.test(n) || /(^|\D)50505594077448/.test(s) || /雕刻/.test(s)) category = 'ENGRAVING';
+  else if (/coffret cadeau|礼盒|盒子/.test(n) || /(^|\D)52838739738888/.test(s) || /盒子/.test(s)) category = 'GIFT_BOX';
+  else if (/mines? color[ée]es?|彩色.*笔芯|pack.*mines/.test(n) || /qb-csbt/.test(s) || /(^|\D)(49624586256648|52725633384712)(\D|$)/.test(s) || /qb-6/.test(s)) category = 'COLOR_REFILL';
+  else if (/mines? rechargeables?|\b4\s*mines\b|笔芯/.test(n) || /qb-4/.test(s) || /(^|\D)(45407586615560|45157341331720)(\D|$)/.test(s)) category = 'REFILL';
+  else if (/le crayon intemporel|铅笔|crayon/.test(n) || /qb-(obsidienne|aluminium|carmin|nuit|jade|saturne)/.test(s) || /(^|\D)(45242109231368|45242109329672)(\D|$)/.test(s) || /铅笔/.test(s)) category = 'PENCIL';
+  return { category, categoryLabel: LABEL[category], isFree, quantity: quantityFromSku(sku) };
+}
+
+function parseLineItems(order) {
+  const names = norm(order.productNames).split(/\n+/).map(x=>x.trim());
+  const skus = norm(order.skuLines).split(/\n+/).map(x=>x.trim());
+  const manual = order.manualLineCategories || {};
+  const count = Math.max(names.filter(Boolean).length ? names.length : 0, skus.filter(Boolean).length ? skus.length : 0, 1);
+  const items=[];
+  for(let i=0;i<count;i++) {
+    const productName=names[i]||''; const sku=skus[i]||'';
+    if(!productName && !sku && count>1) continue;
+    const auto=classifyLine(productName,sku);
+    const forced=manual[i+1];
+    const resolved=forced && LABEL[forced] ? {...auto,category:forced,categoryLabel:LABEL[forced],manualCategory:true} : auto;
+    items.push({ ...resolved, productName, sku, lineNo:i+1 });
+  }
+  return items;
+}
+
+function classifyOrder(order) {
+  const items=parseLineItems(order);
+  const paidItems=items.filter(x=>!x.isFree);
+  const categories=new Set(items.map(x=>x.category));
+  const paidCategories=new Set(paidItems.map(x=>x.category));
+  const amount=Number(order.orderAmount)||0;
+  let code='OTHER'; let label='待确认';
+  if ([...categories].includes('B2B')) [code,label]=['B2B','B2B / 专业订单'];
+  else if ([...categories].includes('GIFT_CARD')) [code,label]=['GIFT_CARD','礼品卡订单'];
+  else if (amount===0 && (paidItems.length===0 || items.every(x=>x.isFree || x.category==='OTHER'))) [code,label]=['ZERO_FREE','赠品 / 0€订单'];
+  else if (paidCategories.has('PENCIL')) [code,label]=['PENCIL_ORDER','铅笔订单'];
+  else if (paidCategories.has('REFILL') || paidCategories.has('COLOR_REFILL')) [code,label]=['REFILL_ORDER','笔芯订单'];
+  else if (paidCategories.has('GIFT_BOX')) [code,label]=['ACCESSORY_ORDER','礼盒 / 配件订单'];
+  else if (paidCategories.has('ENGRAVING')) [code,label]=['SERVICE_ORDER','雕刻服务订单'];
+  else if (amount===0) [code,label]=['ZERO_OTHER','0€待确认订单'];
+  const unknownItems=items.filter(x=>x.category==='OTHER');
+  return {...order, accountingCode:code, accountingCategory:label, lineItems:items, unknownItemCount:unknownItems.length,
+    hasGift:items.some(x=>x.isFree), classificationStatus:unknownItems.length?'需复核':'已分类'};
+}
+
+function classifyOrders(orders=[]) {
+  const classified=orders.map(classifyOrder);
+  const lineItems=[];
+  for(const o of classified) for(const item of o.lineItems) lineItems.push({...item, orderId:o.orderId, orderAmount:o.orderAmount, country:o.country, sourceFile:o.sourceFile, sourceSheet:o.sourceSheet});
+  const orderMap=new Map();
+  for(const o of classified){
+    const k=o.accountingCategory; const r=orderMap.get(k)||{category:k,orders:0,amount:0,review:0}; r.orders++; r.amount+=Number(o.orderAmount)||0; if(o.classificationStatus==='需复核')r.review++; orderMap.set(k,r);
+  }
+  const lineMap=new Map();
+  for(const item of lineItems){
+    const k=item.categoryLabel; const r=lineMap.get(k)||{category:k,lines:0,quantity:0,freeQuantity:0,orders:new Set(),touchedAmountOrders:new Map()};
+    r.lines++; r.quantity+=Number(item.quantity)||1; if(item.isFree)r.freeQuantity+=Number(item.quantity)||1; r.orders.add(item.orderId); r.touchedAmountOrders.set(item.orderId,Number(item.orderAmount)||0); lineMap.set(k,r);
+  }
+  const orderSummary=[...orderMap.values()].sort((a,b)=>b.amount-a.amount);
+  const lineSummary=[...lineMap.values()].map(r=>({category:r.category,lines:r.lines,quantity:r.quantity,freeQuantity:r.freeQuantity,orders:r.orders.size,touchedAmount:[...r.touchedAmountOrders.values()].reduce((a,b)=>a+b,0)})).sort((a,b)=>b.quantity-a.quantity);
+  const unknown=lineItems.filter(x=>x.category==='OTHER');
+  return {orders:classified,lineItems,orderSummary,lineSummary,unknown};
+}
+
+
+const enc=new TextEncoder();
+function esc(v=''){return String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+function colName(n){let s='';while(n){n--;s=String.fromCharCode(65+n%26)+s;n=Math.floor(n/26)}return s}
+function crc32(bytes){let c=0xffffffff;for(const b of bytes){c^=b;for(let k=0;k<8;k++)c=(c>>>1)^((c&1)?0xedb88320:0)}return(c^0xffffffff)>>>0}
+function u16(n){return[n&255,(n>>>8)&255]}function u32(n){return[n&255,(n>>>8)&255,(n>>>16)&255,(n>>>24)&255]}
+function zipStore(entries){const parts=[],central=[];let offset=0;for(const e of entries){const name=enc.encode(e.name),data=typeof e.data==='string'?enc.encode(e.data):e.data,crc=crc32(data);const local=new Uint8Array([...u32(0x04034b50),...u16(20),...u16(0),...u16(0),...u16(0),...u16(0),...u32(crc),...u32(data.length),...u32(data.length),...u16(name.length),...u16(0),...name]);parts.push(local,data);central.push(new Uint8Array([...u32(0x02014b50),...u16(20),...u16(20),...u16(0),...u16(0),...u16(0),...u16(0),...u32(crc),...u32(data.length),...u32(data.length),...u16(name.length),...u16(0),...u16(0),...u16(0),...u16(0),...u32(0),...u32(offset),...name]));offset+=local.length+data.length}const centralSize=central.reduce((a,b)=>a+b.length,0),centralOffset=offset;return new Blob([...parts,...central,new Uint8Array([...u32(0x06054b50),...u16(0),...u16(0),...u16(entries.length),...u16(entries.length),...u32(centralSize),...u32(centralOffset),...u16(0)])],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'})}
+function cellXml(v,r,c,style=0){const ref=`${colName(c)}${r}`;if(v==null||v==='')return`<c r="${ref}" s="${style}"/>`;if(typeof v==='number'&&Number.isFinite(v))return`<c r="${ref}" s="${style}"><v>${v}</v></c>`;return`<c r="${ref}" s="${style}" t="inlineStr"><is><t xml:space="preserve">${esc(v)}</t></is></c>`}
+
+const K={text:0,header:1,int:2,currency:3,altText:4,altInt:5,altCurrency:6,percent:7,altPercent:8,title:9,subtitle:10,section:11,totalText:12,totalInt:13,totalCurrency:14,totalPercent:15,reviewHeader:16,center:17,wrap:18,muted:19};
+function formatKind(sheet,r,c){for(const rule of sheet.formatRules||[]){if(r>=rule.r1&&r<=rule.r2&&c>=rule.c1&&c<=rule.c2)return rule.kind}if(sheet.currencyColumns?.includes(c))return'currency';if(sheet.percentColumns?.includes(c))return'percent';if(sheet.integerColumns?.includes(c))return'int';if(sheet.centerColumns?.includes(c))return'center';if(sheet.wrapColumns?.includes(c))return'wrap';return'text'}
+function styleFor(sheet,ri,ci,value){const r=ri+1,c=ci+1;if(r===sheet.titleRow)return K.title;if(r===sheet.subtitleRow)return K.subtitle;if(sheet.sectionRows?.includes(r))return K.section;if(sheet.headerRows?.includes(r))return sheet.reviewMode?K.reviewHeader:K.header;const kind=formatKind(sheet,r,c);const total=sheet.totalRows?.includes(r),alt=sheet.bandedRows&&r>(sheet.headerRows?.[0]||1)&&r%2===0;if(total){if(kind==='currency')return K.totalCurrency;if(kind==='percent')return K.totalPercent;if(kind==='int')return K.totalInt;return K.totalText}if(kind==='currency')return alt?K.altCurrency:K.currency;if(kind==='percent')return alt?K.altPercent:K.percent;if(kind==='int')return alt?K.altInt:K.int;if(kind==='center')return K.center;if(kind==='wrap')return K.wrap;return alt?K.altText:K.text}
+function sheetXml(sheet){const rows=sheet.rows||[],widths=sheet.widths||[],freezeRow=sheet.freezeRow??1,freezeCol=sheet.freezeCol??0,filterRow=sheet.autoFilterRow??0;const maxCols=Math.max(1,rows.reduce((m,r)=>Math.max(m,r?.length||0),0)),lastCol=colName(maxCols),lastRow=Math.max(1,rows.length);let xml='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">';xml+='<sheetViews><sheetView workbookViewId="0" showGridLines="0">';if(freezeRow>0||freezeCol>0){const topLeft=`${colName(freezeCol+1)}${freezeRow+1}`,pane=freezeRow>0&&freezeCol>0?'bottomRight':freezeRow>0?'bottomLeft':'topRight';xml+=`<pane${freezeCol?` xSplit="${freezeCol}"`:''}${freezeRow?` ySplit="${freezeRow}"`:''} topLeftCell="${topLeft}" activePane="${pane}" state="frozen"/>`}xml+='</sheetView></sheetViews><sheetFormatPr defaultRowHeight="22"/>';if(widths.length)xml+='<cols>'+widths.map((w,i)=>`<col min="${i+1}" max="${i+1}" width="${w}" customWidth="1"/>`).join('')+'</cols>';xml+='<sheetData>';rows.forEach((row,ri)=>{const r=ri+1;let ht=22;if(r===sheet.titleRow)ht=38;else if(r===sheet.subtitleRow)ht=30;else if(sheet.headerRows?.includes(r)||sheet.sectionRows?.includes(r))ht=27;else if(sheet.tallRows?.includes(r))ht=38;xml+=`<row r="${r}" ht="${ht}" customHeight="1">`;for(let ci=0;ci<(row||[]).length;ci++)xml+=cellXml(row[ci],r,ci+1,styleFor(sheet,ri,ci,row[ci]));xml+='</row>'});xml+='</sheetData>';if(sheet.merges?.length)xml+=`<mergeCells count="${sheet.merges.length}">${sheet.merges.map(x=>`<mergeCell ref="${x}"/>`).join('')}</mergeCells>`;if(filterRow>0&&rows.length>=filterRow)xml+=`<autoFilter ref="A${filterRow}:${lastCol}${lastRow}"/>`;xml+='<pageMargins left="0.3" right="0.3" top="0.5" bottom="0.5" header="0.2" footer="0.2"/><pageSetup orientation="landscape" fitToWidth="1" fitToHeight="0"/></worksheet>';return xml}
+
+const styles=`<?xml version="1.0" encoding="UTF-8"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><numFmts count="2"><numFmt numFmtId="164" formatCode="#,##0.00 [$€-fr-FR]"/><numFmt numFmtId="165" formatCode="0.00%"/></numFmts><fonts count="7"><font><sz val="11"/><name val="Aptos"/><color rgb="FF1D1D1F"/></font><font><b/><sz val="11"/><name val="Aptos"/><color rgb="FFFFFFFF"/></font><font><b/><sz val="20"/><name val="Aptos Display"/><color rgb="FFFFFFFF"/></font><font><sz val="11"/><name val="Aptos"/><color rgb="FF6E6E73"/></font><font><b/><sz val="11"/><name val="Aptos"/><color rgb="FF1D1D1F"/></font><font><b/><sz val="11"/><name val="Aptos"/><color rgb="FF9A3412"/></font><font><sz val="11"/><name val="Aptos"/><color rgb="FF6E6E73"/></font></fonts><fills count="8"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FF1C1C1E"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFF2F2F7"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFE5E5EA"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFFAFAFC"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFF7F7F8"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFFFF7ED"/></patternFill></fill></fills><borders count="3"><border><left/><right/><top/><bottom/><diagonal/></border><border><left/><right/><top/><bottom style="thin"><color rgb="FFE5E5EA"/></bottom><diagonal/></border><border><left/><right/><top style="thin"><color rgb="FFC7C7CC"/></top><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="20">
+<xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0"><alignment vertical="center"/></xf>
+<xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFill="1" applyFont="1"><alignment vertical="center"/></xf>
+<xf numFmtId="3" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1"><alignment horizontal="right" vertical="center"/></xf>
+<xf numFmtId="164" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1"><alignment horizontal="right" vertical="center"/></xf>
+<xf numFmtId="0" fontId="0" fillId="6" borderId="1" xfId="0" applyFill="1"><alignment vertical="center"/></xf>
+<xf numFmtId="3" fontId="0" fillId="6" borderId="1" xfId="0" applyFill="1" applyNumberFormat="1"><alignment horizontal="right" vertical="center"/></xf>
+<xf numFmtId="164" fontId="0" fillId="6" borderId="1" xfId="0" applyFill="1" applyNumberFormat="1"><alignment horizontal="right" vertical="center"/></xf>
+<xf numFmtId="165" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1"><alignment horizontal="right" vertical="center"/></xf>
+<xf numFmtId="165" fontId="0" fillId="6" borderId="1" xfId="0" applyFill="1" applyNumberFormat="1"><alignment horizontal="right" vertical="center"/></xf>
+<xf numFmtId="0" fontId="2" fillId="2" borderId="0" xfId="0" applyFill="1" applyFont="1"><alignment vertical="center"/></xf>
+<xf numFmtId="0" fontId="3" fillId="5" borderId="0" xfId="0" applyFill="1" applyFont="1"><alignment vertical="center" wrapText="1"/></xf>
+<xf numFmtId="0" fontId="4" fillId="3" borderId="1" xfId="0" applyFill="1" applyFont="1"><alignment vertical="center"/></xf>
+<xf numFmtId="0" fontId="4" fillId="4" borderId="2" xfId="0" applyFill="1" applyFont="1"><alignment vertical="center"/></xf>
+<xf numFmtId="3" fontId="4" fillId="4" borderId="2" xfId="0" applyFill="1" applyFont="1" applyNumberFormat="1"><alignment horizontal="right" vertical="center"/></xf>
+<xf numFmtId="164" fontId="4" fillId="4" borderId="2" xfId="0" applyFill="1" applyFont="1" applyNumberFormat="1"><alignment horizontal="right" vertical="center"/></xf>
+<xf numFmtId="165" fontId="4" fillId="4" borderId="2" xfId="0" applyFill="1" applyFont="1" applyNumberFormat="1"><alignment horizontal="right" vertical="center"/></xf>
+<xf numFmtId="0" fontId="5" fillId="7" borderId="0" xfId="0" applyFill="1" applyFont="1"><alignment vertical="center"/></xf>
+<xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0"><alignment horizontal="center" vertical="center"/></xf>
+<xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0"><alignment vertical="top" wrapText="1"/></xf>
+<xf numFmtId="0" fontId="6" fillId="0" borderId="1" xfId="0"><alignment vertical="center"/></xf>
+</cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`;
+
+function buildXlsx(sheets){const entries=[],workbookSheets=sheets.map((s,i)=>`<sheet name="${esc(s.name.slice(0,31))}" sheetId="${i+1}" r:id="rId${i+1}"/>`).join('');entries.push({name:'[Content_Types].xml',data:`<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>${sheets.map((_,i)=>`<Override PartName="/xl/worksheets/sheet${i+1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join('')}</Types>`});entries.push({name:'_rels/.rels',data:'<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>'});entries.push({name:'xl/workbook.xml',data:`<?xml version="1.0" encoding="UTF-8"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><workbookPr/><bookViews><workbookView xWindow="0" yWindow="0" windowWidth="22000" windowHeight="14000"/></bookViews><sheets>${workbookSheets}</sheets></workbook>`});entries.push({name:'xl/_rels/workbook.xml.rels',data:`<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${sheets.map((_,i)=>`<Relationship Id="rId${i+1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${i+1}.xml"/>`).join('')}<Relationship Id="rId${sheets.length+1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`});entries.push({name:'xl/styles.xml',data:styles});sheets.forEach((s,i)=>entries.push({name:`xl/worksheets/sheet${i+1}.xml`,data:sheetXml(s)}));return zipStore(entries)}
+function downloadBlob(blob,filename){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=filename;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000)}
+
+
 
 const $ = (id) => document.getElementById(id);
 const els = {
@@ -79,7 +210,7 @@ function closeConfirm(){
 
 function startImport(fileList){
   const files=[...fileList].filter(f=>/\.(xlsx|zip)$/i.test(f.name)); if(!files.length||busy)return;
-  worker?.terminate(); worker=new Worker('./src/workers/import.worker.js',{type:'module'}); importStartedAt=performance.now(); importedFileNames=files.map(f=>f.name);
+  worker?.terminate(); worker=new Worker('./src/workers/import.worker.bundle.js?v=5.3.2'); importStartedAt=performance.now(); importedFileNames=files.map(f=>f.name);
   setBusy(true); hideError(); els.importLanding.hidden=false; els.appViews.hidden=true; els.topActions.hidden=true;
   els.currentFile.textContent='准备读取…'; els.progressFill.style.width='0%'; els.progressText.textContent='0% · 大文件在独立线程运行';
   worker.onmessage=({data})=>{
@@ -352,8 +483,7 @@ function exportAccounting(){
 }
 function reimportFlow(){
   if(!classified){els.fileInput.click();return}
-  openConfirm({title:'重新导入数据？',text:'当前统计结果会被清空，然后打开文件选择器重新导入。原始文件不会被修改。',confirmText:'清空并重新导入',action:()=>{resetState();
-window.__WRITE_APP_READY__=true; document.documentElement.dataset.writeReady='true';setTimeout(()=>els.fileInput.click(),80)}});
+  openConfirm({title:'重新导入数据？',text:'当前统计结果会被清空，然后打开文件选择器重新导入。原始文件不会被修改。',confirmText:'清空并重新导入',action:()=>{resetState(); setTimeout(()=>els.fileInput.click(),80)}});
 }
 function clearFlow(){
   if(!classified)return;
@@ -376,3 +506,6 @@ document.addEventListener('click',e=>{const btn=e.target.closest('[data-go-view]
 document.addEventListener('click',e=>{const btn=e.target.closest('.review-save');if(btn){const editor=btn.closest('.review-editor');if(editor)saveReviewRow(editor)}});
 
 resetState();
+window.__WRITE_APP_READY__=true;
+document.documentElement.dataset.writeReady='true';
+

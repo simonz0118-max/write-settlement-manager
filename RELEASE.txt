@@ -1,4 +1,4 @@
-WRITE Settlement Manager v5.3.0
+WRITE Settlement Manager v5.3.2
 - Larger UI typography and spacing
 - Editable review rows with save/reclassify
 - Fixed clear confirmation action
