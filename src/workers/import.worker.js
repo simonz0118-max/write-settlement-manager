@@ -74,12 +74,14 @@ function parseRelevantRow(rowXml, sharedStrings) {
   const qCell = rowXml.search(/<c\b[^>]*\br="Q\d+"/);
   const relevant = qCell >= 0 ? rowXml.slice(0, qCell) : rowXml;
   const values = new Array(16).fill('');
-  const cellRe = /<c\b([^>]*)>([\s\S]*?)<\/c>/g;
+  // Match both self-closing styled cells (<c .../>) and normal value cells.
+  // This matters on FACT sheets, where column A is often an empty self-closing cell before the real data in B:H.
+  const cellRe = /<c\b([^>]*?)(?:\/>|>([\s\S]*?)<\/c>)/g;
   let match;
   while ((match = cellRe.exec(relevant))) {
     const ref = /\br="([A-Z]+\d+)"/.exec(match[1])?.[1];
     const col = columnNumber(ref);
-    if (col >= 1 && col <= 16) values[col - 1] = resolveCell(match[2], match[1], sharedStrings);
+    if (col >= 1 && col <= 16) values[col - 1] = resolveCell(match[2] || '', match[1], sharedStrings);
   }
   return { rowNum, values };
 }
@@ -158,6 +160,75 @@ async function parseSheetStream(archive, entry, sharedStrings, sourceFile, sheet
     reason: `识别到真实订单表头，导入 ${orders.length.toLocaleString()} 行` };
 }
 
+
+async function parseFactSheetStream(archive, entry, sharedStrings, sourceFile, sheetName, progressCb) {
+  const stream = await archive.stream(entry);
+  const reader = stream.getReader();
+  let buffer = '';
+  let inflated = 0;
+  let headerFound = false;
+  let currentCountry = '';
+  let afterBlank = false;
+  const factRows = [];
+
+  function num(v) {
+    const n = normalizeNumber(v);
+    return Number.isFinite(n) ? n : null;
+  }
+  function consume() {
+    while (true) {
+      const start = buffer.indexOf('<row');
+      if (start < 0) { if (buffer.length > 4096) buffer = buffer.slice(-4096); return; }
+      const end = buffer.indexOf('</row>', start);
+      if (end < 0) { if (start > 0) buffer = buffer.slice(start); return; }
+      const rowXml = buffer.slice(start, end + 6);
+      buffer = buffer.slice(end + 6);
+      const row = parseRelevantRow(rowXml, sharedStrings);
+      const v = row.values.map(x => String(x ?? '').trim());
+      const hasData = v.slice(1,8).some(Boolean);
+      if (!hasData) { afterBlank = headerFound; continue; }
+      if (!headerFound) {
+        const joined = v.slice(1,8).join('|').toLowerCase();
+        if (joined.includes('description') && joined.includes('quantity') && joined.includes('cogs')) { headerFound = true; }
+        continue;
+      }
+      const b=v[1], c=v[2], d=v[3], e=v[4], f=v[5], g=v[6], h=v[7];
+      // Country section labels in FACT are stored in column B with the rest of B:H empty.
+      if (b && !c && !d && !e && !f && !g && !h && /^[A-ZÀ-ÖØ-Þ][A-ZÀ-ÖØ-Þ .'-]{2,}$/.test(b)) {
+        currentCountry=b; afterBlank=false; continue;
+      }
+      if (!c) { afterBlank=false; continue; }
+      if (afterBlank) currentCountry = 'GLOBAL / 附加项目';
+      const quantity=num(d);
+      const cogs=num(e);
+      const shipping=num(f);
+      const unitTotal=num(g);
+      const amount=num(h);
+      const no = b || '';
+      // Only retain genuine FACT cost/category rows.
+      if (quantity!==null || cogs!==null || shipping!==null || unitTotal!==null || amount!==null) {
+        factRows.push({
+          sourceFile, sourceSheet: sheetName, sourceRow: row.rowNum, country: currentCountry || 'GLOBAL / 附加项目',
+          no, description: c, quantity, cogs, shipping, unitTotal, amount
+        });
+      }
+      afterBlank=false;
+    }
+  }
+  let lastProgressAt=0, lastProgressBytes=0;
+  while (true) {
+    const {value,done}=await reader.read(); if(done) break;
+    inflated += value.byteLength; buffer += textDecoder.decode(value,{stream:true}); consume();
+    const now=Date.now();
+    if (inflated-lastProgressBytes>=1024*1024 || now-lastProgressAt>=120) {
+      progressCb?.(inflated, entry.uncompressedSize || inflated); lastProgressBytes=inflated; lastProgressAt=now;
+    }
+  }
+  buffer += textDecoder.decode(); consume(); progressCb?.(inflated, entry.uncompressedSize || inflated);
+  return { sourceFile, sheetName, status:'ignored_fact', orderCount:0, factRows, inflatedBytes:inflated,
+    reason:`FACT 成本页已解析：${factRows.length.toLocaleString()} 条分类明细（不作为订单导入）` };
+}
+
 async function parseXlsxBlob(blob, sourceFile, progressCb) {
   const archive = await ZipArchive.open(blob);
   const workbookXml = await archive.text('xl/workbook.xml', 4 * 1024 * 1024);
@@ -172,8 +243,16 @@ async function parseXlsxBlob(blob, sourceFile, progressCb) {
   for (const [path, sheetName] of sheets) {
     workIndex++;
     if (isFactSheet(sheetName)) {
-      results.push({ sourceFile, sheetName, status: 'ignored_fact', orderCount: 0, inflatedBytes: 0, reason: 'FACT 工作表已忽略' });
-      progressCb?.(workIndex / sheets.length, sheetName, 'fact');
+      const factEntry = archive.get(path);
+      if (!factEntry) {
+        results.push({ sourceFile, sheetName, status:'ignored_fact', orderCount:0, factRows:[], inflatedBytes:0, reason:'FACT 工作表存在，但找不到工作表 XML' });
+        continue;
+      }
+      const factResult = await parseFactSheetStream(archive, factEntry, sharedStrings, sourceFile, sheetName, (done,total)=>{
+        const within=total?Math.min(1,done/total):0;
+        progressCb?.((workIndex-1+within)/sheets.length, sheetName, 'fact');
+      });
+      results.push(factResult);
       continue;
     }
     const entry = archive.get(path);

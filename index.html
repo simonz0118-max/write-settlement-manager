@@ -3,40 +3,46 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="theme-color" content="#f5f5f7" />
+  <meta name="theme-color" content="#0b0c0e" />
   <title>WRITE Settlement Manager</title>
   <link rel="stylesheet" href="./src/styles.css" />
 </head>
 <body>
-  <div class="app-shell">
+  <div class="mac-window">
     <aside class="sidebar">
+      <div class="traffic-lights" aria-hidden="true"><i></i><i></i><i></i></div>
       <div class="brand-block">
-        <img class="brand-panda" src="./assets/panda-logo.png" alt="侧脸熊猫 Logo" />
-        <div class="brand-copy"><strong>WRITE</strong><span>Settlement Manager</span><small>v5.0</small></div>
+        <div class="panda-logo" aria-label="WRITE Panda Logo">
+          <svg viewBox="0 0 80 80" role="img" aria-hidden="true">
+            <path class="panda-ear rear" d="M39 14c2-7 10-10 16-6 5 3 5 10 1 15" />
+            <path class="panda-ear" d="M20 23c-5-6-4-14 2-18 7-4 14 1 14 9" />
+            <path class="panda-head" d="M23 19C14 26 10 37 12 48c2 11 9 20 21 27" />
+            <path class="panda-head" d="M29 16c12-4 27 0 35 10 5 6 6 13 6 20 0 4 3 7 7 10l2 2c2 2 1 5-3 7-2 6-7 10-14 12-5 2-9 5-11 10" />
+            <path class="panda-patch" d="M50 30c6-3 12 1 13 7 0 8-5 14-11 14-6-2-8-12-2-21Z" />
+            <circle class="panda-eye" cx="55.4" cy="39.2" r="1.8" />
+            <path class="panda-muzzle" d="M67 51c4 1 7 3 8 6-1 4-5 6-9 6" />
+            <path class="panda-nose" d="M74 56c3 0 5 1 6 3-1 3-4 4-7 3" />
+            <path class="panda-mouth" d="M69 64c-2 3-5 5-9 5" />
+            <path class="panda-neck" d="M51 68c4 2 7 5 8 10" />
+          </svg>
+        </div>
+        <div><strong>WRITE</strong><span>Settlement Manager</span><small>v4.1</small></div>
       </div>
 
       <nav class="side-nav" id="sideNav">
-        <button class="nav-item active" data-view="dashboard"><span>⌂</span>首页</button>
-        <button id="navImportButton" class="nav-item"><span>⇧</span>订单导入</button>
+        <button class="nav-item active" data-view="dashboard"><span>⌂</span>仪表盘</button>
         <button class="nav-item" data-view="orders"><span>▤</span>订单管理</button>
-        <button class="nav-item" data-view="products"><span>⌘</span>分类统计</button>
+        <button class="nav-item" data-view="products"><span>◇</span>商品分类</button>
         <button class="nav-item" data-view="review"><span>◎</span>待复核 <b id="navReviewCount" hidden>0</b></button>
         <button class="nav-item" data-view="imports"><span>↧</span>导入记录</button>
+        <div class="nav-separator"></div>
         <button class="nav-item" data-view="export"><span>⇩</span>导出报表</button>
       </nav>
 
-      <div class="tips-card">
-        <strong>使用提示</strong>
-        <ol>
-          <li>支持 Excel / ZIP</li>
-          <li>FACT Sheet 自动忽略</li>
-          <li>本地解析，不上传订单数据</li>
-        </ol>
-      </div>
-
       <div class="system-card">
+        <div class="system-title">系统状态</div>
         <div class="ready-row"><i></i><span id="systemStatus">等待导入</span></div>
-        <small id="lastImportText">Local-first · Privacy by design</small>
+        <small id="lastImportText">本地处理 · 数据不上传</small>
         <button id="sidebarResetButton" class="secondary-action" disabled>清空数据并重新导入</button>
       </div>
     </aside>
@@ -45,54 +51,43 @@
       <header class="workspace-bar">
         <div class="window-title">WRITE Settlement Manager</div>
         <div class="top-actions" id="topActions" hidden>
-          <button id="reimportButton" class="toolbar-button">↻ 重新导入</button>
-          <button id="clearButton" class="toolbar-button danger">⌫ 清空数据</button>
-          <button id="topExportButton" class="toolbar-button primary-compact">⇩ 导出 Excel</button>
+          <button id="reimportButton" class="toolbar-button">↻&nbsp; 重新导入</button>
+          <button id="clearButton" class="toolbar-button danger">⌫&nbsp; 清空数据</button>
+          <button id="topExportButton" class="toolbar-button primary-compact">⇩&nbsp; 导出 Excel</button>
         </div>
       </header>
 
       <main class="content">
         <section id="importLanding" class="import-landing">
-          <div class="landing-card">
-            <div class="landing-copy">
-              <span class="eyebrow">WRITE SETTLEMENT MANAGER</span>
-              <h1>订单结算，<br><em>一次完成。</em></h1>
-              <p>拖入真实订单 Excel 或整个 ZIP。系统自动忽略 FACT Sheet，完成去重、分类、复核与专业 Excel 报表输出。</p>
-              <div id="dropzone" class="dropzone">
-                <input id="fileInput" hidden type="file" accept=".xlsx,.zip" multiple />
-                <div id="idleState" class="landing-actions">
-                  <button id="chooseButton" class="primary-action hero-primary"><span>⇧</span><b>开始导入订单</b><small>Excel / ZIP</small></button>
-                  <div class="privacy-note">文件仅在本机浏览器中处理</div>
-                </div>
-                <div id="busyState" hidden>
-                  <div class="spinner"></div>
-                  <h3>正在流式解析</h3>
-                  <p id="currentFile" class="current-file">准备读取…</p>
-                  <div class="progress-track"><div id="progressFill" class="progress-fill"></div></div>
-                  <small id="progressText">0% · 大文件在独立线程运行</small>
-                </div>
-              </div>
+          <div class="landing-copy">
+            <span class="overline">LOCAL-FIRST · STREAMING XLSX ENGINE</span>
+            <h1>结算数据，<br />保持简单。</h1>
+            <p>拖入真实订单 Excel 或整个 ZIP。系统自动忽略 FACT Sheet，识别订单、去重、分类并生成会计报表。</p>
+          </div>
+          <div id="dropzone" class="dropzone compact-dropzone">
+            <input id="fileInput" hidden type="file" accept=".xlsx,.zip" multiple />
+            <div id="idleState">
+              <div class="upload-symbol">⇧</div>
+              <h3>拖入 Excel 或 ZIP</h3>
+              <p>.xlsx / .zip · FACT Sheet 自动忽略</p>
+              <button id="chooseButton" class="primary-action">选择文件</button>
             </div>
-            <div class="landing-art"><img src="./assets/panda-hero.png" alt="熊猫侧脸线稿" /></div>
+            <div id="busyState" hidden>
+              <div class="spinner"></div>
+              <h3>正在流式解析</h3>
+              <p id="currentFile" class="current-file">准备读取…</p>
+              <div class="progress-track"><div id="progressFill" class="progress-fill"></div></div>
+              <small id="progressText">0% · 大文件在独立线程运行</small>
+            </div>
           </div>
           <div id="errorCard" class="error-inline" hidden><span>!</span><div><b>导入未完成</b><p id="errorText"></p></div><button id="dismissError">×</button></div>
         </section>
 
         <div id="appViews" hidden>
           <section class="view active" data-view-panel="dashboard">
-            <section class="hero-panel">
-              <div class="hero-copy">
-                <span class="eyebrow">SETTLEMENT READY</span>
-                <h1>智能订单分类<br><em>结算系统</em></h1>
-                <p>订单已经完成去重、分类与复核标记。现在可以直接生成专业会计结算报表。</p>
-                <div class="hero-actions">
-                  <button id="heroExportButton" class="hero-export"><span>⇩</span><div><b>导出结算报表</b><small>一键生成专业 Excel</small></div></button>
-                  <button id="heroImportButton" class="hero-import"><span>⇧</span><div><b>重新导入订单</b><small>Excel / ZIP</small></div></button>
-                </div>
-                <div class="feature-pills"><span>多文件导入</span><span>FACT 自动忽略</span><span>订单去重</span><span>本地处理</span></div>
-              </div>
-              <div class="hero-art"><img src="./assets/panda-hero.png" alt="照片级线稿熊猫侧脸" /></div>
-            </section>
+            <div class="page-head">
+              <div><span class="overline">概览</span><h1>仪表盘</h1><p>核心订单、分类与导入质量集中在一个页面。</p></div>
+            </div>
 
             <section class="metrics-grid">
               <article class="metric-card"><span>订单总数</span><strong id="metricOrders">0</strong><small>去重后真实订单</small></article>
@@ -105,7 +100,7 @@
 
             <div class="dashboard-grid">
               <section class="panel category-panel">
-                <div class="panel-title"><div><h2>会计分类统计</h2><p>按金额排序 · 无彩色饼图</p></div><button class="text-button" data-go-view="products">查看商品分类 ›</button></div>
+                <div class="panel-title"><div><h2>会计分类统计</h2><p>订单级分类互斥，可直接汇总金额</p></div><span class="panel-kicker">按金额排序</span></div>
                 <div class="accounting-table-head"><span>会计分类</span><span>订单数</span><span>金额</span><span>占比</span></div>
                 <div id="accountingSummary" class="accounting-table"></div>
               </section>
@@ -134,7 +129,7 @@
           </section>
 
           <section class="view" data-view-panel="orders">
-            <div class="page-head compact"><div><span class="eyebrow">ORDERS</span><h1>订单管理</h1><p id="resultCount">0 条结果</p></div><button id="inlineImportButton" class="toolbar-button">⇧ 重新导入</button></div>
+            <div class="page-head compact"><div><span class="overline">ORDERS</span><h1>订单管理</h1><p id="resultCount">0 条结果</p></div></div>
             <section class="panel data-panel">
               <div class="filters-bar">
                 <label class="search-box">⌕ <input id="searchInput" placeholder="订单号 / 买家 / 产品 / 运单号" /></label>
@@ -146,25 +141,28 @@
           </section>
 
           <section class="view" data-view-panel="products">
-            <div class="page-head compact"><div><span class="eyebrow">PRODUCTS</span><h1>商品分类</h1><p>按商品行查看分类结果，不与订单收入重复汇总。</p></div></div>
+            <div class="page-head compact"><div><span class="overline">PRODUCTS</span><h1>商品分类</h1><p>按商品行查看分类结果，不与订单收入重复汇总。</p></div></div>
             <section class="panel product-panel"><div class="panel-title"><div><h2>商品级分类统计</h2><p>件数、涉及订单与赠品数量</p></div></div><div id="lineSummary" class="product-summary"></div></section>
           </section>
 
           <section class="view" data-view-panel="review">
-            <div class="page-head compact"><div><span class="eyebrow">REVIEW</span><h1>待复核</h1><p>无法可靠自动分类的商品单独保留，不强制误分类。</p></div></div>
+            <div class="page-head compact"><div><span class="overline">REVIEW</span><h1>待复核</h1><p>无法可靠自动分类的商品单独保留，不强制误分类。</p></div></div>
             <section class="panel review-panel"><div id="unknownList" class="unknown-list"></div><div id="emptyReview" class="empty-state" hidden>没有待复核商品。</div></section>
           </section>
 
           <section class="view" data-view-panel="imports">
-            <div class="page-head compact"><div><span class="eyebrow">IMPORT LOG</span><h1>导入记录</h1><p>每个工作表的识别与处理原因。</p></div></div>
+            <div class="page-head compact"><div><span class="overline">IMPORT LOG</span><h1>导入记录</h1><p>每个工作表的识别与处理原因。</p></div></div>
             <section class="panel"><div id="sheetList" class="sheet-list"></div></section>
           </section>
 
           <section class="view" data-view-panel="export">
-            <div class="page-head compact"><div><span class="eyebrow">EXPORT</span><h1>导出报表</h1><p>会计汇总、订单明细、商品汇总、待复核与审计分层输出。</p></div></div>
+            <div class="page-head compact"><div><span class="overline">EXPORT</span><h1>导出报表</h1><p>生成清晰的会计汇总、订单明细、商品分类明细和导入日志。</p></div></div>
             <section class="panel export-card">
-              <div class="report-preview"><span class="report-icon">⇩</span><div><h2>WRITE 会计结算报表</h2><p>00_结算总览 · 01_订单明细 · 02_商品汇总 · 03_待复核 · 90_订单审计 · 99_导入日志</p></div></div>
-              <button id="exportButton" class="hero-export standalone"><span>⇩</span><div><b>导出结算报表</b><small>生成 .xlsx 文件</small></div></button>
+              <div class="report-preview">
+                <span class="report-icon">▤</span>
+                <div><h2>WRITE 会计结算报表</h2><p>Excel · 6 个工作表 · 会计总览 · 精简订单 · 商品汇总 · 待复核 · 审计 · 导入日志</p></div>
+              </div>
+              <button id="exportButton" class="primary-action large">导出 Excel</button>
             </section>
           </section>
         </div>

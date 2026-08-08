@@ -1,4 +1,4 @@
-# WRITE Settlement Manager v5.0 验收
+# WRITE Settlement Manager v5.2 验收
 
 ## 静态完整性
 

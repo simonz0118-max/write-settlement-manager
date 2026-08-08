@@ -137,76 +137,21 @@ function renderOrders(){
 function buildFactExportData(){
   const factRows=sheets.flatMap(s=>(s.factRows||[]).map(r=>({...r,sourceFile:r.sourceFile||s.sourceFile,sourceSheet:r.sourceSheet||s.sheetName})));
   const active=factRows.filter(r=>(Number(r.quantity)||0)>0 || (Number(r.amount)||0)!==0);
-
-  const normalizeDesc=(v)=>String(v||'未命名分类').replace(/\s+/g,' ').replace(/eternel\s*X/ig,'eternelX').trim();
-  const naturalRank=(desc)=>{
-    const d=normalizeDesc(desc);
-    const m=d.match(/eternelX\s*(\d+)/i);
-    if(m)return [0,Number(m[1]),d.toLowerCase()];
-    if(/4 mines rechargeables|Lot de 4 mines rechargeables/i.test(d))return [1,0,d.toLowerCase()];
-    if(/6 Mines colorées|Mines colorées/i.test(d))return [2,0,d.toLowerCase()];
-    if(/Gravure/i.test(d))return [3,0,d.toLowerCase()];
-    if(/Coffret/i.test(d))return [4,0,d.toLowerCase()];
-    return [9,0,d.toLowerCase()];
-  };
-  const compareDesc=(a,b)=>{
-    const aa=naturalRank(a.description),bb=naturalRank(b.description);
-    return aa[0]-bb[0] || aa[1]-bb[1] || aa[2].localeCompare(bb[2],'fr');
-  };
-
   const totalAmount=active.reduce((a,r)=>a+(Number(r.amount)||0),0);
   const totalQty=active.reduce((a,r)=>a+(Number(r.quantity)||0),0);
   const cogsTotal=active.reduce((a,r)=>a+((Number(r.quantity)||0)*(Number(r.cogs)||0)),0);
   const shippingTotal=active.reduce((a,r)=>a+((Number(r.quantity)||0)*(Number(r.shipping)||0)),0);
-  const unallocated=totalAmount-cogsTotal-shippingTotal;
-
+  const unallocated=Math.max(0,totalAmount-cogsTotal-shippingTotal);
   const byDesc=new Map();
-  for(const r of factRows){
-    const display=normalizeDesc(r.description);
-    const key=display.toLowerCase();
+  for(const r of active){
+    const key=String(r.description||'未命名分类').trim();
     const qty=Number(r.quantity)||0, amount=Number(r.amount)||0;
-    const cur=byDesc.get(key)||{
-      description:display,quantity:0,cogsAmount:0,shippingAmount:0,unitAmountWeighted:0,amount:0,
-      countries:new Set(),files:new Set(),rows:0,rateRows:0,cogsRateSum:0,shippingRateSum:0,unitRateSum:0
-    };
-    cur.quantity+=qty;
-    cur.cogsAmount+=qty*(Number(r.cogs)||0);
-    cur.shippingAmount+=qty*(Number(r.shipping)||0);
-    cur.unitAmountWeighted+=qty*(Number(r.unitTotal)||0);
-    cur.amount+=amount;
-    cur.rows+=1;
-    if(Number.isFinite(Number(r.cogs))||Number.isFinite(Number(r.shipping))||Number.isFinite(Number(r.unitTotal))){
-      cur.rateRows+=1;
-      cur.cogsRateSum+=Number(r.cogs)||0;
-      cur.shippingRateSum+=Number(r.shipping)||0;
-      cur.unitRateSum+=Number(r.unitTotal)||0;
-    }
-    if(r.country)cur.countries.add(r.country);
-    if(r.sourceFile)cur.files.add(r.sourceFile);
-    byDesc.set(key,cur);
+    const cur=byDesc.get(key)||{description:key,quantity:0,cogs:0,shipping:0,amount:0,countries:new Set(),files:new Set()};
+    cur.quantity+=qty;cur.cogs+=qty*(Number(r.cogs)||0);cur.shipping+=qty*(Number(r.shipping)||0);cur.amount+=amount;
+    if(r.country)cur.countries.add(r.country);if(r.sourceFile)cur.files.add(r.sourceFile);byDesc.set(key,cur);
   }
-
-  const summary=[...byDesc.values()].map(x=>{
-    const qty=x.quantity;
-    const avgCogs=qty?x.cogsAmount/qty:(x.rateRows?x.cogsRateSum/x.rateRows:0);
-    const avgShipping=qty?x.shippingAmount/qty:(x.rateRows?x.shippingRateSum/x.rateRows:0);
-    const avgUnit=qty?x.unitAmountWeighted/qty:(x.rateRows?x.unitRateSum/x.rateRows:(avgCogs+avgShipping));
-    return {...x,avgCogs,avgShipping,avgUnit};
-  }).filter(x=>x.quantity>0 || x.amount!==0).sort(compareDesc);
-
-  const countries=new Map();
-  for(const r of factRows){
-    const country=String(r.country||'GLOBAL / 附加项目').trim()||'GLOBAL / 附加项目';
-    if(!countries.has(country))countries.set(country,[]);
-    countries.get(country).push(r);
-  }
-  const countryOrder=[...countries.keys()].sort((a,b)=>{
-    const preferred=['FRANCE','BELGIUM','CANADA','SWITZERLAND','LUXEMBOURG','GERMANY','SPAIN','ITALY','NETHERLANDS','AUSTRIA','PORTUGAL','GLOBAL / 附加项目'];
-    const ai=preferred.indexOf(a.toUpperCase()),bi=preferred.indexOf(b.toUpperCase());
-    return (ai<0?999:ai)-(bi<0?999:bi)||a.localeCompare(b,'en');
-  });
-
-  return {factRows,active,totalAmount,totalQty,cogsTotal,shippingTotal,unallocated,summary,countries,countryOrder};
+  const summary=[...byDesc.values()].sort((a,b)=>b.amount-a.amount||b.quantity-a.quantity);
+  return {factRows,active,totalAmount,totalQty,cogsTotal,shippingTotal,unallocated,summary};
 }
 
 function exportAccounting(){
@@ -275,65 +220,41 @@ function exportAccounting(){
   for(const x of sheets) logRows.push([x.sourceFile,x.sheetName,x.status,x.orderCount,x.reason,x.inflatedBytes||0]);
 
   const factRows=[
-    ['WRITE Settlement Manager — FACT 分类汇总统计','','','','','',''],
-    [`生成时间：${reportDate}｜来源：${factSheets.length} 个 FACT Sheet｜口径与原 FACT 一致：Quantity × (COGs + Shipping) = Amount；跨国家汇总的单价为数量加权平均。`,'','','','','',''],
+    ['WRITE Settlement Manager — FACT 分类汇总','','','','','','','',''],
+    [`生成时间：${reportDate}｜自动读取原始工作簿的 FACT Sheet；FACT 仅用于成本/分类汇总，不作为订单导入。`,'','','','','','','',''],
     [],
-    ['FACT 分类汇总（全局）','','','','','',''],
-    ['No','Description','Quantity','COGs (€)','Shipping (€)','COGs + Shipping (€)','Amount (€)']
+    ['FACT 核心指标','数值','说明','','','','','',''],
+    ['FACT 明细行',factData.active.length,'数量或金额不为 0 的成本明细','','','','','',''],
+    ['分类数量',factData.summary.length,'按 Description 合并','','','','','',''],
+    ['数量合计',factData.totalQty,'FACT Quantity 合计','','','','','',''],
+    ['COGs 估算',factData.cogsTotal,'Σ Quantity × COGs (€)','','','','','',''],
+    ['Shipping 估算',factData.shippingTotal,'Σ Quantity × Shipping (€)','','','','','',''],
+    ['未拆分金额',factData.unallocated,'Amount 与可拆分 COGs/Shipping 的差额','','','','','',''],
+    ['FACT 总成本',factData.totalAmount,'以 FACT Amount (€) 为最终口径','','','','','',''],
+    [],
+    ['FACT 分类汇总','Quantity','COGs 合计','Shipping 合计','未拆分','Amount (€)','占比','国家/地区数','说明']
   ];
   const factSummaryHeaderRow=factRows.length;
   const factSummaryStart=factRows.length+1;
-  let factNo=1;
   for(const r of factData.summary){
-    factRows.push([factNo++,r.description,r.quantity,r.avgCogs,r.avgShipping,r.avgUnit,r.amount]);
+    const allocated=r.cogs+r.shipping;
+    factRows.push([r.description,r.quantity,r.cogs,r.shipping,Math.max(0,r.amount-allocated),r.amount,factData.totalAmount?r.amount/factData.totalAmount:0,r.countries.size,`${r.files.size} 个 FACT 文件`]);
   }
   const factSummaryTotalRow=factRows.length+1;
-  const weightedCogs=factData.totalQty?factData.cogsTotal/factData.totalQty:0;
-  const weightedShipping=factData.totalQty?factData.shippingTotal/factData.totalQty:0;
-  const weightedUnit=factData.totalQty?(factData.cogsTotal+factData.shippingTotal)/factData.totalQty:0;
-  factRows.push(['','TOTAL / 合计',factData.totalQty,weightedCogs,weightedShipping,weightedUnit,factData.totalAmount]);
+  factRows.push(['合计',factData.totalQty,factData.cogsTotal,factData.shippingTotal,factData.unallocated,factData.totalAmount,1,new Set(factData.active.map(r=>r.country).filter(Boolean)).size,'']);
   factRows.push([]);
-  const factCheckTitleRow=factRows.length+1;
-  factRows.push(['FACT 关键核对','','','','','','']);
-  factRows.push(['FACT Sheet 数',factSheets.length,'','','','','']);
-  factRows.push(['FACT 分类数',factData.summary.length,'','','','','']);
-  factRows.push(['Quantity 合计',factData.totalQty,'','','','','']);
-  factRows.push(['COGs 成本合计',factData.cogsTotal,'','','','','']);
-  factRows.push(['Shipping 成本合计',factData.shippingTotal,'','','','','']);
-  factRows.push(['FACT Amount 合计',factData.totalAmount,'','','','','']);
-  factRows.push(['成本差额',factData.unallocated,'Amount - COGs总额 - Shipping总额；正常应接近 0','','','','']);
-  factRows.push([]);
-  const factDetailTitleRow=factRows.length+1;
-  factRows.push(['FACT 原始明细（按国家/地区）','','','','','','']);
   const factDetailHeaderRow=factRows.length+1;
-  factRows.push(['No','Description','Quantity','COGs (€)','Shipping (€)','COGs + Shipping (€)','Amount (€)']);
-  const factCountryRows=[];
-  const factDetailDataStart=factRows.length+1;
-  for(const country of factData.countryOrder){
-    const group=factData.countries.get(country)||[];
-    factCountryRows.push(factRows.length+1);
-    factRows.push([country,'','','','','','']);
-    for(const r of group){
-      factRows.push([r.no||'',r.description||'',r.quantity??'',r.cogs??'',r.shipping??'',r.unitTotal??'',r.amount??'']);
-    }
+  factRows.push(['FACT 原始分类明细（按国家/地区）','No','Description','Quantity','COGs (€)','Shipping (€)','COGs + Shipping (€)','Amount (€)','来源 FACT']);
+  for(const r of factData.factRows){
+    factRows.push([r.country||'GLOBAL / 附加项目',r.no||'',r.description||'',r.quantity??'',r.cogs??'',r.shipping??'',r.unitTotal??'',r.amount??'',r.sourceFile||'']);
   }
-  const factDetailEnd=factRows.length;
 
   const blob=buildXlsx([
-    {name:'00_FACT分类汇总',rows:factRows,widths:[9,42,13,15,17,21,19],titleRow:1,subtitleRow:2,
-      sectionRows:[4,factSummaryHeaderRow,factCheckTitleRow,factDetailTitleRow,factDetailHeaderRow,...factCountryRows],
-      totalRows:[factSummaryTotalRow],freezeRow:factSummaryHeaderRow,freezeCol:2,
-      merges:['A1:G1','A2:G2','A4:G4',`A${factCheckTitleRow}:G${factCheckTitleRow}`,`A${factDetailTitleRow}:G${factDetailTitleRow}`],
-      formatRules:[
-        {r1:factSummaryStart,r2:factSummaryTotalRow,c1:1,c2:1,kind:'int'},
-        {r1:factSummaryStart,r2:factSummaryTotalRow,c1:3,c2:3,kind:'int'},
-        {r1:factSummaryStart,r2:factSummaryTotalRow,c1:4,c2:7,kind:'currency'},
-        {r1:factCheckTitleRow+1,r2:factCheckTitleRow+3,c1:2,c2:2,kind:'int'},
-        {r1:factCheckTitleRow+4,r2:factCheckTitleRow+7,c1:2,c2:2,kind:'currency'},
-        {r1:factDetailHeaderRow+1,r2:factDetailEnd,c1:1,c2:1,kind:'int'},
-        {r1:factDetailHeaderRow+1,r2:factDetailEnd,c1:3,c2:3,kind:'int'},
-        {r1:factDetailHeaderRow+1,r2:factDetailEnd,c1:4,c2:7,kind:'currency'}
-      ],wrapColumns:[2]},
+    {name:'00_FACT分类汇总',rows:factRows,widths:[34,12,32,13,16,18,22,18,42],titleRow:1,subtitleRow:2,sectionRows:[4,factSummaryHeaderRow,factDetailHeaderRow],totalRows:[factSummaryTotalRow],freezeRow:factSummaryHeaderRow,freezeCol:1,merges:['A1:I1','A2:I2'],formatRules:[
+      {r1:5,r2:7,c1:2,c2:2,kind:'int'},{r1:8,r2:11,c1:2,c2:2,kind:'currency'},
+      {r1:factSummaryStart,r2:factSummaryTotalRow,c1:2,c2:2,kind:'int'},{r1:factSummaryStart,r2:factSummaryTotalRow,c1:3,c2:6,kind:'currency'},{r1:factSummaryStart,r2:factSummaryTotalRow,c1:7,c2:7,kind:'percent'},{r1:factSummaryStart,r2:factSummaryTotalRow,c1:8,c2:8,kind:'int'},
+      {r1:factDetailHeaderRow+1,r2:factRows.length,c1:4,c2:4,kind:'int'},{r1:factDetailHeaderRow+1,r2:factRows.length,c1:5,c2:8,kind:'currency'}
+    ],wrapColumns:[1,3,9]},
     {name:'01_结算总览',rows:overview,widths:[28,18,22,14,14,30],titleRow:1,subtitleRow:2,sectionRows:[4,orderHeaderRow,productHeaderRow],totalRows:[orderTotalRow],freezeRow:orderHeaderRow,freezeCol:1,merges:['A1:F1','A2:F2'],formatRules:[
       {r1:6,r2:6,c1:2,c2:2,kind:'currency'},{r1:5,r2:5,c1:2,c2:2,kind:'int'},{r1:7,r2:10,c1:2,c2:2,kind:'int'},{r1:11,r2:11,c1:2,c2:2,kind:'currency'},{r1:12,r2:12,c1:2,c2:2,kind:'int'},
       {r1:orderSectionStart,r2:orderTotalRow,c1:2,c2:2,kind:'int'},{r1:orderSectionStart,r2:orderTotalRow,c1:3,c2:3,kind:'currency'},{r1:orderSectionStart,r2:orderTotalRow,c1:4,c2:4,kind:'percent'},{r1:orderSectionStart,r2:orderTotalRow,c1:5,c2:5,kind:'int'},

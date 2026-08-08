@@ -25,7 +25,7 @@ PY
 URL="http://127.0.0.1:${PORT}/index.html"
 
 echo ""
-echo "WRITE Settlement Manager v5.0"
+echo "WRITE Settlement Manager v5.2"
 echo "----------------------------------------"
 echo "Local server: ${URL}"
 echo "Keep this Terminal window open while using the app."
