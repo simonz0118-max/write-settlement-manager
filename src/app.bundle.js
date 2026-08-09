@@ -234,10 +234,22 @@ function normalizeTargetLocal(target){
 function findFactSheetPath(workbookXml,relsXml){
   const rels=new Map();let m;
   const rr=/<Relationship\b([^>]*)\/?\s*>/g;
-  while((m=rr.exec(relsXml))){const id=/\bId="([^"]+)"/.exec(m[1])?.[1],target=/\bTarget="([^"]+)"/.exec(m[1])?.[1];if(id&&target)rels.set(id,normalizeTargetLocal(target))}
+  while((m=rr.exec(relsXml))){
+    const id=/\bId="([^"]+)"/.exec(m[1])?.[1],
+          target=/\bTarget="([^"]+)"/.exec(m[1])?.[1];
+    if(id&&target)rels.set(id,normalizeTargetLocal(target));
+  }
+  const candidates=[];
   const sr=/<sheet\b([^>]*)\/?\s*>/g;
-  while((m=sr.exec(workbookXml))){const name=xmlDecodeLocal(/\bname="([^"]+)"/.exec(m[1])?.[1]||''),rid=/\br:id="([^"]+)"/.exec(m[1])?.[1];if(name.trim().toUpperCase()==='FACT'&&rels.get(rid))return rels.get(rid)}
-  return '';
+  while((m=sr.exec(workbookXml))){
+    const name=xmlDecodeLocal(/\bname="([^"]+)"/.exec(m[1])?.[1]||''),
+          rid=/\br:id="([^"]+)"/.exec(m[1])?.[1],
+          path=rels.get(rid);
+    if(path && /FACT/i.test(name))candidates.push({name,path});
+  }
+  // V7.0.2: CN is the canonical WRITE FACT when multiple FACT sheets exist.
+  const cn=candidates.find(x=>/CN/i.test(x.name));
+  return cn?.path || candidates[0]?.path || '';
 }
 function normalizeCountry(v=''){
   const s=norm(v).toUpperCase().replace(/\s+/g,' ');
@@ -249,63 +261,235 @@ function isColorPack6(item){
   return /pack[^0-9]*6|52725633384712|49624586256648|qb-6/.test(x);
 }
 function factDescriptionType(desc=''){
-  const d=norm(desc).toLowerCase();
+  const d=norm(desc).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
   const pencil=/stylo\s*eternel\s*x\s*(\d+)/i.exec(d);
   if(pencil)return {type:'pencil',bucket:Number(pencil[1])};
-  if(/lot de 4 mines rechargeables/.test(d))return {type:'refill'};
-  if(/lot de 6 mines color/.test(d))return {type:'color6'};
-  if(/mines color/.test(d))return {type:'colorSingle'};
+
+  const upsell=/upsell/.test(d);
+  if(/lot de 2 gommes/.test(d))return {type:upsell?'eraserUpsell':'eraserBase'};
+  if(/carnet/.test(d))return {type:upsell?'notebookUpsell':'notebookBase'};
+
+  if(/lot de 4 mines rechargeables/.test(d))return {type:upsell?'refill4Upsell':'refill4Base'};
+  if(/lot de 6 mines rechargeables/.test(d))return {type:upsell?'refill6Upsell':'refill6Base'};
+  if(/lot de 6 mines colorees/.test(d))return {type:upsell?'color6Upsell':'color6Base'};
+  if(/lot de 12 mines colorees/.test(d))return {type:upsell?'color12Upsell':'color12Base'};
+  if(/mines colorees/.test(d))return {type:'colorSingleUpsell'};
+
   if(/gravure personnalis/.test(d))return {type:'engraving'};
   if(/coffret cadeau/.test(d))return {type:'giftBox'};
+  if(/frais d.importation/.test(d))return {type:'derivedCharge'};
+  if(/cout du moule/.test(d))return {type:'fixedCharge'};
   return {type:'unknown'};
+}
+function accessoryPackSize(item){
+  const x=`${item.productName||''} ${item.sku||''}`.toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  if(/(?:^|\D)12\s*mines/.test(x)||/\b12\s*mines\b/.test(x))return 12;
+  if(/(?:^|\D)6\s*mines/.test(x)||/\b6\s*mines\b/.test(x)||/qb-6/.test(x))return 6;
+  if(/(?:^|\D)4\s*mines/.test(x)||/\b4\s*mines\b/.test(x)||/qb-4/.test(x))return 4;
+  return 1;
 }
 function sourceDataForWorkbook(workbookName){
   const wbOrders=(classified?.orders||[]).filter(o=>o.sourceFile===workbookName);
   const wbLines=(classified?.lineItems||[]).filter(x=>x.sourceFile===workbookName);
-  const orderById=new Map(wbOrders.map(o=>[String(o.orderId),o]));
+  const paidLines=wbLines.filter(x=>!x.isFree);
+
   const pencilQtyByOrder=new Map();
-  for(const x of wbLines){if(x.category==='PENCIL')pencilQtyByOrder.set(String(x.orderId),(pencilQtyByOrder.get(String(x.orderId))||0)+(Number(x.quantity)||1))}
-  const pencilBucket=new Map(),refill=new Map(),color6=new Map(),colorSingle=new Map();
-  const add=(map,country,n)=>map.set(country,(map.get(country)||0)+n);
-  for(const o of wbOrders){
-    const country=normalizeCountry(o.country),qty=Math.round(pencilQtyByOrder.get(String(o.orderId))||0);
-    if(qty>0){const k=`${country}\u0001${qty}`;pencilBucket.set(k,(pencilBucket.get(k)||0)+1)}
+  for(const x of paidLines){
+    if(x.category==='PENCIL'){
+      const id=String(x.orderId);
+      pencilQtyByOrder.set(id,(pencilQtyByOrder.get(id)||0)+(Number(x.quantity)||1));
+    }
   }
-  let engraving=0,boxWithPencil=0,boxWithoutPencil=0;
-  for(const x of wbLines){
-    const q=Number(x.quantity)||1,country=normalizeCountry(x.country);
-    if(x.category==='REFILL')add(refill,country,q);
-    else if(x.category==='COLOR_REFILL')add(isColorPack6(x)?color6:colorSingle,country,q);
+
+  const pencilBucket=new Map();
+  for(const o of wbOrders){
+    const country=normalizeCountry(o.country),
+          qty=Math.round(pencilQtyByOrder.get(String(o.orderId))||0);
+    if(qty>0){
+      const k=`${country}\u0001${qty}`;
+      pencilBucket.set(k,(pencilBucket.get(k)||0)+1);
+    }
+  }
+
+  const buckets=new Map();
+  const inputLedger=new Map();
+  const add=(key,country,n)=>{
+    const k=`${key}\u0001${country}`;
+    buckets.set(k,(buckets.get(k)||0)+n);
+  };
+  const ledger=(category,n)=>{
+    inputLedger.set(category,(inputLedger.get(category)||0)+n);
+  };
+
+  let engraving=0, boxWithPencil=0, boxWithoutPencil=0;
+
+  for(const x of paidLines){
+    const q=Math.max(0,Number(x.quantity)||1),
+          country=normalizeCountry(x.country),
+          hasPencil=(pencilQtyByOrder.get(String(x.orderId))||0)>0,
+          mode=hasPencil?'Upsell':'Base';
+
+    ledger(x.category,q);
+
+    if(x.category==='ERASER')add(`eraser${mode}`,country,q);
+    else if(x.category==='NOTEBOOK')add(`notebook${mode}`,country,q);
+    else if(x.category==='REFILL'){
+      const size=accessoryPackSize(x);
+      add(`refill${size}${mode}`,country,q);
+    }
+    else if(x.category==='COLOR_REFILL'){
+      const size=accessoryPackSize(x);
+      if(size===12)add(`color12${mode}`,country,q);
+      else if(size===6)add(`color6${mode}`,country,q);
+      else add('colorSingleUpsell',country,q);
+    }
     else if(x.category==='ENGRAVING')engraving+=q;
     else if(x.category==='GIFT_BOX'){
-      if((pencilQtyByOrder.get(String(x.orderId))||0)>0)boxWithPencil+=q;else boxWithoutPencil+=q;
+      if(hasPencil)boxWithPencil+=q;
+      else boxWithoutPencil+=q;
     }
   }
-  return {wbOrders,wbLines,orderById,pencilBucket,refill,color6,colorSingle,engraving,boxWithPencil,boxWithoutPencil};
+
+  return {
+    wbOrders,wbLines,paidLines,pencilQtyByOrder,pencilBucket,buckets,
+    inputLedger,engraving,boxWithPencil,boxWithoutPencil
+  };
 }
+
+function targetQuantity(src,kind,country,row,context){
+  if(kind.type==='pencil')return src.pencilBucket.get(`${country}\u0001${kind.bucket}`)||0;
+  if(/^(eraser|notebook|refill4|refill6|color6|color12)(Base|Upsell)$/.test(kind.type)){
+    return src.buckets.get(`${kind.type}\u0001${country}`)||0;
+  }
+  if(kind.type==='colorSingleUpsell')return src.buckets.get(`colorSingleUpsell\u0001${country}`)||0;
+  if(kind.type==='engraving')return src.engraving;
+  if(kind.type==='giftBox'){
+    if(row===context.firstBoxRow)return src.boxWithPencil;
+    if(row===context.secondBoxRow)return src.boxWithoutPencil;
+    return 0;
+  }
+  return 0;
+}
+
 function buildFactBackfillPlan(workbookName,factRows){
-  const src=sourceDataForWorkbook(workbookName), plan=new Map(), boxRows=factRows.filter(r=>factDescriptionType(r.description).type==='giftBox').sort((a,b)=>a.sourceRow-b.sourceRow);
-  let firstBoxRow=boxRows[0]?.sourceRow, secondBoxRow=boxRows[1]?.sourceRow;
+  const src=sourceDataForWorkbook(workbookName),
+        plan=new Map(),
+        boxRows=factRows.filter(r=>factDescriptionType(r.description).type==='giftBox').sort((a,b)=>a.sourceRow-b.sourceRow),
+        context={firstBoxRow:boxRows[0]?.sourceRow,secondBoxRow:boxRows[1]?.sourceRow},
+        allocated=new Map(),
+        mappedTargets=new Set();
+
   let total=0;
   for(const r of factRows){
-    const kind=factDescriptionType(r.description), country=normalizeCountry(r.country), unit=Number.isFinite(Number(r.unitTotal))?Number(r.unitTotal):((Number(r.cogs)||0)+(Number(r.shipping)||0));
+    const kind=factDescriptionType(r.description),
+          country=normalizeCountry(r.country),
+          unit=Number.isFinite(Number(r.unitTotal))
+            ?Number(r.unitTotal)
+            :((Number(r.cogs)||0)+(Number(r.shipping)||0));
+
     let quantity=0;
-    if(kind.type==='pencil')quantity=src.pencilBucket.get(`${country}\u0001${kind.bucket}`)||0;
-    else if(kind.type==='refill')quantity=src.refill.get(country)||0;
-    else if(kind.type==='color6')quantity=src.color6.get(country)||0;
-    else if(kind.type==='colorSingle')quantity=src.colorSingle.get(country)||0;
-    else if(kind.type==='engraving')quantity=src.engraving;
-    else if(kind.type==='giftBox'){
-      if(r.sourceRow===firstBoxRow)quantity=src.boxWithPencil;
-      else if(r.sourceRow===secondBoxRow)quantity=src.boxWithoutPencil;
-      else quantity=0;
+    if(!['derivedCharge','fixedCharge','unknown'].includes(kind.type)){
+      quantity=targetQuantity(src,kind,country,Number(r.sourceRow),context);
+      mappedTargets.add(`${kind.type}\u0001${country}`);
     }
+
     quantity=Math.max(0,Math.round(quantity));
     const amount=Math.round((quantity*unit+Number.EPSILON)*100)/100;
-    plan.set(Number(r.sourceRow),{quantity,amount});
+    plan.set(Number(r.sourceRow),{quantity,amount,kind:kind.type,country});
+    allocated.set(kind.type,(allocated.get(kind.type)||0)+quantity);
     total+=amount;
   }
-  return {plan,total:Math.round((total+Number.EPSILON)*100)/100};
+
+  return {
+    plan,total:Math.round((total+Number.EPSILON)*100)/100,
+    src,allocated,mappedTargets
+  };
+}
+
+/*
+ * Export invariant:
+ * Every PAID order line must be one of:
+ *   A. represented in a FACT target row, or
+ *   B. explicitly designated as a derived/fixed/system charge.
+ * A classified paid product is never allowed to disappear silently.
+ */
+function factCompletenessAudit(workbookName,factRows){
+  const built=buildFactBackfillPlan(workbookName,factRows),
+        src=built.src,
+        issues=[],
+        lineTargets=[];
+
+  const hasTarget=(type,country)=>{
+    const exact=factRows.some(r=>{
+      const k=factDescriptionType(r.description).type;
+      return k===type && normalizeCountry(r.country)===country;
+    });
+    return exact;
+  };
+
+  for(const x of src.paidLines){
+    if(x.category==='PENCIL')continue; // audited at order-bucket level below
+
+    const country=normalizeCountry(x.country),
+          hasPencil=(src.pencilQtyByOrder.get(String(x.orderId))||0)>0,
+          mode=hasPencil?'Upsell':'Base',
+          size=accessoryPackSize(x);
+
+    let target='';
+    if(x.category==='ERASER')target=`eraser${mode}`;
+    else if(x.category==='NOTEBOOK')target=`notebook${mode}`;
+    else if(x.category==='REFILL')target=`refill${size}${mode}`;
+    else if(x.category==='COLOR_REFILL'){
+      target=size===12?`color12${mode}`:size===6?`color6${mode}`:'colorSingleUpsell';
+    }
+    else if(x.category==='ENGRAVING')target='engraving';
+    else if(x.category==='GIFT_BOX')target='giftBox';
+    else if(['B2B','GIFT_CARD'].includes(x.category))target='SYSTEM_EXCLUDED';
+    else if(x.category==='OTHER')target='UNMAPPED';
+
+    lineTargets.push({...x,target,country});
+
+    if(target==='UNMAPPED'){
+      issues.push({type:'UNMAPPED_PRODUCT',orderId:x.orderId,product:x.productName,sku:x.sku,country,quantity:x.quantity});
+    }else if(target && target!=='SYSTEM_EXCLUDED' && target!=='giftBox' && target!=='engraving' && !hasTarget(target,country)){
+      issues.push({type:'NO_FACT_TARGET',orderId:x.orderId,product:x.productName,sku:x.sku,country,quantity:x.quantity,target});
+    }
+  }
+
+  // Pencil bucket conservation: every order with paid pencils must map to exactly one country/X row.
+  for(const [key,count] of src.pencilBucket.entries()){
+    const [country,bucket]=key.split('\u0001');
+    if(!factRows.some(r=>{
+      const k=factDescriptionType(r.description);
+      return k.type==='pencil' && Number(k.bucket)===Number(bucket) && normalizeCountry(r.country)===country;
+    })){
+      issues.push({type:'NO_PENCIL_BUCKET',country,bucket:Number(bucket),orders:count});
+    }
+  }
+
+  // Quantity conservation for directly counted categories.
+  const expected=new Map();
+  const actual=new Map();
+  for(const x of lineTargets){
+    if(!x.target || ['SYSTEM_EXCLUDED','UNMAPPED','giftBox','engraving'].includes(x.target))continue;
+    const k=`${x.target}\u0001${x.country}`;
+    expected.set(k,(expected.get(k)||0)+(Number(x.quantity)||1));
+  }
+  for(const [row,v] of built.plan.entries()){
+    const k=v.kind;
+    if(!k || ['pencil','giftBox','engraving','derivedCharge','fixedCharge','unknown'].includes(k))continue;
+    const key=`${k}\u0001${v.country}`;
+    actual.set(key,(actual.get(key)||0)+(Number(v.quantity)||0));
+  }
+  for(const [k,qty] of expected){
+    const got=actual.get(k)||0;
+    if(Math.round(qty)!==Math.round(got)){
+      issues.push({type:'QUANTITY_MISMATCH',key,expected:qty,actual:got});
+    }
+  }
+
+  return {ok:issues.length===0,issues,built};
 }
 function escapeRegExp(s){return String(s).replace(/[.*+?^${}()|[\]\\]/g,'\\$&')}
 function numericCellXml(attrs,ref,value){
@@ -662,7 +846,7 @@ function renderOrders(){
 }
 
 
-// v7.0.1 — mandatory FACT delivery: generate a FACT when the source workbook has none.
+// v7.0.2 — mandatory FACT delivery: generate a FACT when the source workbook has none.
 function currencyForWorkbook(workbookName=''){
   const n=String(workbookName||'').toUpperCase();
   if(/\bUSD\b|\$US|US\$/.test(n))return 'USD';
@@ -678,7 +862,7 @@ function workbooksWithFact(){
   return new Set(sheets.filter(s=>s.status==='ignored_fact').map(s=>s.sourceFile));
 }
 
-const LEARNED_PENCIL_FACT_ROWS = [{"sourceRow":12,"country":"FRANCE","description":"Stylo eternelX1","quantity":1463.0,"cogs":0.85,"shipping":5.06,"unitTotal":5.909999999999999,"amount":8646.33},{"sourceRow":13,"country":"FRANCE","description":"Stylo eternelX2","quantity":84.0,"cogs":1.7,"shipping":8.07,"unitTotal":9.77,"amount":820.68},{"sourceRow":14,"country":"FRANCE","description":"Stylo eternelX3","quantity":1330.0,"cogs":2.55,"shipping":11.01,"unitTotal":13.559999999999999,"amount":18034.8},{"sourceRow":15,"country":"FRANCE","description":"Stylo eternelX4","quantity":91.0,"cogs":3.4,"shipping":13.93,"unitTotal":17.33,"amount":1577.03},{"sourceRow":16,"country":"FRANCE","description":"Stylo eternelX5","quantity":6.0,"cogs":4.25,"shipping":17.78,"unitTotal":22.03,"amount":132.18},{"sourceRow":17,"country":"FRANCE","description":"Stylo eternelX6","quantity":51.0,"cogs":5.1,"shipping":20.92,"unitTotal":26.020000000000003,"amount":1327.02},{"sourceRow":18,"country":"FRANCE","description":"Stylo eternelX7","quantity":0.0,"cogs":5.95,"shipping":24.05,"unitTotal":30.0,"amount":0.0},{"sourceRow":19,"country":"FRANCE","description":"Stylo eternelX8","quantity":2.0,"cogs":6.8,"shipping":27.19,"unitTotal":33.99,"amount":67.98},{"sourceRow":20,"country":"FRANCE","description":"Stylo eternelX9","quantity":2.0,"cogs":7.65,"shipping":30.32,"unitTotal":37.97,"amount":75.94},{"sourceRow":21,"country":"FRANCE","description":"Stylo eternelX10","quantity":0.0,"cogs":8.5,"shipping":33.46,"unitTotal":41.96,"amount":0.0},{"sourceRow":22,"country":"FRANCE","description":"Stylo eternelX12","quantity":4.0,"cogs":11.3,"shipping":34.48,"unitTotal":45.78,"amount":183.12},{"sourceRow":23,"country":"FRANCE","description":"Stylo eternelX15","quantity":1.0,"cogs":12.75,"shipping":38.82,"unitTotal":51.57,"amount":51.57},{"sourceRow":24,"country":"FRANCE","description":"Stylo eternelX16","quantity":1.0,"cogs":13.6,"shipping":40.35,"unitTotal":53.95,"amount":53.95},{"sourceRow":25,"country":"FRANCE","description":"Stylo eternelX20","quantity":0.0,"cogs":17.0,"shipping":45.42,"unitTotal":62.42,"amount":0.0},{"sourceRow":26,"country":"FRANCE","description":"Stylo eternelX21","quantity":0.0,"cogs":17.85,"shipping":46.94,"unitTotal":64.78999999999999,"amount":0.0},{"sourceRow":27,"country":"FRANCE","description":"Stylo eternelX24","quantity":0.0,"cogs":20.4,"shipping":49.5,"unitTotal":69.9,"amount":0.0},{"sourceRow":28,"country":"FRANCE","description":"Stylo eternelX48","quantity":0.0,"cogs":40.8,"shipping":73.0,"unitTotal":113.8,"amount":0.0},{"sourceRow":29,"country":"FRANCE","description":"Lot de 4 mines rechargeables UPSELL","quantity":2085.0,"cogs":0.76,"shipping":null,"unitTotal":0.76,"amount":1584.6},{"sourceRow":30,"country":"FRANCE","description":"Lot de 6 Mines colorées UPSELL","quantity":2963.0,"cogs":1.49,"shipping":null,"unitTotal":1.49,"amount":4414.87},{"sourceRow":31,"country":"FRANCE","description":"Mines colorées  UPSELL","quantity":87.0,"cogs":0.25,"shipping":null,"unitTotal":0.25,"amount":21.75},{"sourceRow":33,"country":"BELGIUM","description":"Stylo eternelX1","quantity":131.0,"cogs":0.85,"shipping":4.64,"unitTotal":5.489999999999999,"amount":719.19},{"sourceRow":34,"country":"BELGIUM","description":"Stylo eternelX2","quantity":19.0,"cogs":1.7,"shipping":7.58,"unitTotal":9.28,"amount":176.32},{"sourceRow":35,"country":"BELGIUM","description":"Stylo eternelX3","quantity":98.0,"cogs":2.55,"shipping":10.52,"unitTotal":13.07,"amount":1280.86},{"sourceRow":36,"country":"BELGIUM","description":"Stylo eternelX4","quantity":5.0,"cogs":3.4,"shipping":13.46,"unitTotal":16.86,"amount":84.3},{"sourceRow":37,"country":"BELGIUM","description":"Stylo eternelX5","quantity":4.0,"cogs":4.25,"shipping":16.41,"unitTotal":20.66,"amount":82.64},{"sourceRow":38,"country":"BELGIUM","description":"Stylo eternelX6","quantity":3.0,"cogs":5.1,"shipping":19.35,"unitTotal":24.450000000000003,"amount":73.35},{"sourceRow":39,"country":"BELGIUM","description":"Stylo eternelX7","quantity":3.0,"cogs":5.95,"shipping":22.29,"unitTotal":28.24,"amount":84.72},{"sourceRow":40,"country":"BELGIUM","description":"Stylo eternelX8","quantity":0.0,"cogs":6.8,"shipping":25.23,"unitTotal":32.03,"amount":0.0},{"sourceRow":41,"country":"BELGIUM","description":"Stylo eternelX9","quantity":0.0,"cogs":7.65,"shipping":28.17,"unitTotal":35.82,"amount":0.0},{"sourceRow":42,"country":"BELGIUM","description":"Stylo eternelX12","quantity":1.0,"cogs":10.2,"shipping":36.33,"unitTotal":46.53,"amount":46.53},{"sourceRow":43,"country":"BELGIUM","description":"Lot de 4 mines rechargeables UPSELL","quantity":175.0,"cogs":0.76,"shipping":null,"unitTotal":0.76,"amount":133.0},{"sourceRow":44,"country":"BELGIUM","description":"Lot de 6 Mines colorées UPSELL","quantity":238.0,"cogs":1.49,"shipping":null,"unitTotal":1.49,"amount":354.62},{"sourceRow":45,"country":"BELGIUM","description":"Mines colorées  UPSELL","quantity":13.0,"cogs":0.25,"shipping":null,"unitTotal":0.25,"amount":3.25},{"sourceRow":47,"country":"CANADA","description":"Stylo eternelX1","quantity":238.0,"cogs":0.85,"shipping":5.29,"unitTotal":6.14,"amount":1461.32},{"sourceRow":48,"country":"CANADA","description":"Stylo eternelX2","quantity":39.0,"cogs":1.7,"shipping":8.37,"unitTotal":10.069999999999999,"amount":392.73},{"sourceRow":49,"country":"CANADA","description":"Stylo eternelX3","quantity":203.0,"cogs":2.55,"shipping":11.46,"unitTotal":14.010000000000002,"amount":2844.03},{"sourceRow":50,"country":"CANADA","description":"Stylo eternelX4","quantity":13.0,"cogs":3.4,"shipping":18.06,"unitTotal":21.459999999999997,"amount":278.98},{"sourceRow":51,"country":"CANADA","description":"Stylo eternelX5","quantity":3.0,"cogs":4.25,"shipping":21.7,"unitTotal":25.95,"amount":77.85},{"sourceRow":52,"country":"CANADA","description":"Stylo eternelX6","quantity":8.0,"cogs":5.1,"shipping":25.34,"unitTotal":30.439999999999998,"amount":243.52},{"sourceRow":53,"country":"CANADA","description":"Stylo eternelX7","quantity":1.0,"cogs":5.95,"shipping":23.81,"unitTotal":29.759999999999998,"amount":29.76},{"sourceRow":54,"country":"CANADA","description":"Stylo eternelX9","quantity":2.0,"cogs":7.65,"shipping":29.98,"unitTotal":37.63,"amount":75.26},{"sourceRow":55,"country":"CANADA","description":"Lot de 4 mines rechargeables UPSELL","quantity":191.0,"cogs":0.76,"shipping":null,"unitTotal":0.76,"amount":145.16},{"sourceRow":56,"country":"CANADA","description":"Lot de 6 Mines colorées UPSELL","quantity":526.0,"cogs":1.49,"shipping":null,"unitTotal":1.49,"amount":783.74},{"sourceRow":57,"country":"CANADA","description":"Mines colorées  UPSELL","quantity":17.0,"cogs":0.25,"shipping":null,"unitTotal":0.25,"amount":4.25},{"sourceRow":59,"country":"SWITZERLAND","description":"Stylo eternelX1","quantity":174.0,"cogs":0.85,"shipping":5.49,"unitTotal":6.34,"amount":1103.16},{"sourceRow":60,"country":"SWITZERLAND","description":"Stylo eternelX2","quantity":54.0,"cogs":1.7,"shipping":9.78,"unitTotal":11.479999999999999,"amount":619.92},{"sourceRow":61,"country":"SWITZERLAND","description":"Stylo eternelX3","quantity":174.0,"cogs":2.55,"shipping":14.0,"unitTotal":16.55,"amount":2879.7},{"sourceRow":62,"country":"SWITZERLAND","description":"Stylo eternelX4","quantity":14.0,"cogs":3.4,"shipping":18.36,"unitTotal":21.759999999999998,"amount":304.64},{"sourceRow":63,"country":"SWITZERLAND","description":"Stylo eternelX5","quantity":2.0,"cogs":4.25,"shipping":22.66,"unitTotal":26.91,"amount":53.82},{"sourceRow":64,"country":"SWITZERLAND","description":"Stylo eternelX6","quantity":6.0,"cogs":5.1,"shipping":26.95,"unitTotal":32.05,"amount":192.3},{"sourceRow":65,"country":"SWITZERLAND","description":"Stylo eternelX7","quantity":1.0,"cogs":5.95,"shipping":31.24,"unitTotal":37.19,"amount":37.19},{"sourceRow":66,"country":"SWITZERLAND","description":"Stylo eternelX8","quantity":1.0,"cogs":6.8,"shipping":35.53,"unitTotal":42.33,"amount":42.33},{"sourceRow":67,"country":"SWITZERLAND","description":"Stylo eternelX9","quantity":3.0,"cogs":7.65,"shipping":39.82,"unitTotal":47.47,"amount":142.41},{"sourceRow":68,"country":"SWITZERLAND","description":"Stylo eternelX12","quantity":0.0,"cogs":10.2,"shipping":46.89,"unitTotal":57.09,"amount":0.0},{"sourceRow":69,"country":"SWITZERLAND","description":"Lot de 4 mines rechargeables UPSELL","quantity":359.0,"cogs":0.76,"shipping":null,"unitTotal":0.76,"amount":272.84},{"sourceRow":70,"country":"SWITZERLAND","description":"Lot de 6 Mines colorées UPSELL","quantity":448.0,"cogs":2.55,"shipping":null,"unitTotal":2.55,"amount":1142.4},{"sourceRow":71,"country":"SWITZERLAND","description":"Mines colorées  UPSELL","quantity":3.0,"cogs":0.25,"shipping":null,"unitTotal":0.25,"amount":0.75},{"sourceRow":73,"country":"LUXEMBOURG","description":"Stylo eternelX1","quantity":3.0,"cogs":0.85,"shipping":6.6,"unitTotal":7.449999999999999,"amount":22.35},{"sourceRow":74,"country":"LUXEMBOURG","description":"Stylo eternelX2","quantity":2.0,"cogs":1.7,"shipping":10.69,"unitTotal":12.389999999999999,"amount":24.78},{"sourceRow":75,"country":"LUXEMBOURG","description":"Stylo eternelX3","quantity":8.0,"cogs":2.55,"shipping":14.79,"unitTotal":17.34,"amount":138.72},{"sourceRow":76,"country":"LUXEMBOURG","description":"Stylo eternelX4","quantity":0.0,"cogs":3.4,"shipping":18.88,"unitTotal":22.279999999999998,"amount":0.0},{"sourceRow":77,"country":"LUXEMBOURG","description":"Stylo eternelX6","quantity":1.0,"cogs":5.1,"shipping":27.08,"unitTotal":32.18,"amount":32.18},{"sourceRow":78,"country":"LUXEMBOURG","description":"Stylo eternelX10","quantity":0.0,"cogs":8.5,"shipping":43.46,"unitTotal":51.96,"amount":0.0},{"sourceRow":79,"country":"LUXEMBOURG","description":"Stylo eternelX27","quantity":1.0,"cogs":22.95,"shipping":51.07,"unitTotal":74.02,"amount":74.02},{"sourceRow":80,"country":"LUXEMBOURG","description":"Lot de 4 mines rechargeables UPSELL","quantity":12.0,"cogs":0.79,"shipping":null,"unitTotal":0.79,"amount":9.48},{"sourceRow":81,"country":"LUXEMBOURG","description":"Lot de 6 Mines colorées UPSELL","quantity":16.0,"cogs":2.73,"shipping":null,"unitTotal":2.73,"amount":43.68},{"sourceRow":83,"country":"GERMANY","description":"Stylo eternelX1","quantity":2.0,"cogs":0.85,"shipping":5.76,"unitTotal":6.609999999999999,"amount":13.22},{"sourceRow":84,"country":"GERMANY","description":"Stylo eternelX2","quantity":0.0,"cogs":1.7,"shipping":9.98,"unitTotal":11.68,"amount":0.0},{"sourceRow":85,"country":"GERMANY","description":"Stylo eternelX3","quantity":5.0,"cogs":2.55,"shipping":14.68,"unitTotal":17.23,"amount":86.15},{"sourceRow":86,"country":"GERMANY","description":"Lot de 4 mines rechargeables UPSELL","quantity":5.0,"cogs":0.76,"shipping":null,"unitTotal":0.76,"amount":3.8},{"sourceRow":87,"country":"GERMANY","description":"Lot de 6 Mines colorées UPSELL","quantity":7.0,"cogs":1.79,"shipping":null,"unitTotal":1.79,"amount":12.53},{"sourceRow":88,"country":"GERMANY","description":"Mines colorées  UPSELL","quantity":0.0,"cogs":0.25,"shipping":null,"unitTotal":0.25,"amount":0.0},{"sourceRow":90,"country":"UNITED STATES","description":"Stylo eternelX1","quantity":0.0,"cogs":0.0,"shipping":0.0,"unitTotal":0,"amount":0.0},{"sourceRow":92,"country":"SPAIN","description":"Stylo eternelX1","quantity":1.0,"cogs":0.85,"shipping":5.95,"unitTotal":6.8,"amount":6.8},{"sourceRow":93,"country":"SPAIN","description":"Lot de 6 Mines colorées UPSELL","quantity":1.0,"cogs":1.79,"shipping":null,"unitTotal":1.79,"amount":1.79},{"sourceRow":95,"country":"UKRAINE","description":"Stylo eternelX1","quantity":1.0,"cogs":0.85,"shipping":5.05,"unitTotal":5.8999999999999995,"amount":5.9},{"sourceRow":97,"country":"","description":"Gravure Personnalisée","quantity":6095.0,"cogs":0.6,"shipping":null,"unitTotal":0.6,"amount":3657.0},{"sourceRow":98,"country":"","description":"Coffret Cadeau （upsell）","quantity":3509.0,"cogs":0.37,"shipping":1.25,"unitTotal":1.62,"amount":5684.58},{"sourceRow":99,"country":"","description":"Coffret Cadeau （upsell）","quantity":7.0,"cogs":0.37,"shipping":0.8,"unitTotal":1.17,"amount":8.19}];
+const LEARNED_PENCIL_FACT_ROWS = [{"sourceRow":12,"country":"FRANCE","description":"Stylo eternelX1","quantity":209.0,"cogs":0.85,"shipping":5.06,"unitTotal":5.91,"amount":1235.19},{"sourceRow":13,"country":"FRANCE","description":"Stylo eternelX2","quantity":7.0,"cogs":1.7,"shipping":8.07,"unitTotal":9.77,"amount":68.39},{"sourceRow":14,"country":"FRANCE","description":"Stylo eternelX3","quantity":114.0,"cogs":2.55,"shipping":11.01,"unitTotal":13.56,"amount":1545.84},{"sourceRow":15,"country":"FRANCE","description":"Stylo eternelX4","quantity":1.0,"cogs":3.4,"shipping":13.93,"unitTotal":17.33,"amount":17.33},{"sourceRow":16,"country":"FRANCE","description":"Stylo eternelX5","quantity":0,"cogs":4.25,"shipping":17.78,"unitTotal":22.03,"amount":0},{"sourceRow":17,"country":"FRANCE","description":"Stylo eternelX6","quantity":0,"cogs":5.1,"shipping":20.92,"unitTotal":26.02,"amount":0},{"sourceRow":18,"country":"FRANCE","description":"Stylo eternelX7","quantity":0,"cogs":5.95,"shipping":24.05,"unitTotal":30.0,"amount":0},{"sourceRow":19,"country":"FRANCE","description":"Stylo eternelX8","quantity":0,"cogs":6.8,"shipping":27.19,"unitTotal":33.99,"amount":0},{"sourceRow":20,"country":"FRANCE","description":"Stylo eternelX9","quantity":0,"cogs":7.65,"shipping":30.32,"unitTotal":37.97,"amount":0},{"sourceRow":21,"country":"FRANCE","description":"Stylo eternelX10","quantity":0,"cogs":8.5,"shipping":33.46,"unitTotal":41.96,"amount":0},{"sourceRow":22,"country":"FRANCE","description":"Stylo eternelX12","quantity":0,"cogs":11.3,"shipping":34.48,"unitTotal":45.78,"amount":0},{"sourceRow":23,"country":"FRANCE","description":"Stylo eternelX15","quantity":0,"cogs":12.75,"shipping":38.82,"unitTotal":51.57,"amount":0},{"sourceRow":24,"country":"FRANCE","description":"Stylo eternelX16","quantity":0,"cogs":13.6,"shipping":40.35,"unitTotal":53.95,"amount":0},{"sourceRow":25,"country":"FRANCE","description":"Stylo eternelX20","quantity":0,"cogs":17.0,"shipping":45.42,"unitTotal":62.42,"amount":0},{"sourceRow":26,"country":"FRANCE","description":"Stylo eternelX21","quantity":0,"cogs":17.85,"shipping":46.94,"unitTotal":64.79,"amount":0},{"sourceRow":27,"country":"FRANCE","description":"Stylo eternelX24","quantity":0,"cogs":20.4,"shipping":49.5,"unitTotal":69.9,"amount":0},{"sourceRow":28,"country":"FRANCE","description":"Stylo eternelX48","quantity":0,"cogs":40.8,"shipping":73.0,"unitTotal":113.8,"amount":0},{"sourceRow":29,"country":"FRANCE","description":"Lot de 2 gommes","quantity":59.0,"cogs":0.24,"shipping":5.06,"unitTotal":5.3,"amount":312.7},{"sourceRow":30,"country":"FRANCE","description":"Carnet X1","quantity":2.0,"cogs":1.97,"shipping":9.04,"unitTotal":11.01,"amount":22.02},{"sourceRow":31,"country":"FRANCE","description":"Lot de 4 mines rechargeables","quantity":0,"cogs":0.16,"shipping":4.79,"unitTotal":4.95,"amount":0},{"sourceRow":32,"country":"FRANCE","description":"Lot de 6 Mines colorées","quantity":0,"cogs":0.24,"shipping":4.79,"unitTotal":5.03,"amount":0},{"sourceRow":33,"country":"FRANCE","description":"Lot de 12 Mines colorées","quantity":0,"cogs":0.48,"shipping":4.79,"unitTotal":5.27,"amount":0},{"sourceRow":34,"country":"FRANCE","description":"Lot de 2 gommes UPSELL","quantity":201.0,"cogs":2.06,"shipping":null,"unitTotal":2.06,"amount":414.06},{"sourceRow":35,"country":"FRANCE","description":"Carnet  UPSELL","quantity":9.0,"cogs":6.97,"shipping":null,"unitTotal":6.97,"amount":62.73},{"sourceRow":36,"country":"FRANCE","description":"Lot de 4 mines rechargeables UPSELL","quantity":106.0,"cogs":0.76,"shipping":null,"unitTotal":0.76,"amount":80.56},{"sourceRow":37,"country":"FRANCE","description":"Lot de 6 Mines colorées UPSELL","quantity":264.0,"cogs":1.49,"shipping":null,"unitTotal":1.49,"amount":393.36},{"sourceRow":38,"country":"FRANCE","description":"Lot de 12 Mines colorées UPSELL","quantity":122.0,"cogs":2.98,"shipping":null,"unitTotal":2.98,"amount":363.56},{"sourceRow":39,"country":"FRANCE","description":"Mines colorées  UPSELL","quantity":23.0,"cogs":0.25,"shipping":null,"unitTotal":0.25,"amount":5.75},{"sourceRow":41,"country":"BELGIUM","description":"Stylo eternelX1","quantity":43.0,"cogs":0.85,"shipping":4.64,"unitTotal":5.49,"amount":236.07},{"sourceRow":42,"country":"BELGIUM","description":"Stylo eternelX2","quantity":7.0,"cogs":1.7,"shipping":7.58,"unitTotal":9.28,"amount":64.96},{"sourceRow":43,"country":"BELGIUM","description":"Stylo eternelX3","quantity":5.0,"cogs":2.55,"shipping":10.52,"unitTotal":13.07,"amount":65.35},{"sourceRow":44,"country":"BELGIUM","description":"Stylo eternelX4","quantity":0,"cogs":3.4,"shipping":13.46,"unitTotal":16.86,"amount":0},{"sourceRow":45,"country":"BELGIUM","description":"Stylo eternelX5","quantity":0,"cogs":4.25,"shipping":16.41,"unitTotal":20.66,"amount":0},{"sourceRow":46,"country":"BELGIUM","description":"Stylo eternelX6","quantity":1.0,"cogs":5.1,"shipping":19.35,"unitTotal":24.45,"amount":24.45},{"sourceRow":47,"country":"BELGIUM","description":"Stylo eternelX7","quantity":0,"cogs":5.95,"shipping":22.29,"unitTotal":28.24,"amount":0},{"sourceRow":48,"country":"BELGIUM","description":"Stylo eternelX8","quantity":0,"cogs":6.8,"shipping":25.23,"unitTotal":32.03,"amount":0},{"sourceRow":49,"country":"BELGIUM","description":"Stylo eternelX9","quantity":0,"cogs":7.65,"shipping":28.17,"unitTotal":35.82,"amount":0},{"sourceRow":50,"country":"BELGIUM","description":"Stylo eternelX12","quantity":0,"cogs":10.2,"shipping":36.33,"unitTotal":46.53,"amount":0},{"sourceRow":51,"country":"BELGIUM","description":"Lot de 2 gommes","quantity":0,"cogs":0.24,"shipping":4.64,"unitTotal":4.88,"amount":0},{"sourceRow":52,"country":"BELGIUM","description":"Carnet X1","quantity":2.0,"cogs":1.97,"shipping":9.25,"unitTotal":11.22,"amount":22.44},{"sourceRow":53,"country":"BELGIUM","description":"Lot de 4 mines rechargeables","quantity":0,"cogs":0.16,"shipping":3.44,"unitTotal":3.6,"amount":0},{"sourceRow":54,"country":"BELGIUM","description":"Lot de 6 mines rechargeables","quantity":0,"cogs":0.24,"shipping":4.5,"unitTotal":4.74,"amount":0},{"sourceRow":55,"country":"BELGIUM","description":"Lot de 12 Mines colorées","quantity":0,"cogs":0.48,"shipping":3.44,"unitTotal":3.92,"amount":0},{"sourceRow":56,"country":"BELGIUM","description":"Lot de 2 gommes UPSELL","quantity":28.0,"cogs":2.21,"shipping":null,"unitTotal":2.21,"amount":61.88},{"sourceRow":57,"country":"BELGIUM","description":"Carnet  UPSELL","quantity":6.0,"cogs":7.4,"shipping":null,"unitTotal":7.4,"amount":44.4},{"sourceRow":58,"country":"BELGIUM","description":"Lot de 4 mines rechargeables UPSELL","quantity":31.0,"cogs":0.76,"shipping":null,"unitTotal":0.76,"amount":23.56},{"sourceRow":59,"country":"BELGIUM","description":"Lot de 6 Mines colorées UPSELL","quantity":29.0,"cogs":1.49,"shipping":null,"unitTotal":1.49,"amount":43.21},{"sourceRow":60,"country":"BELGIUM","description":"Lot de 12 Mines colorées UPSELL","quantity":26.0,"cogs":2.98,"shipping":null,"unitTotal":2.98,"amount":77.48},{"sourceRow":61,"country":"BELGIUM","description":"Mines colorées  UPSELL","quantity":9.0,"cogs":0.25,"shipping":null,"unitTotal":0.25,"amount":2.25},{"sourceRow":63,"country":"CANADA","description":"Stylo eternelX1","quantity":12.0,"cogs":0.85,"shipping":5.29,"unitTotal":6.14,"amount":73.68},{"sourceRow":64,"country":"CANADA","description":"Stylo eternelX2","quantity":0,"cogs":1.7,"shipping":8.37,"unitTotal":10.07,"amount":0},{"sourceRow":65,"country":"CANADA","description":"Stylo eternelX3","quantity":3.0,"cogs":2.55,"shipping":11.46,"unitTotal":14.01,"amount":42.03},{"sourceRow":66,"country":"CANADA","description":"Stylo eternelX4","quantity":0,"cogs":3.4,"shipping":18.06,"unitTotal":21.46,"amount":0},{"sourceRow":67,"country":"CANADA","description":"Stylo eternelX5","quantity":0,"cogs":4.25,"shipping":21.7,"unitTotal":25.95,"amount":0},{"sourceRow":68,"country":"CANADA","description":"Stylo eternelX6","quantity":0,"cogs":5.1,"shipping":25.34,"unitTotal":30.44,"amount":0},{"sourceRow":69,"country":"CANADA","description":"Stylo eternelX7","quantity":0,"cogs":5.95,"shipping":23.81,"unitTotal":29.76,"amount":0},{"sourceRow":70,"country":"CANADA","description":"Stylo eternelX9","quantity":0,"cogs":7.65,"shipping":29.98,"unitTotal":37.63,"amount":0},{"sourceRow":71,"country":"CANADA","description":"Stylo eternelX12","quantity":0,"cogs":10.2,"shipping":38.12,"unitTotal":48.32,"amount":0},{"sourceRow":72,"country":"CANADA","description":"Lot de 2 gommes","quantity":5.0,"cogs":0.24,"shipping":5.29,"unitTotal":5.53,"amount":27.65},{"sourceRow":73,"country":"CANADA","description":"Carnet X1","quantity":0,"cogs":1.97,"shipping":9.13,"unitTotal":11.1,"amount":0},{"sourceRow":74,"country":"CANADA","description":"Lot de 4 mines rechargeables","quantity":0,"cogs":0.16,"shipping":3.78,"unitTotal":3.94,"amount":0},{"sourceRow":75,"country":"CANADA","description":"Lot de 6 mines rechargeables","quantity":2.0,"cogs":0.24,"shipping":5.09,"unitTotal":5.33,"amount":10.66},{"sourceRow":76,"country":"CANADA","description":"Lot de 12 Mines colorées","quantity":0,"cogs":null,"shipping":null,"unitTotal":0.0,"amount":0},{"sourceRow":77,"country":"CANADA","description":"Lot de 2 gommes UPSELL","quantity":8.0,"cogs":2.24,"shipping":null,"unitTotal":2.24,"amount":17.92},{"sourceRow":78,"country":"CANADA","description":"Carnet  UPSELL","quantity":0,"cogs":null,"shipping":null,"unitTotal":0.0,"amount":0},{"sourceRow":79,"country":"CANADA","description":"Lot de 4 mines rechargeables UPSELL","quantity":12.0,"cogs":0.76,"shipping":null,"unitTotal":0.76,"amount":9.12},{"sourceRow":80,"country":"CANADA","description":"Lot de 6 Mines colorées UPSELL","quantity":14.0,"cogs":1.49,"shipping":null,"unitTotal":1.49,"amount":20.86},{"sourceRow":81,"country":"CANADA","description":"Lot de 12 Mines colorées UPSELL","quantity":8.0,"cogs":2.98,"shipping":null,"unitTotal":2.98,"amount":23.84},{"sourceRow":82,"country":"CANADA","description":"Mines colorées  UPSELL","quantity":0,"cogs":0.25,"shipping":null,"unitTotal":0.25,"amount":0},{"sourceRow":84,"country":"SWITZERLAND","description":"Stylo eternelX1","quantity":32.0,"cogs":0.85,"shipping":5.49,"unitTotal":6.34,"amount":202.88},{"sourceRow":85,"country":"SWITZERLAND","description":"Stylo eternelX2","quantity":8.0,"cogs":1.7,"shipping":9.78,"unitTotal":11.48,"amount":91.84},{"sourceRow":86,"country":"SWITZERLAND","description":"Stylo eternelX3","quantity":4.0,"cogs":2.55,"shipping":14.0,"unitTotal":16.55,"amount":66.2},{"sourceRow":87,"country":"SWITZERLAND","description":"Stylo eternelX4","quantity":1.0,"cogs":3.4,"shipping":18.36,"unitTotal":21.76,"amount":21.76},{"sourceRow":88,"country":"SWITZERLAND","description":"Stylo eternelX5","quantity":0,"cogs":4.25,"shipping":22.66,"unitTotal":26.91,"amount":0},{"sourceRow":89,"country":"SWITZERLAND","description":"Stylo eternelX6","quantity":1.0,"cogs":5.1,"shipping":26.95,"unitTotal":32.05,"amount":32.05},{"sourceRow":90,"country":"SWITZERLAND","description":"Stylo eternelX7","quantity":0,"cogs":5.95,"shipping":31.24,"unitTotal":37.19,"amount":0},{"sourceRow":91,"country":"SWITZERLAND","description":"Stylo eternelX8","quantity":0,"cogs":6.8,"shipping":35.53,"unitTotal":42.33,"amount":0},{"sourceRow":92,"country":"SWITZERLAND","description":"Stylo eternelX9","quantity":0,"cogs":7.65,"shipping":39.82,"unitTotal":47.47,"amount":0},{"sourceRow":93,"country":"SWITZERLAND","description":"Stylo eternelX11","quantity":0,"cogs":9.35,"shipping":42.98,"unitTotal":52.33,"amount":0},{"sourceRow":94,"country":"SWITZERLAND","description":"Stylo eternelX12","quantity":0,"cogs":10.2,"shipping":46.89,"unitTotal":57.09,"amount":0},{"sourceRow":95,"country":"SWITZERLAND","description":"Lot de 2 gommes","quantity":2.0,"cogs":0.24,"shipping":5.49,"unitTotal":5.73,"amount":11.46},{"sourceRow":96,"country":"SWITZERLAND","description":"Carnet X1","quantity":3.0,"cogs":1.97,"shipping":11.23,"unitTotal":13.2,"amount":39.6},{"sourceRow":97,"country":"SWITZERLAND","description":"Lot de 2 gommes UPSELL","quantity":24.0,"cogs":2.64,"shipping":null,"unitTotal":2.64,"amount":63.36},{"sourceRow":98,"country":"SWITZERLAND","description":"Carnet  UPSELL","quantity":2.0,"cogs":10.2,"shipping":null,"unitTotal":10.2,"amount":20.4},{"sourceRow":99,"country":"SWITZERLAND","description":"Lot de 4 mines rechargeables UPSELL","quantity":18.0,"cogs":0.76,"shipping":null,"unitTotal":0.76,"amount":13.68},{"sourceRow":100,"country":"SWITZERLAND","description":"Lot de 6 Mines colorées UPSELL","quantity":21.0,"cogs":1.49,"shipping":null,"unitTotal":1.49,"amount":31.29},{"sourceRow":101,"country":"SWITZERLAND","description":"Lot de 12 Mines colorées UPSELL","quantity":17.0,"cogs":2.98,"shipping":null,"unitTotal":2.98,"amount":50.66},{"sourceRow":102,"country":"SWITZERLAND","description":"Mines colorées  UPSELL","quantity":0,"cogs":0.25,"shipping":null,"unitTotal":0.25,"amount":0},{"sourceRow":104,"country":"LUXEMBOURG","description":"Stylo eternelX1","quantity":2.0,"cogs":0.85,"shipping":6.6,"unitTotal":7.45,"amount":14.9},{"sourceRow":105,"country":"LUXEMBOURG","description":"Stylo eternelX2","quantity":0,"cogs":1.7,"shipping":10.69,"unitTotal":12.39,"amount":0},{"sourceRow":106,"country":"LUXEMBOURG","description":"Stylo eternelX3","quantity":1.0,"cogs":2.55,"shipping":14.79,"unitTotal":17.34,"amount":17.34},{"sourceRow":107,"country":"LUXEMBOURG","description":"Stylo eternelX4","quantity":0,"cogs":3.4,"shipping":18.88,"unitTotal":22.28,"amount":0},{"sourceRow":108,"country":"LUXEMBOURG","description":"Stylo eternelX6","quantity":0,"cogs":5.1,"shipping":27.08,"unitTotal":32.18,"amount":0},{"sourceRow":109,"country":"LUXEMBOURG","description":"Stylo eternelX10","quantity":0,"cogs":8.5,"shipping":43.46,"unitTotal":51.96,"amount":0},{"sourceRow":110,"country":"LUXEMBOURG","description":"Stylo eternelX27","quantity":0,"cogs":22.95,"shipping":51.07,"unitTotal":74.02,"amount":0},{"sourceRow":111,"country":"LUXEMBOURG","description":"Lot de 2 gommes","quantity":0,"cogs":0.24,"shipping":6.6,"unitTotal":6.84,"amount":0},{"sourceRow":112,"country":"LUXEMBOURG","description":"Carnet X1","quantity":0,"cogs":1.97,"shipping":9.87,"unitTotal":11.84,"amount":0},{"sourceRow":113,"country":"LUXEMBOURG","description":"Lot de 2 gommes UPSELL","quantity":3.0,"cogs":2.89,"shipping":null,"unitTotal":2.89,"amount":8.67},{"sourceRow":114,"country":"LUXEMBOURG","description":"Carnet  UPSELL","quantity":0,"cogs":11.23,"shipping":null,"unitTotal":11.23,"amount":0},{"sourceRow":115,"country":"LUXEMBOURG","description":"Lot de 4 mines rechargeables UPSELL","quantity":2.0,"cogs":0.76,"shipping":null,"unitTotal":0.76,"amount":1.52},{"sourceRow":116,"country":"LUXEMBOURG","description":"Lot de 6 Mines colorées UPSELL","quantity":2.0,"cogs":1.49,"shipping":null,"unitTotal":1.49,"amount":2.98},{"sourceRow":117,"country":"LUXEMBOURG","description":"Lot de 12 Mines colorées UPSELL","quantity":1.0,"cogs":2.98,"shipping":null,"unitTotal":2.98,"amount":2.98},{"sourceRow":118,"country":"LUXEMBOURG","description":"Mines colorées  UPSELL","quantity":0,"cogs":null,"shipping":null,"unitTotal":0.0,"amount":0},{"sourceRow":120,"country":"GERMANY","description":"Stylo eternelX1","quantity":0,"cogs":0.85,"shipping":5.76,"unitTotal":6.61,"amount":0},{"sourceRow":121,"country":"GERMANY","description":"Stylo eternelX2","quantity":0,"cogs":1.7,"shipping":9.98,"unitTotal":11.68,"amount":0},{"sourceRow":122,"country":"GERMANY","description":"Stylo eternelX3","quantity":0,"cogs":2.55,"shipping":14.68,"unitTotal":17.23,"amount":0},{"sourceRow":123,"country":"GERMANY","description":"Lot de 4 mines rechargeables UPSELL","quantity":0,"cogs":0.76,"shipping":null,"unitTotal":0.76,"amount":0},{"sourceRow":124,"country":"GERMANY","description":"Lot de 6 Mines colorées UPSELL","quantity":0,"cogs":1.49,"shipping":null,"unitTotal":1.49,"amount":0},{"sourceRow":125,"country":"GERMANY","description":"Mines colorées  UPSELL","quantity":0,"cogs":0.25,"shipping":null,"unitTotal":0.25,"amount":0},{"sourceRow":127,"country":"AUSTRALIA","description":"Stylo eternelX1","quantity":0,"cogs":0.85,"shipping":null,"unitTotal":5.15,"amount":0},{"sourceRow":128,"country":"AUSTRALIA","description":"Stylo eternelX3","quantity":0,"cogs":2.55,"shipping":null,"unitTotal":11.16,"amount":0},{"sourceRow":129,"country":"AUSTRALIA","description":"Lot de 4 mines rechargeables","quantity":0,"cogs":0.17,"shipping":null,"unitTotal":3.1,"amount":0},{"sourceRow":130,"country":"AUSTRALIA","description":"Lot de 4 mines rechargeables UPSELL","quantity":0,"cogs":0.76,"shipping":null,"unitTotal":0.76,"amount":0},{"sourceRow":131,"country":"AUSTRALIA","description":"Lot de 6 Mines colorées UPSELL","quantity":0,"cogs":1.49,"shipping":null,"unitTotal":2.55,"amount":0},{"sourceRow":132,"country":"AUSTRALIA","description":"Mines colorées  UPSELL","quantity":0,"cogs":0.25,"shipping":null,"unitTotal":0.25,"amount":0},{"sourceRow":134,"country":"UNITED STATES","description":"Stylo eternelX1","quantity":0,"cogs":0.85,"shipping":null,"unitTotal":5.44,"amount":0},{"sourceRow":135,"country":"UNITED STATES","description":"Stylo eternelX3","quantity":0,"cogs":2.55,"shipping":null,"unitTotal":12.12,"amount":0},{"sourceRow":136,"country":"UNITED STATES","description":"Stylo eternelX4","quantity":0,"cogs":3.4,"shipping":null,"unitTotal":15.67,"amount":0},{"sourceRow":137,"country":"UNITED STATES","description":"Lot de 4 mines rechargeables UPSELL","quantity":0,"cogs":0.76,"shipping":null,"unitTotal":0.72,"amount":0},{"sourceRow":138,"country":"UNITED STATES","description":"Lot de 6 Mines colorées UPSELL","quantity":0,"cogs":1.49,"shipping":null,"unitTotal":1.47,"amount":0},{"sourceRow":139,"country":"UNITED STATES","description":"Mines colorées  UPSELL","quantity":0,"cogs":0.25,"shipping":null,"unitTotal":0.25,"amount":0},{"sourceRow":141,"country":"SPAIN","description":"Stylo eternelX1","quantity":0,"cogs":0.85,"shipping":5.95,"unitTotal":6.8,"amount":0},{"sourceRow":142,"country":"SPAIN","description":"Lot de 6 Mines colorées UPSELL","quantity":0,"cogs":1.79,"shipping":null,"unitTotal":1.79,"amount":0},{"sourceRow":144,"country":"","description":"Gravure Personnalisée","quantity":375.0,"cogs":0.6,"shipping":null,"unitTotal":0.6,"amount":225.0},{"sourceRow":145,"country":"","description":"Coffret Cadeau （upsell）","quantity":138.0,"cogs":0.37,"shipping":1.05,"unitTotal":1.42,"amount":195.96},{"sourceRow":147,"country":"","description":"Frais d’importation dans l’UE (3 € par colis)","quantity":337.0,"cogs":3.0,"shipping":null,"unitTotal":3.0,"amount":1011.0},{"sourceRow":148,"country":"","description":"Frais d’importation dans l’UE (2 € par colis)","quantity":56.0,"cogs":2.0,"shipping":null,"unitTotal":2.0,"amount":112.0},{"sourceRow":150,"country":"","description":"⁠Coût du moule - Gommes","quantity":0,"cogs":485.0,"shipping":null,"unitTotal":485.0,"amount":0}];
 
 function detectGeneratedFactProfile(workbookName){
   const lines=(classified?.lineItems||[]).filter(x=>String(x.sourceFile||'')===String(workbookName||''));
@@ -830,17 +1014,24 @@ async function rebuildArchiveReplacingEntry(archive,path,newBytes){
   const centralSize=central.reduce((a,b)=>a+b.length,0),centralOffset=offset;parts.push(...central,new Uint8Array([...u32(ZIP_EOCD),...u16(0),...u16(0),...u16(entries.length),...u16(entries.length),...u32(centralSize),...u32(centralOffset),...u16(0)]));return new Blob(parts,{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
 }
 async function buildGeneratedPencilFactWorkbook(workbookName){
-  const resp=await fetch(`./assets/FACT_TEMPLATE_PENCIL_V1.xlsx?v=7.0.1`,{cache:'no-store'});
-  if(!resp.ok)throw new Error('无法读取 WRITE 铅笔 FACT 学习模板');
-  const templateBlob=await resp.blob(),archive=await PreserveZipArchive.open(templateBlob);
-  const wbXml=await archive.text('xl/workbook.xml',4*1024*1024),
+  const resp=await fetch(`./assets/FACT_TEMPLATE_CN_CANONICAL_V1.xlsx?v=7.0.2`,{cache:'no-store'});
+  if(!resp.ok)throw new Error('无法读取 CN 标准 FACT 模板');
+  const templateBlob=await resp.blob(),
+        archive=await PreserveZipArchive.open(templateBlob),
+        wbXml=await archive.text('xl/workbook.xml',4*1024*1024),
         relsXml=await archive.text('xl/_rels/workbook.xml.rels',4*1024*1024),
         factPath=findFactSheetPath(wbXml,relsXml);
-  if(!factPath)throw new Error('铅笔学习模板缺少 FACT 工作表');
-  const xml=await archive.text(factPath,16*1024*1024);
-  let patched=patchFactXml(xml,LEARNED_PENCIL_FACT_ROWS,workbookName).xml;
-  const date=new Intl.DateTimeFormat('fr-FR',{day:'2-digit',month:'2-digit',year:'2-digit'}).format(new Date());
-  patched=patched.replace(/<c[^>]*\br="E3"[^>]*>[\s\S]*?<\/c>/,xmlTextCell('E3',62,`FACT - AUTO\n\n${date}`));
+  if(!factPath)throw new Error('CN 标准模板缺少 FACT-CN 工作表');
+
+  const audit=factCompletenessAudit(workbookName,LEARNED_PENCIL_FACT_ROWS);
+  if(!audit.ok){
+    const sample=audit.issues.slice(0,8).map(x=>JSON.stringify(x)).join('\n');
+    throw new Error(`FACT 完整性审计未通过，禁止导出以避免漏统计。\n${sample}`);
+  }
+
+  const xml=await archive.text(factPath,16*1024*1024),
+        patched=patchFactXml(xml,LEARNED_PENCIL_FACT_ROWS,workbookName).xml;
+
   return rebuildArchiveReplacingEntry(archive,factPath,enc.encode(patched));
 }
 async function buildGeneratedFactWorkbook(workbookName){
@@ -848,7 +1039,7 @@ async function buildGeneratedFactWorkbook(workbookName){
     return buildGeneratedPencilFactWorkbook(workbookName);
   }
   const data=generatedFactRowsForWorkbook(workbookName);
-  const resp=await fetch(`./assets/FACT_TEMPLATE_LEARNED_V1.xlsx?v=7.0.1`,{cache:'no-store'});if(!resp.ok)throw new Error('无法读取内置 FACT 学习模板');
+  const resp=await fetch(`./assets/FACT_TEMPLATE_LEARNED_V1.xlsx?v=7.0.2`,{cache:'no-store'});if(!resp.ok)throw new Error('无法读取内置 FACT 学习模板');
   const templateBlob=await resp.blob(),archive=await PreserveZipArchive.open(templateBlob),sheetPath='xl/worksheets/sheet1.xml';
   const xml=await archive.text(sheetPath,16*1024*1024),patched=patchLearnedTemplateSheetXml(xml,data,workbookName);
   return rebuildArchiveReplacingEntry(archive,sheetPath,enc.encode(patched));
@@ -1053,27 +1244,52 @@ async function exportAccounting(){
   if(!classified)return;
   const report=buildAccountingReport();
   const hasFact=workbooksWithFact();
+
   try{
     const deliverables=[];
     for(const wb of (sourceWorkbooks||[])){
-      if(hasFact.has(wb.name)){
+      const profile=detectGeneratedFactProfile(wb.name);
+
+      if(profile==='PENCIL_V1'){
+        // V7.0.2: WRITE pencil FACT always uses canonical CN template,
+        // regardless of whether the source workbook contained CN/FR/legacy FACT.
+        const generated=await buildGeneratedPencilFactWorkbook(wb.name);
+        deliverables.push({
+          name:`FACT_CN_已统计_${currentOrderRangeLabel()}_${basename(wb.name).replace(/\.xlsx$/i,'')}.xlsx`,
+          data:generated
+        });
+      }else if(hasFact.has(wb.name)){
+        const factRows=sheets.flatMap(s=>s.sourceFile===wb.name&&s.status==='ignored_fact'?(s.factRows||[]):[]);
+        const audit=factCompletenessAudit(wb.name,factRows);
+        if(!audit.ok){
+          const sample=audit.issues.slice(0,8).map(x=>JSON.stringify(x)).join('\n');
+          throw new Error(`${basename(wb.name)} FACT 完整性审计未通过。\n${sample}`);
+        }
         const patched=await rebuildFactWorkbook(wb.blob,wb.name);
         deliverables.push({name:`FACT_已回填_${currentOrderRangeLabel()}_${basename(wb.name)}`,data:patched});
       }else{
         const generated=await buildGeneratedFactWorkbook(wb.name);
-        deliverables.push({name:`FACT_自动生成_${currentOrderRangeLabel()}_${basename(wb.name).replace(/\.xlsx$/i,'')}.xlsx`,data:generated});
+        deliverables.push({
+          name:`FACT_自动生成_${currentOrderRangeLabel()}_${basename(wb.name).replace(/\.xlsx$/i,'')}.xlsx`,
+          data:generated
+        });
       }
     }
-    // Even if a parser ever fails to retain workbook blobs, export at least one generated FACT from analyzed orders.
+
     if(!deliverables.length){
       const fallbackName=(importedFileNames?.[0]||'订单数据.xlsx').replace(/\.zip$/i,'.xlsx');
-      deliverables.push({name:`FACT_自动生成_${currentOrderRangeLabel()}_${basename(fallbackName).replace(/\.xlsx$/i,'')}.xlsx`,data:await buildGeneratedFactWorkbook(fallbackName)});
+      const generated=await buildGeneratedFactWorkbook(fallbackName);
+      deliverables.push({
+        name:`FACT_自动生成_${currentOrderRangeLabel()}_${basename(fallbackName).replace(/\.xlsx$/i,'')}.xlsx`,
+        data:generated
+      });
     }
+
     const packageBlob=await zipStoreBlobs([{name:report.fileName,data:report.blob},...deliverables]);
     downloadBlob(packageBlob,`WRITE_结算交付包_${currentOrderRangeLabel()}_${localDateStamp()}.zip`);
   }catch(err){
     console.error(err);
-    showError(`FACT 交付导出失败：${err?.message||err}`);
+    showError(`导出被完整性校验拦截：${err?.message||err}`);
   }
 }
 function reimportFlow(){
@@ -1137,12 +1353,12 @@ if(themeMedia.addEventListener)themeMedia.addEventListener('change',onSystemThem
 applyTheme(getThemePreference(),{persist:false});
 
 
-// v7.0.1 release notes controller — show once per release per browser
-const WRITE_RELEASE_META = window.WRITE_RELEASE_META || {current:{version:document.body.dataset.release||'7.0.1',time:'',title:'WRITE Settlement Manager',sections:[]},history:[]};
+// v7.0.2 release notes controller — show once per release per browser
+const WRITE_RELEASE_META = window.WRITE_RELEASE_META || {current:{version:document.body.dataset.release||'7.0.2',time:'',title:'WRITE Settlement Manager',sections:[]},history:[]};
 const WRITE_RELEASE = {
-  version: WRITE_RELEASE_META.current?.version || document.body.dataset.release || '7.0.1',
+  version: WRITE_RELEASE_META.current?.version || document.body.dataset.release || '7.0.2',
   date: WRITE_RELEASE_META.current?.time || '',
-  title: `WRITE Settlement Manager v${WRITE_RELEASE_META.current?.version || document.body.dataset.release || '7.0.1'}`,
+  title: `WRITE Settlement Manager v${WRITE_RELEASE_META.current?.version || document.body.dataset.release || '7.0.2'}`,
   sections: WRITE_RELEASE_META.current?.sections || []
 };
 function showReleaseNotesIfNeeded(){
@@ -1177,7 +1393,7 @@ document.documentElement.dataset.writeReady='true';
 
 
 
-// v7.0.1 — version history from unified release metadata
+// v7.0.2 — version history from unified release metadata
 const WRITE_HISTORY = Array.isArray(WRITE_RELEASE_META.history) ? WRITE_RELEASE_META.history : [];
 function renderReleaseHistory(){
   const host=document.getElementById('releaseHistory');

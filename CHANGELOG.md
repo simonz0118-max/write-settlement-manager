@@ -1,3 +1,13 @@
+## v7.0.2 — 2026-08-09 17:25 (Europe/Paris)
+- WRITE 铅笔业务正式锁定 `1-FACT-CN` 为唯一标准 FACT 模板；FR 模板不再参与自动生成。
+- 从用户手工 CN FACT 建立 `FACT_TEMPLATE_CN_CANONICAL_V1.xlsx`，输出模板仅保留一个 `FACT-CN` 工作表，不再携带旧订单 Sheet。
+- 扩展 FACT 行解析：Carnet、Lot de 2 gommes、4/6/12 mines、各类 UPSELL、Gravure、Coffret Cadeau 全部进入明确落点。
+- 修复免费赠品也参与 FACT 成本统计的问题：FACT 分配只使用收费商品行。
+- 新增 `factCompletenessAudit()`：每一个收费商品必须拥有 FACT 目标行；没有落点时禁止导出。
+- 新增数量守恒校验：订单端商品数量与 FACT 分配数量不一致时禁止导出。
+- 新增铅笔档位完整性校验：X 数量档位在 CN 模板不存在时禁止导出，而不是丢弃订单。
+- 更新首次弹窗、历史更新、README、RELEASE 和中文发布脚本。
+
 ## v7.0.1 — 2026-08-09 17:12 (Europe/Paris)
 - 新增 `ERASER`（Gomme-capuchon Shield）和 `NOTEBOOK`（Le Carnet Parfait）商品类别。
 - Gomme 支持商品名变体、`2 Gomme *1 ~ *6` 和已出现数字 SKU。

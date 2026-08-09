@@ -1,10 +1,11 @@
-WRITE Settlement Manager V7.0.1
-Release time: 2026-08-09 17:12 Europe/Paris
+WRITE Settlement Manager V7.0.2
+Release time: 2026-08-09 17:25 Europe/Paris
 
 本版核心：
-- Gomme-capuchon Shield 自动分类
-- Le Carnet Parfait 自动分类
-- 人工待复核分类永久学习
-- 相同 SKU 后续不再重复复核
-- 无可靠历史成本不编造价格
-- 27792–28706 样本回归测试
+- WRITE 铅笔业务以后全部使用 CN FACT 模板
+- 自动模板仅保留 FACT-CN，不携带旧订单 Sheet
+- Carnet / Gomme / 4-6-12 mines / UPSELL 全映射
+- 免费赠品不参与收费 FACT 成本
+- 商品落点完整性校验
+- 数量守恒校验
+- 任何统计遗漏直接阻止导出
