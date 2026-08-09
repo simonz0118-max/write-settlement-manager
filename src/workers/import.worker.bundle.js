@@ -141,31 +141,65 @@ class ZipArchive {
 }
 
 
-const ORDER_HEADERS = [
-  '订单号', '订单金额', '产品总数', '多品名', '产品名称', '收货人国家', '买家姓名', '运单号',
-  '订单备注', '拣货备注', '客服备注', '地址1+地址2', '下单时间', '付款时间', '店铺账号', '发货时间',
-];
 
-const HEADER_TO_KEY = {
-  '订单号': 'orderId',
-  '订单金额': 'orderAmount',
-  '产品总数': 'productCount',
-  '多品名': 'skuLines',
-  '产品名称': 'productNames',
-  '收货人国家': 'country',
-  '买家姓名': 'buyerName',
-  '运单号': 'trackingNo',
-  '订单备注': 'orderNote',
-  '拣货备注': 'pickingNote',
-  '客服备注': 'customerServiceNote',
-  '地址1+地址2': 'address',
-  '下单时间': 'orderTime',
-  '付款时间': 'paidTime',
-  '店铺账号': 'storeAccount',
-  '发货时间': 'shippedTime',
+const FIELD_ALIASES = {
+  orderId:['订单号','订单编号','order id','order','order number','order no','commande','n° commande','numero commande','numéro commande'],
+  orderAmount:['订单金额','金额','总金额','amount','total','order total','montant','montant total','total commande'],
+  currency:['币种','货币','currency','devise','currency code'],
+  productCount:['产品总数','商品总数','数量','qty','quantity','quantité','quantite','items','item count'],
+  skuLines:['多品名','sku','skus','variant sku','reference','référence','reference produit'],
+  productNames:['产品名称','商品名称','商品','product name','product','products','produit','nom produit','article'],
+  country:['收货人国家','国家','country','shipping country','destination country','pays','pays livraison'],
+  buyerName:['买家姓名','客户姓名','buyer','buyer name','customer','customer name','client','nom client'],
+  trackingNo:['运单号','物流单号','tracking','tracking no','tracking number','numéro suivi','numero suivi'],
+  orderNote:['订单备注','order note','note commande'],
+  pickingNote:['拣货备注','picking note'],
+  customerServiceNote:['客服备注','customer service note','cs note'],
+  address:['地址1+地址2','地址','address','shipping address','adresse'],
+  orderTime:['下单时间','订单时间','order time','created at','date commande'],
+  paidTime:['付款时间','支付时间','paid time','paid at','date paiement'],
+  storeAccount:['店铺账号','店铺','store','store account','shop','boutique'],
+  shippedTime:['发货时间','shipped time','shipped at','date expédition','date expedition']
 };
-
-const REQUIRED_HEADERS = ['订单号', '订单金额', '产品总数', '产品名称', '收货人国家'];
+const CORE_FIELDS=['orderId','orderAmount','productNames','country'];
+const normalizeHeaderText=(v='')=>String(v??'').trim().toLowerCase()
+  .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+  .replace(/[：:()（）[\]{}_\-\/\\]+/g,' ')
+  .replace(/\s+/g,' ').trim();
+const ALIAS_TO_KEY=new Map();
+for(const [key,aliases] of Object.entries(FIELD_ALIASES)){
+  for(const a of aliases)ALIAS_TO_KEY.set(normalizeHeaderText(a),key);
+}
+function keyForHeader(v=''){
+  const n=normalizeHeaderText(v);
+  if(ALIAS_TO_KEY.has(n))return ALIAS_TO_KEY.get(n);
+  // Conservative partial fallbacks only for distinctive labels.
+  if(/\bsku\b/.test(n))return 'skuLines';
+  if(/tracking|suivi/.test(n))return 'trackingNo';
+  if(/currency|devise|币种|货币/.test(n))return 'currency';
+  return null;
+}
+function scoreOrderHeader(row=[]){
+  const keys=row.map(keyForHeader).filter(Boolean);
+  return new Set(keys).size;
+}
+function isOrderHeader(row=[]){
+  const keys=new Set(row.map(keyForHeader).filter(Boolean));
+  return CORE_FIELDS.every(k=>keys.has(k)) && keys.size>=5;
+}
+function inferCurrency(sourceFile='',value=''){
+  const explicit=String(value||'').trim().toUpperCase();
+  const aliases={EURO:'EUR','€':'EUR','$':'USD','US$':'USD','£':'GBP','¥':'JPY','RMB':'CNY'};
+  if(/^[A-Z]{3}$/.test(explicit))return explicit;
+  if(aliases[explicit])return aliases[explicit];
+  const n=String(sourceFile||'').toUpperCase();
+  for(const c of ['USD','EUR','GBP','CHF','CAD','AUD','JPY','CNY']){
+    if(new RegExp(`(^|[^A-Z])${c}([^A-Z]|$)`).test(n))return c;
+  }
+  if(n.includes('€'))return 'EUR';
+  if(n.includes('£'))return 'GBP';
+  return 'EUR';
+}
 
 function isFactSheet(name = '') {
   return String(name).trim().toUpperCase() === 'FACT';
@@ -306,7 +340,7 @@ async function parseSheetStream(archive, entry, sharedStrings, sourceFile, sheet
       if (!header && row.rowNum <= 30 && isOrderHeader(row.values)) {
         header = row.values.map((v) => String(v ?? '').trim());
         headerRow = row.rowNum;
-        keyByColumn = header.map((h) => HEADER_TO_KEY[h] || null);
+        keyByColumn = header.map((h) => keyForHeader(h));
         continue;
       }
       if (!header || row.rowNum <= headerRow) continue;
@@ -317,6 +351,7 @@ async function parseSheetStream(archive, entry, sharedStrings, sourceFile, sheet
       if (!order.orderId) continue;
       order.orderAmount = normalizeNumber(order.orderAmount);
       order.productCount = normalizeNumber(order.productCount);
+      order.currency = inferCurrency(sourceFile, order.currency);
       orders.push(order);
     }
   }
@@ -502,18 +537,27 @@ self.onmessage = async ({ data }) => {
     }
 
     const rawOrders = all.flatMap((s) => s.orders || []);
-    const seen = new Set();
+    // V7: dedupe only inside each workbook. Same order id in another workbook is retained and flagged.
+    const seenLocal = new Set();
+    const byOrderId = new Map();
     const orders = [];
     let duplicates = 0;
     for (const order of rawOrders) {
-      const key = String(order.orderId || '').trim();
-      if (!key) continue;
-      if (seen.has(key)) { duplicates++; continue; }
-      seen.add(key);
+      const orderId = String(order.orderId || '').trim();
+      if (!orderId) continue;
+      const localKey = `${order.sourceFile}\u0001${orderId}`;
+      if (seenLocal.has(localKey)) { duplicates++; continue; }
+      seenLocal.add(localKey);
       orders.push(order);
+      const arr=byOrderId.get(orderId)||[];
+      arr.push({sourceFile:order.sourceFile,sourceSheet:order.sourceSheet});
+      byOrderId.set(orderId,arr);
     }
+    const crossWorkbookDuplicates=[...byOrderId.entries()]
+      .filter(([,refs])=>new Set(refs.map(r=>r.sourceFile)).size>1)
+      .map(([orderId,refs])=>({orderId,refs}));
     const sheets = all.map(({ orders: _orders, ...rest }) => rest);
-    self.postMessage({ type: 'complete', progress: 1, orders, sheets, duplicates, workbooks });
+    self.postMessage({ type: 'complete', progress: 1, orders, sheets, duplicates, crossWorkbookDuplicates, workbooks });
   } catch (error) {
     self.postMessage({ type: 'error', message: error?.message || String(error), stack: error?.stack || '' });
   }

@@ -1,9 +1,10 @@
-WRITE Settlement Manager V6.6.2
-Release time: 2026-08-09 16:58 Europe/Paris
+WRITE Settlement Manager V7.0.1
+Release time: 2026-08-09 17:12 Europe/Paris
 
 本版核心：
-- 无 FACT 自动生成接入真实分类学习
-- WRITE 铅笔自动选择铅笔 FACT 学习模板
-- 国家 + 数量档位 COGs / Shipping 自动学习
-- 自动 FACT 与已有 FACT 回填使用同一统计引擎
-- 全部更新日志入口同步
+- Gomme-capuchon Shield 自动分类
+- Le Carnet Parfait 自动分类
+- 人工待复核分类永久学习
+- 相同 SKU 后续不再重复复核
+- 无可靠历史成本不编造价格
+- 27792–28706 样本回归测试

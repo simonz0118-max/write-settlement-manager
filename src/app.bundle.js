@@ -8,6 +8,8 @@ const LINE_CATEGORIES = [
   ['REFILL','普通笔芯','可替换普通笔芯'],
   ['COLOR_REFILL','彩色笔芯','彩色笔芯 / Mines colorées'],
   ['GIFT_BOX','礼盒','Coffret Cadeau / 礼盒'],
+  ['ERASER','橡皮 / 笔帽橡皮','Gomme-capuchon Shield / 橡皮配件'],
+  ['NOTEBOOK','笔记本 / Carnet','Le Carnet Parfait / 笔记本配件'],
   ['GIFT_CARD','礼品卡','Carte-cadeau'],
   ['B2B','B2B / 专业订单','Commande Professionnelle'],
   ['OTHER','待确认','未命中已知规则'],
@@ -20,13 +22,45 @@ function quantityFromSku(sku='') {
   return m ? Number(m[1]) : 1;
 }
 
+
+const LEARNED_RULES_STORAGE_KEY='write-learned-line-rules-v1';
+function normalizeRuleToken(v=''){
+  return low(v).normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim();
+}
+function learnedRuleKey(productName='',sku=''){
+  const s=normalizeRuleToken(sku),n=normalizeRuleToken(productName);
+  return s?`sku:${s}`:n?`name:${n}`:'';
+}
+function loadPersistentLineRules(){
+  try{
+    const raw=JSON.parse(localStorage.getItem(LEARNED_RULES_STORAGE_KEY)||'{}');
+    return raw&&typeof raw==='object'?raw:{};
+  }catch(e){return{}}
+}
+function savePersistentLineRule(productName='',sku='',category=''){
+  if(!LABEL[category]||category==='OTHER')return;
+  const key=learnedRuleKey(productName,sku);if(!key)return;
+  const rules=loadPersistentLineRules();
+  rules[key]={category,productName:norm(productName),sku:norm(sku),updatedAt:new Date().toISOString()};
+  try{localStorage.setItem(LEARNED_RULES_STORAGE_KEY,JSON.stringify(rules))}catch(e){}
+}
+function persistentCategoryFor(productName='',sku=''){
+  const rules=loadPersistentLineRules();
+  const skuKey=normalizeRuleToken(sku)?`sku:${normalizeRuleToken(sku)}`:'';
+  const nameKey=normalizeRuleToken(productName)?`name:${normalizeRuleToken(productName)}`:'';
+  return (skuKey&&rules[skuKey]?.category)||(nameKey&&rules[nameKey]?.category)||null;
+}
+
 function classifyLine(productName='', sku='') {
   const name = norm(productName), n = low(name), s = low(sku);
   const isFree = /^🎁/.test(name) || /100%\s*off|gratuit|cadeau offert/.test(n);
-  let category = 'OTHER';
-  if (/commande professionnelle|professional order|cmd pro/.test(n)) category = 'B2B';
+  let category = persistentCategoryFor(productName,sku) || 'OTHER';
+  if (category!=='OTHER') {}
+  else if (/commande professionnelle|professional order|cmd pro/.test(n)) category = 'B2B';
   else if (/carte[- ]cadeau|gift\s*card/.test(n)) category = 'GIFT_CARD';
   else if (/gravure|雕刻/.test(n) || /(^|\D)50505594077448/.test(s) || /雕刻/.test(s)) category = 'ENGRAVING';
+  else if (/gomme[- ]?capuchon|gommes?[- ]capuchons?\s+shield|gomme.*shield/.test(n) || /(^|\s)2\s*gomme(?:\s|\*|$)/.test(s) || /58329286902024/.test(s)) category = 'ERASER';
+  else if (/\ble carnet parfait\b|\bcarnet\b/.test(n) || /(^|\s)carnet(?:\s|\*|$)/.test(s)) category = 'NOTEBOOK';
   else if (/coffret cadeau|礼盒|盒子/.test(n) || /(^|\D)52838739738888/.test(s) || /盒子/.test(s)) category = 'GIFT_BOX';
   else if (/mines? color[ée]es?|彩色.*笔芯|pack.*mines/.test(n) || /qb-csbt/.test(s) || /(^|\D)(49624586256648|52725633384712)(\D|$)/.test(s) || /qb-6/.test(s)) category = 'COLOR_REFILL';
   else if (/mines? rechargeables?|\b4\s*mines\b|笔芯/.test(n) || /qb-4/.test(s) || /(^|\D)(45407586615560|45157341331720)(\D|$)/.test(s)) category = 'REFILL';
@@ -63,7 +97,7 @@ function classifyOrder(order) {
   else if (amount===0 && (paidItems.length===0 || items.every(x=>x.isFree || x.category==='OTHER'))) [code,label]=['ZERO_FREE','赠品 / 0€订单'];
   else if (paidCategories.has('PENCIL')) [code,label]=['PENCIL_ORDER','铅笔订单'];
   else if (paidCategories.has('REFILL') || paidCategories.has('COLOR_REFILL')) [code,label]=['REFILL_ORDER','笔芯订单'];
-  else if (paidCategories.has('GIFT_BOX')) [code,label]=['ACCESSORY_ORDER','礼盒 / 配件订单'];
+  else if (paidCategories.has('GIFT_BOX') || paidCategories.has('ERASER') || paidCategories.has('NOTEBOOK')) [code,label]=['ACCESSORY_ORDER','礼盒 / 配件订单'];
   else if (paidCategories.has('ENGRAVING')) [code,label]=['SERVICE_ORDER','雕刻服务订单'];
   else if (amount===0) [code,label]=['ZERO_OTHER','0€待确认订单'];
   const unknownItems=items.filter(x=>x.category==='OTHER');
@@ -375,9 +409,10 @@ const els = {
 const numberFormat = new Intl.NumberFormat('fr-FR');
 const moneyFormat = new Intl.NumberFormat('fr-FR',{style:'currency',currency:'EUR',minimumFractionDigits:2,maximumFractionDigits:2});
 const decimalFormat = new Intl.NumberFormat('fr-FR',{maximumFractionDigits:1});
+const decimal2Format = new Intl.NumberFormat('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2});
 const durationFormat = new Intl.NumberFormat('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2});
 const percentDisplayFormat = new Intl.NumberFormat('fr-FR',{minimumFractionDigits:1,maximumFractionDigits:1});
-let worker=null, orders=[], sheets=[], classified=null, busy=false, duplicateCount=0, importStartedAt=0, importDuration=0, importedFileNames=[], sourceWorkbooks=[];
+let worker=null, orders=[], sheets=[], classified=null, busy=false, duplicateCount=0, crossWorkbookDuplicates=[], importStartedAt=0, importDuration=0, importedFileNames=[], sourceWorkbooks=[];
 let modalAction=null;
 
 function escapeHtml(v){return String(v??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}
@@ -393,7 +428,7 @@ function setView(view){
   document.querySelectorAll('.view[data-view-panel]').forEach(panel=>panel.classList.toggle('active',panel.dataset.viewPanel===view));
 }
 function resetState({showLanding=true}={}){
-  worker?.terminate(); worker=null; orders=[]; sheets=[]; classified=null; busy=false; duplicateCount=0; importDuration=0; importedFileNames=[]; sourceWorkbooks=[];
+  worker?.terminate(); worker=null; orders=[]; sheets=[]; classified=null; busy=false; duplicateCount=0; crossWorkbookDuplicates=[]; importDuration=0; importedFileNames=[]; sourceWorkbooks=[];
   setBusy(false); hideError(); els.progressFill.style.width='0%'; els.fileInput.value=''; els.searchInput.value='';
   els.countrySelect.innerHTML='<option value="ALL">全部国家</option>'; els.categorySelect.innerHTML='<option value="ALL">全部会计分类</option>';
   els.appViews.hidden=true; els.topActions.hidden=true; els.importLanding.hidden=!showLanding; els.sidebarResetButton.disabled=true;
@@ -463,19 +498,87 @@ function startImport(fileList){
   worker.postMessage({files});
 }
 
+
+// V7.0 universal workbook / currency / quality / learning layer
+function orderCurrency(order){return String(order?.currency||currencyForWorkbook(order?.sourceFile||'')||'EUR').toUpperCase()}
+function currencyTotals(){
+  const map=new Map();
+  for(const o of (classified?.orders||[])){
+    const c=orderCurrency(o),r=map.get(c)||{currency:c,orders:0,amount:0};
+    r.orders++;r.amount+=Number(o.orderAmount)||0;map.set(c,r);
+  }
+  return [...map.values()].sort((a,b)=>a.currency.localeCompare(b.currency));
+}
+function workbookModels(){
+  const factSet=new Set(sheets.filter(s=>s.status==='ignored_fact').map(s=>s.sourceFile));
+  const byFile=new Map();
+  for(const o of (classified?.orders||[])){
+    const r=byFile.get(o.sourceFile)||{file:o.sourceFile,orders:[],currencies:new Set(),unknown:0,profiles:new Set()};
+    r.orders.push(o);r.currencies.add(orderCurrency(o));
+    r.unknown+=Number(o.unknownItemCount)||0;
+    byFile.set(o.sourceFile,r);
+  }
+  return [...byFile.values()].map(r=>{
+    const profile=detectGeneratedFactProfile(r.file);
+    return {...r,profile,hasFact:factSet.has(r.file),orderMin:Math.min(...r.orders.map(o=>orderSequenceNumber(o.orderId)).filter(Number.isFinite),Infinity),orderMax:Math.max(...r.orders.map(o=>orderSequenceNumber(o.orderId)).filter(Number.isFinite),-Infinity)};
+  });
+}
+function qualityIssues(){
+  const issues=[];
+  const totals=currencyTotals();
+  if(totals.length>1)issues.push({level:'warn',type:'多币种',message:`检测到 ${totals.map(x=>x.currency).join(' / ')}，V7 不会把不同币种直接相加。`});
+  if(crossWorkbookDuplicates.length)issues.push({level:'warn',type:'跨工作簿重复',message:`发现 ${crossWorkbookDuplicates.length} 个订单号出现在多个工作簿中；已保留各工作簿订单，不再静默删除。`});
+  const unknown=classified?.unknown?.length||0;
+  if(unknown)issues.push({level:'warn',type:'未识别商品',message:`${unknown} 个商品行需要学习或人工复核。`});
+  for(const wb of workbookModels()){
+    if(!wb.hasFact && wb.profile==='GENERIC')issues.push({level:'info',type:'无 FACT / 新模型',message:`${basename(wb.file)} 没有 FACT 且未命中已学习 Profile，将生成通用 FACT 并标记未学习成本。`});
+    if(wb.currencies.size>1)issues.push({level:'warn',type:'工作簿混合币种',message:`${basename(wb.file)} 内检测到多个币种：${[...wb.currencies].join(' / ')}`});
+  }
+  return issues;
+}
+function learnedRuleRows(){
+  const map=new Map();
+  for(const x of (classified?.lineItems||[])){
+    const sku=String(x.sku||'').trim(),name=String(x.productName||'').trim();
+    const key=[x.sourceFile,sku||name,x.category].join('\u0001');
+    const saved=persistentCategoryFor(name,sku);
+    const source=saved?'人工学习':(x.category==='ERASER'||x.category==='NOTEBOOK'?'V7 内置学习':'自动规则');
+    if(!map.has(key))map.set(key,{sourceFile:x.sourceFile,sku,name,category:x.categoryLabel||x.category,profile:detectGeneratedFactProfile(x.sourceFile),source,count:0});
+    map.get(key).count+=Number(x.quantity)||1;
+  }
+  return [...map.values()].sort((a,b)=>b.count-a.count);
+}
+function renderQualityCenter(){
+  const host=document.getElementById('qualityList'),summary=document.getElementById('qualitySummary');
+  if(!host||!summary)return;
+  const issues=qualityIssues(),models=workbookModels(),currencies=currencyTotals();
+  summary.innerHTML=`<div><b>${models.length}</b><span>工作簿</span></div><div><b>${currencies.length}</b><span>币种</span></div><div><b>${crossWorkbookDuplicates.length}</b><span>跨文件重复订单</span></div><div><b>${classified?.unknown?.length||0}</b><span>未识别商品行</span></div>`;
+  host.innerHTML=issues.length?issues.map(x=>`<article class="quality-item ${x.level}"><strong>${escapeHtml(x.type)}</strong><p>${escapeHtml(x.message)}</p></article>`).join(''):`<div class="empty">✓ 未发现阻断性数据质量问题。</div>`;
+  const wbHost=document.getElementById('workbookModelList');
+  if(wbHost)wbHost.innerHTML=models.map(w=>`<div class="model-row"><strong>${escapeHtml(basename(w.file))}</strong><span>${escapeHtml(w.profile)}</span><span>${w.hasFact?'已有 FACT':'自动 FACT'}</span><span>${escapeHtml([...w.currencies].join(' / '))}</span><span>${numberFormat.format(w.orders.length)} 单</span></div>`).join('');
+}
+function renderLearningCenter(){
+  const host=document.getElementById('learningList'),meta=document.getElementById('learningMeta');
+  if(!host||!meta)return;
+  const rows=learnedRuleRows();
+  meta.textContent=`本次识别 ${rows.length} 条商品/SKU 映射 · 人工修正优先于自动规则`;
+  host.innerHTML=rows.slice(0,500).map(r=>`<div class="learning-row"><div><strong>${escapeHtml(r.sku||r.name||'—')}</strong><small>${escapeHtml(r.name||'')}</small></div><span>${escapeHtml(r.category)}</span><span>${escapeHtml(r.profile)}</span><span>${numberFormat.format(r.count)} 件</span></div>`).join('')||'<div class="empty">导入订单后显示学习结果。</div>';
+}
+
 function renderResults(){
   if(!classified)return;
   const imported=sheets.filter(s=>s.status==='imported'), facts=sheets.filter(s=>s.status==='ignored_fact');
-  const amount=orders.reduce((a,o)=>a+(Number(o.orderAmount)||0),0), review=classified.orders.filter(o=>o.classificationStatus==='需复核').length;
+  const currencySummary=currencyTotals(),singleCurrency=currencySummary.length===1;
+  const amount=singleCurrency?currencySummary[0].amount:0, review=classified.orders.filter(o=>o.classificationStatus==='需复核').length;
   const itemQty=classified.lineItems.reduce((a,b)=>a+(Number(b.quantity)||1),0), giftQty=classified.lineItems.filter(x=>x.isFree).reduce((a,b)=>a+(Number(b.quantity)||1),0);
   const rawRows=imported.reduce((a,s)=>a+(Number(s.orderCount)||0),0), uniqueBooks=new Set(sheets.map(s=>s.sourceFile)).size, inflated=sheets.reduce((a,s)=>a+(Number(s.inflatedBytes)||0),0);
 
-  els.metricOrders.textContent=numberFormat.format(orders.length); els.metricAmount.textContent=moneyFormat.format(amount); els.metricSheets.textContent=numberFormat.format(imported.length);
+  els.metricOrders.textContent=numberFormat.format(orders.length); els.metricAmount.textContent=singleCurrency?(currencySummary[0].currency==='EUR'?moneyFormat.format(amount):`${decimal2Format.format(amount)} ${currencySummary[0].currency}`):'多币种'; els.metricSheets.textContent=numberFormat.format(imported.length);
   els.metricFacts.textContent=numberFormat.format(facts.length); els.metricDuplicates.textContent=`${numberFormat.format(duplicateCount)} 个重复订单已去重`; els.metricReview.textContent=numberFormat.format(review); els.metricGift.textContent=numberFormat.format(itemQty);
   els.navReviewCount.textContent=numberFormat.format(review); els.navReviewCount.hidden=review===0; els.quickReviewCount.textContent=numberFormat.format(review);
   els.systemStatus.textContent='就绪'; els.lastImportText.textContent=`上次导入 · ${nowText()}`; document.querySelector('.system-card')?.classList.add('ready'); els.sidebarResetButton.disabled=false;
 
-  renderAccounting(amount); renderProductSummary(giftQty); renderUnknown(); renderSheets(); renderOrders(); renderRecent();
+  renderAccounting(amount); renderProductSummary(giftQty); renderUnknown(); renderSheets(); renderOrders(); renderRecent(); renderQualityCenter(); renderLearningCenter();
   const countries=[...new Set(classified.orders.map(o=>o.country).filter(Boolean))].sort();
   els.countrySelect.innerHTML='<option value="ALL">全部国家</option>'+countries.map(c=>`<option>${escapeHtml(c)}</option>`).join('');
   const cats=[...new Set(classified.orders.map(o=>o.accountingCategory))];
@@ -529,7 +632,11 @@ function saveReviewRow(editor){
   setLineValue(order,'skuLines',lineNo,editor.querySelector('.review-sku').value);
   const chosen=editor.querySelector('.review-category').value;
   order.manualLineCategories={...(order.manualLineCategories||{})};
-  if(chosen==='AUTO') delete order.manualLineCategories[lineNo]; else order.manualLineCategories[lineNo]=chosen;
+  if(chosen==='AUTO') delete order.manualLineCategories[lineNo];
+  else {
+    order.manualLineCategories[lineNo]=chosen;
+    savePersistentLineRule(editor.querySelector('.review-name').value,editor.querySelector('.review-sku').value,chosen);
+  }
   classified=classifyOrders(orders); renderResults(); setView('review');
 }
 
@@ -555,7 +662,7 @@ function renderOrders(){
 }
 
 
-// v6.6.2 — mandatory FACT delivery: generate a FACT when the source workbook has none.
+// v7.0.1 — mandatory FACT delivery: generate a FACT when the source workbook has none.
 function currencyForWorkbook(workbookName=''){
   const n=String(workbookName||'').toUpperCase();
   if(/\bUSD\b|\$US|US\$/.test(n))return 'USD';
@@ -599,25 +706,29 @@ function learnedCostRateForDescription(description='',country=''){
 }
 function generatedPencilFactRowsForWorkbook(workbookName){
   const {plan}=buildFactBackfillPlan(workbookName,LEARNED_PENCIL_FACT_ROWS);
-  return LEARNED_PENCIL_FACT_ROWS.map((r,i)=>{
+  const base=LEARNED_PENCIL_FACT_ROWS.map((r,i)=>{
     const v=plan.get(Number(r.sourceRow))||{quantity:0,amount:0};
     return {
-      no:i+1,
-      country:r.country||'',
-      description:r.description,
-      sku:'',
-      quantity:v.quantity,
-      cogs:r.cogs,
-      shipping:r.shipping,
-      unitTotal:r.unitTotal,
-      amount:v.amount,
-      currency:'EUR',
-      costStatus:'已使用 WRITE 铅笔 FACT 学习价格',
-      sourceFile:workbookName,
-      sourceSheet:'AUTO_FACT_PENCIL',
-      generated:true
+      no:i+1,country:r.country||'',description:r.description,sku:'',quantity:v.quantity,
+      cogs:r.cogs,shipping:r.shipping,unitTotal:r.unitTotal,amount:v.amount,currency:'EUR',
+      costStatus:'已使用 WRITE 铅笔 FACT 学习价格',sourceFile:workbookName,sourceSheet:'AUTO_FACT_PENCIL',generated:true
     };
   });
+  const extra=new Map();
+  const lines=(classified?.lineItems||[]).filter(x=>String(x.sourceFile||'')===String(workbookName||'')&&(x.category==='ERASER'||x.category==='NOTEBOOK'));
+  for(const x of lines){
+    const desc=x.category==='ERASER'?'Gomme-capuchon Shield':'Le Carnet Parfait';
+    const key=[normalizeCountry(x.country),desc].join('\u0001');
+    const r=extra.get(key)||{country:normalizeCountry(x.country),description:desc,quantity:0};
+    r.quantity+=Number(x.quantity)||1;
+    extra.set(key,r);
+  }
+  for(const r of extra.values())base.push({
+    no:base.length+1,country:r.country,description:r.description,sku:'',quantity:r.quantity,
+    cogs:null,shipping:null,unitTotal:null,amount:0,currency:'EUR',
+    costStatus:'已分类 · 历史 FACT 无可靠成本价格',sourceFile:workbookName,sourceSheet:'AUTO_FACT_PENCIL_ACCESSORY',generated:true
+  });
+  return base;
 }
 function generatedGenericFactRowsForWorkbook(workbookName){
   const rows=[], map=new Map(), currency=currencyForWorkbook(workbookName);
@@ -719,7 +830,7 @@ async function rebuildArchiveReplacingEntry(archive,path,newBytes){
   const centralSize=central.reduce((a,b)=>a+b.length,0),centralOffset=offset;parts.push(...central,new Uint8Array([...u32(ZIP_EOCD),...u16(0),...u16(0),...u16(entries.length),...u16(entries.length),...u32(centralSize),...u32(centralOffset),...u16(0)]));return new Blob(parts,{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
 }
 async function buildGeneratedPencilFactWorkbook(workbookName){
-  const resp=await fetch(`./assets/FACT_TEMPLATE_PENCIL_V1.xlsx?v=6.6.2`,{cache:'no-store'});
+  const resp=await fetch(`./assets/FACT_TEMPLATE_PENCIL_V1.xlsx?v=7.0.1`,{cache:'no-store'});
   if(!resp.ok)throw new Error('无法读取 WRITE 铅笔 FACT 学习模板');
   const templateBlob=await resp.blob(),archive=await PreserveZipArchive.open(templateBlob);
   const wbXml=await archive.text('xl/workbook.xml',4*1024*1024),
@@ -737,7 +848,7 @@ async function buildGeneratedFactWorkbook(workbookName){
     return buildGeneratedPencilFactWorkbook(workbookName);
   }
   const data=generatedFactRowsForWorkbook(workbookName);
-  const resp=await fetch(`./assets/FACT_TEMPLATE_LEARNED_V1.xlsx?v=6.6.2`,{cache:'no-store'});if(!resp.ok)throw new Error('无法读取内置 FACT 学习模板');
+  const resp=await fetch(`./assets/FACT_TEMPLATE_LEARNED_V1.xlsx?v=7.0.1`,{cache:'no-store'});if(!resp.ok)throw new Error('无法读取内置 FACT 学习模板');
   const templateBlob=await resp.blob(),archive=await PreserveZipArchive.open(templateBlob),sheetPath='xl/worksheets/sheet1.xml';
   const xml=await archive.text(sheetPath,16*1024*1024),patched=patchLearnedTemplateSheetXml(xml,data,workbookName);
   return rebuildArchiveReplacingEntry(archive,sheetPath,enc.encode(patched));
@@ -854,6 +965,8 @@ function buildAccountingReport(){
   const grossProfit=totalAmount-factData.totalAmount;
   const grossMargin=totalAmount?grossProfit/totalAmount:0;
   const sourceLabel=sourceNames.length===1?sourceNames[0]:`${sourceNames.length} 个文件`;
+  const currencySummaryV7=currencyTotals();
+  const multiCurrency=currencySummaryV7.length>1;
 
   // 00: only one clear accounting overview table. No FACT/order tables mixed on this sheet.
   const overview=[
@@ -861,10 +974,10 @@ function buildAccountingReport(){
     [`生成时间：${reportDate}｜数据源：${sourceLabel}`,'','',''],
     [],
     ['指标','数值','会计口径','状态'],
-    ['销售订单总额',totalAmount,'去重后订单金额合计','已核算'],
+    ['销售订单总额',multiCurrency?'见币种总览':totalAmount,multiCurrency?'多币种禁止直接合计':'去重后订单金额合计',multiCurrency?'分币种核算':'已核算'],
     ['FACT 成本总额',factData.totalAmount,'FACT / 自动生成 FACT 的 Amount 合计',factData.factRows.length?(factData.active?'已解析':'已生成 · 成本待补'):'无 FACT 数据'],
-    ['估算毛利',grossProfit,'销售订单总额 - FACT 成本总额','估算值'],
-    ['估算毛利率',grossMargin,'估算毛利 ÷ 销售订单总额','估算值'],
+    ['估算毛利',multiCurrency?'—':grossProfit,multiCurrency?'多币种时不跨币种计算毛利':'销售订单总额 - FACT 成本总额',multiCurrency?'不计算':'估算值'],
+    ['估算毛利率',multiCurrency?'—':grossMargin,multiCurrency?'多币种时不跨币种计算毛利率':'估算毛利 ÷ 销售订单总额',multiCurrency?'不计算':'估算值'],
     ['去重后订单数',classified.orders.length,'最终纳入结算的唯一订单','已核算'],
     ['商品件数',totalItemQty,'所有商品行数量合计','已核算'],
     ['赠品件数',giftQty,'🎁 / 100% off 自动识别','已识别'],
@@ -891,8 +1004,8 @@ function buildAccountingReport(){
   }
 
   // 04: Order detail.
-  const orderRows=[['订单号','日期','客户','国家/地区','订单金额','会计分类','状态','商品件数','含赠品','运单号']];
-  for(const o of classified.orders) orderRows.push([o.orderId,o.orderTime||'',o.buyerName||'',o.country||'',Number(o.orderAmount)||0,o.accountingCategory,o.classificationStatus,Number(o.productCount)||0,o.hasGift?'是':'否',o.trackingNo||'']);
+  const orderRows=[['订单号','日期','客户','国家/地区','订单金额','币种','会计分类','状态','商品件数','含赠品','运单号']];
+  for(const o of classified.orders) orderRows.push([o.orderId,o.orderTime||'',o.buyerName||'',o.country||'',Number(o.orderAmount)||0,orderCurrency(o),o.accountingCategory,o.classificationStatus,Number(o.productCount)||0,o.hasGift?'是':'否',o.trackingNo||'']);
 
   // 05: Product summary.
   const productMap=new Map();
@@ -915,16 +1028,21 @@ function buildAccountingReport(){
   const logRows=[['来源文件','Sheet','处理状态','订单行数','处理说明','解压读取字节']];
   for(const x of sheets)logRows.push([x.sourceFile,x.sheetName,x.status,x.orderCount,x.reason,x.inflatedBytes||0]);
 
+  const currencyRows=[['币种','订单数','原币金额','说明']];
+  for(const c of currencySummaryV7)currencyRows.push([c.currency,c.orders,c.amount,'原币汇总，不做隐式换算']);
+  if(currencySummaryV7.length===0)currencyRows.push(['—',0,0,'未识别币种']);
+
   const blob=buildXlsx([
-    {name:'00_结算总览',rows:overview,widths:[26,20,38,20],titleRow:1,subtitleRow:2,headerRows:[4],freezeRow:4,freezeCol:1,merges:['A1:D1','A2:D2'],formatRules:[
+    {name:'00_币种总览',rows:currencyRows,widths:[14,14,22,40],headerRows:[1],freezeRow:1,autoFilterRow:1,integerColumns:[2],centerColumns:[1,2],bandedRows:true},
+    {name:'01_结算总览',rows:overview,widths:[26,20,38,20],titleRow:1,subtitleRow:2,headerRows:[4],freezeRow:4,freezeCol:1,merges:['A1:D1','A2:D2'],formatRules:[
       {r1:5,r2:7,c1:2,c2:2,kind:'currency'},{r1:8,r2:8,c1:2,c2:2,kind:'percent'},{r1:9,r2:12,c1:2,c2:2,kind:'int'}
     ]},
-    {name:'01_FACT分类汇总',rows:factSummaryRows,widths:[10,52,14,16,18,22,20],headerRows:[1],totalRows:[factSummaryRows.length],freezeRow:1,freezeCol:2,autoFilterRow:1,integerColumns:[1,3],currencyColumns:[4,5,6,7],bandedRows:true},
-    {name:'02_订单会计分类',rows:orderCategoryRows,widths:[26,14,18,16,14],headerRows:[1],totalRows:[orderCategoryRows.length],freezeRow:1,freezeCol:1,autoFilterRow:1,integerColumns:[2,5],currencyColumns:[3],percentColumns:[4],bandedRows:true},
-    {name:'03_FACT国家明细',rows:factDetailRows,widths:[20,10,52,14,16,18,22,20],headerRows:[1],freezeRow:1,freezeCol:3,autoFilterRow:1,integerColumns:[2,4],currencyColumns:[5,6,7,8],bandedRows:true},
-    {name:'04_订单明细',rows:orderRows,widths:[22,22,28,18,17,22,14,13,12,28],headerRows:[1],freezeRow:1,freezeCol:2,autoFilterRow:1,currencyColumns:[5],integerColumns:[8],bandedRows:true},
-    {name:'05_商品汇总',rows:productRows,widths:[18,60,36,14,14,14,16],headerRows:[1],freezeRow:1,freezeCol:1,autoFilterRow:1,integerColumns:[4,5,6,7],bandedRows:true},
-    {name:'06_待复核',rows:reviewRows,widths:[22,17,28,18,58,36,42],headerRows:[1],freezeRow:1,freezeCol:2,autoFilterRow:1,currencyColumns:[2],reviewMode:true,bandedRows:true},
+    {name:'02_FACT分类汇总',rows:factSummaryRows,widths:[10,52,14,16,18,22,20],headerRows:[1],totalRows:[factSummaryRows.length],freezeRow:1,freezeCol:2,autoFilterRow:1,integerColumns:[1,3],currencyColumns:[4,5,6,7],bandedRows:true},
+    {name:'03_订单会计分类',rows:orderCategoryRows,widths:[26,14,18,16,14],headerRows:[1],totalRows:[orderCategoryRows.length],freezeRow:1,freezeCol:1,autoFilterRow:1,integerColumns:[2,5],currencyColumns:[3],percentColumns:[4],bandedRows:true},
+    {name:'04_FACT国家明细',rows:factDetailRows,widths:[20,10,52,14,16,18,22,20],headerRows:[1],freezeRow:1,freezeCol:3,autoFilterRow:1,integerColumns:[2,4],currencyColumns:[5,6,7,8],bandedRows:true},
+    {name:'05_订单明细',rows:orderRows,widths:[22,22,28,18,17,12,22,14,13,12,28],headerRows:[1],freezeRow:1,freezeCol:2,autoFilterRow:1,integerColumns:[9],centerColumns:[6],bandedRows:true},
+    {name:'06_商品汇总',rows:productRows,widths:[18,60,36,14,14,14,16],headerRows:[1],freezeRow:1,freezeCol:1,autoFilterRow:1,integerColumns:[4,5,6,7],bandedRows:true},
+    {name:'07_待复核',rows:reviewRows,widths:[22,17,28,18,58,36,42],headerRows:[1],freezeRow:1,freezeCol:2,autoFilterRow:1,currencyColumns:[2],reviewMode:true,bandedRows:true},
     {name:'90_订单审计',rows:auditRows,widths:[22,17,22,14,14,54,24,12,28,22,22],headerRows:[1],freezeRow:1,freezeCol:1,autoFilterRow:1,currencyColumns:[2],integerColumns:[8],bandedRows:true},
     {name:'99_导入日志',rows:logRows,widths:[56,26,20,14,56,20],headerRows:[1],freezeRow:1,autoFilterRow:1,integerColumns:[4,6],bandedRows:true}
   ]);
@@ -1019,12 +1137,12 @@ if(themeMedia.addEventListener)themeMedia.addEventListener('change',onSystemThem
 applyTheme(getThemePreference(),{persist:false});
 
 
-// v6.6.2 release notes controller — show once per release per browser
-const WRITE_RELEASE_META = window.WRITE_RELEASE_META || {current:{version:document.body.dataset.release||'6.6.2',time:'',title:'WRITE Settlement Manager',sections:[]},history:[]};
+// v7.0.1 release notes controller — show once per release per browser
+const WRITE_RELEASE_META = window.WRITE_RELEASE_META || {current:{version:document.body.dataset.release||'7.0.1',time:'',title:'WRITE Settlement Manager',sections:[]},history:[]};
 const WRITE_RELEASE = {
-  version: WRITE_RELEASE_META.current?.version || document.body.dataset.release || '6.6.2',
+  version: WRITE_RELEASE_META.current?.version || document.body.dataset.release || '7.0.1',
   date: WRITE_RELEASE_META.current?.time || '',
-  title: `WRITE Settlement Manager v${WRITE_RELEASE_META.current?.version || document.body.dataset.release || '6.6.2'}`,
+  title: `WRITE Settlement Manager v${WRITE_RELEASE_META.current?.version || document.body.dataset.release || '7.0.1'}`,
   sections: WRITE_RELEASE_META.current?.sections || []
 };
 function showReleaseNotesIfNeeded(){
@@ -1059,7 +1177,7 @@ document.documentElement.dataset.writeReady='true';
 
 
 
-// v6.6.2 — version history from unified release metadata
+// v7.0.1 — version history from unified release metadata
 const WRITE_HISTORY = Array.isArray(WRITE_RELEASE_META.history) ? WRITE_RELEASE_META.history : [];
 function renderReleaseHistory(){
   const host=document.getElementById('releaseHistory');

@@ -18,15 +18,15 @@
   }catch(e){document.documentElement.dataset.theme='light';document.documentElement.dataset.themePreference='auto';}
 })();
 </script>
-<link href="./src/styles.css?v=6.6.2" rel="stylesheet"/>
+<link href="./src/styles.css?v=7.0.1" rel="stylesheet"/>
 <style>[hidden]{display:none!important}</style>
 </head>
-<body data-release="6.6.2">
+<body data-release="7.0.1">
 <div class="app-shell">
 <aside class="sidebar">
 <div class="brand">
 <img class="brand-logo brand-logo-c" src="./assets/panda-logo-c-image2.png" alt="WRITE 熊猫简笔画 Logo"/>
-<div class="brand-copy"><strong>WRITE</strong><span>Settlement Manager</span><small>v6.6.2</small></div>
+<div class="brand-copy"><strong>WRITE</strong><span>Settlement Manager</span><small>v7.0.1</small></div>
 </div>
 <nav class="side-nav" id="sideNav">
 <button class="nav-item active" data-view="dashboard"><span>⌂</span>首页</button>
@@ -34,6 +34,8 @@
 <button class="nav-item" data-view="orders"><span>▤</span>订单管理</button>
 <button class="nav-item" data-view="products"><span>◇</span>商品分类</button>
 <button class="nav-item" data-view="review"><span>◎</span>待复核 <b hidden="" id="navReviewCount">0</b></button>
+<button class="nav-item" data-view="quality"><span>△</span>数据质量</button>
+<button class="nav-item" data-view="learning"><span>⌘</span>规则学习</button>
 <button class="nav-item" data-view="imports"><span>↧</span>导入记录</button>
 <button class="nav-item" data-view="export"><span>⇩</span>导出报表</button>
 <button class="nav-item" data-view="history"><span>↺</span>历史更新</button>
@@ -166,12 +168,24 @@
 <section class="view" data-view-panel="orders"><div class="page-head"><div><span class="eyebrow">ORDERS</span><h1>订单管理</h1><p id="resultCount">0 条结果</p></div><button class="ghost-btn" id="inlineImportButton">重新导入</button></div><section class="panel"><div class="filters-bar"><label>⌕ <input id="searchInput" placeholder="订单号 / 买家 / 产品 / 运单号"/></label><select id="categorySelect"><option value="ALL">全部会计分类</option></select><select id="countrySelect"><option value="ALL">全部国家</option></select></div><div class="table-wrap"><table class="data-table"><thead><tr><th>订单号</th><th>金额</th><th>件数</th><th>会计分类</th><th>国家</th><th>买家</th><th>产品</th><th>赠品</th><th>运单号</th></tr></thead><tbody id="ordersBody"></tbody></table><div hidden="" id="tableNote"></div></div></section></section>
 <section class="view" data-view-panel="products"><div class="page-head"><div><span class="eyebrow">PRODUCTS</span><h1>商品分类</h1><p>按商品行查看分类结果。</p></div></div><section class="panel"><div class="panel-head"><div><h2>商品级分类统计</h2><p>件数、订单与赠品数量</p></div></div><div id="lineSummary"></div></section></section>
 <section class="view" data-view-panel="review"><div class="page-head"><div><span class="eyebrow">REVIEW</span><h1>待复核</h1><p>直接修正产品名称、SKU 或指定分类；保存后会立即重新统计，英雄页导出使用修正后的结果。</p></div></div><section class="panel"><div class="review-help">逐条核对后点击「保存并重新分类」。若你明确知道商品类型，可以直接选择分类，不需要等待自动规则识别。保存成功后，该条如果已能分类，会自动从待复核列表消失。</div><div id="unknownList"></div><div class="empty" hidden="" id="emptyReview">✓ 没有待复核商品，可以直接导出正式结算表。</div></section></section>
+
+<section class="view" data-view-panel="quality">
+  <div class="page-head"><div><span class="eyebrow">DATA QUALITY</span><h1>数据质量</h1><p>跨工作簿重复、币种、FACT、未识别商品和模型状态。</p></div></div>
+  <section class="quality-summary" id="qualitySummary"></section>
+  <section class="panel"><div class="panel-head"><div><h2>质量警报</h2><p>V7 不再静默吞掉不确定数据。</p></div></div><div id="qualityList"></div></section>
+  <section class="panel"><div class="panel-head"><div><h2>工作簿模型</h2><p>每个工作簿独立统计、独立 FACT、独立币种判断。</p></div></div><div class="model-head"><span>工作簿</span><span>Profile</span><span>FACT</span><span>币种</span><span>订单</span></div><div id="workbookModelList"></div></section>
+</section>
+<section class="view" data-view-panel="learning">
+  <div class="page-head"><div><span class="eyebrow">RULE LEARNING</span><h1>规则学习</h1><p>查看当前商品/SKU → 分类 → FACT Profile 的识别结果。</p></div></div>
+  <section class="panel"><div class="panel-head"><div><h2>本次学习映射</h2><p id="learningMeta">导入订单后显示。</p></div></div><div class="learning-head"><span>SKU / 商品</span><span>分类</span><span>Profile</span><span>数量</span></div><div id="learningList"></div></section>
+</section>
+
 <section class="view" data-view-panel="imports"><div class="page-head"><div><span class="eyebrow">IMPORT LOG</span><h1>导入记录</h1><p>每个 Sheet 的识别与处理原因。</p></div></div><section class="panel"><div id="sheetList"></div></section></section>
 <section class="view" data-view-panel="export"><div class="page-head"><div><span class="eyebrow">EXPORT</span><h1>导出报表</h1><p>FACT 分类汇总、会计总览、订单、商品、待复核和审计数据。</p></div></div><section class="panel export-panel"><div><b>WRITE 会计结算报表</b><p>8 个工作表 · 第一页为清晰结算摘要，含 FACT 分类汇总</p></div><button class="export-hero small" id="exportButton">⇩ 导出 Excel</button></section></section>
 <section class="view" data-view-panel="history">
   <div class="page-head history-page-head">
     <div><span class="eyebrow">VERSION HISTORY</span><h1>历史更新</h1><p>从首个可追溯正式版本到当前版本的发布时间与主要变更。</p></div>
-    <div class="history-current"><span>当前版本</span><strong id="historyCurrentVersion">v6.6.2</strong></div>
+    <div class="history-current"><span>当前版本</span><strong id="historyCurrentVersion">v7.0.1</strong></div>
   </div>
   <section class="panel history-panel">
     <div class="history-toolbar"><div><b>WRITE Settlement Manager</b><p>自 v6.5.7 起，发布时间精确记录到分钟；早期无法可靠还原分钟的版本标记为“时间未记录”。</p></div><span id="historyCount">20 个版本</span></div>
@@ -183,8 +197,8 @@
 </main>
 </section>
 </div>
-<script src="./src/release-meta.js?v=6.6.2"></script>
-<script defer="" src="./src/app.bundle.js?v=6.6.2"></script>
+<script src="./src/release-meta.js?v=7.0.1"></script>
+<script defer="" src="./src/app.bundle.js?v=7.0.1"></script>
 <script>
 window.__WRITE_APP_READY__ = false;
 setTimeout(function(){
@@ -192,7 +206,7 @@ setTimeout(function(){
     var box=document.createElement('div');
     box.id='bootFailure';
     box.style.cssText='position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:99999;background:#f2f2f3;color:#303136;border:1px solid #d4d6da;border-radius:12px;padding:12px 16px;font:600 14px -apple-system,BlinkMacSystemFont,sans-serif;box-shadow:0 8px 30px rgba(0,0,0,.12)';
-    box.textContent='WRITE v6.6.2 脚本未启动，请刷新页面或检查部署文件。';
+    box.textContent='WRITE v7.0.0 脚本未启动，请刷新页面或检查部署文件。';
     document.body.appendChild(box);
   }
 },1800);
