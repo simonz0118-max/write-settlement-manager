@@ -1,17 +1,12 @@
-WRITE Settlement Manager V7.1.4
+WRITE Settlement Manager V7.1.5
 
-推荐使用：
-双击「一键更新到GitHub并部署Cloudflare.command」
+双击：一键更新到GitHub并部署Cloudflare.command
 
-此版本发布流程已经重构：
-1. 自动克隆 GitHub 到临时干净目录。
-2. 先 checkout/pull 最新 main。
-3. 再覆盖 V7.1.4 文件。
-4. 恢复或自动查询 D1 Binding。
-5. 执行发布前代码与配置自检。
-6. 自检通过后才 commit/push。
-7. 部署 Cloudflare。
-8. 自动回读本次唯一地址，确认线上确实是 v7.1.4。
-9. 检查规则云同步 API。
+最终成功必须同时出现：
+- GitHub main 已更新
+- Wrangler exit code: 0
+- 线上版本确认：v7.1.5
+- Cloudflare D1 云同步 API 正常
+- WRITE V7.1.5 全部发布检查通过
 
-不需要把升级包放到 Git 仓库中。
+任何一步失败都会显示真实错误。

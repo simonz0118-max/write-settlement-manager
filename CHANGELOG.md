@@ -1,3 +1,10 @@
+## v7.1.5 — 2026-08-09 23:59 (Europe/Paris)
+- Cloudflare Pages 部署失败时完整打印 Wrangler stderr 与 exit code。
+- 优先下载真实 Pages Wrangler 配置，再注入 WRITE_RULES_DB。
+- Git/D1/Pages 分段诊断，禁止静默失败。
+- 成功条件：GitHub 成功 + deployment=v7.1.5 + sync API ok:true。
+- 不修改订单、会计、FACT 与规则分类业务逻辑。
+
 ## v7.1.4 — 2026-08-09 23:45 (Europe/Paris)
 - 重构发布流程：clone → checkout → pull --ff-only → 保存 D1 配置 → rsync 新版 → 自检 → commit → push → Pages。
 - 发布始终使用临时干净 Git 工作区，不受升级包目录和用户本地 Git 状态影响。

@@ -1,40 +1,53 @@
 {
   "current": {
-    "version": "7.1.4",
-    "time": "2026-08-09 23:45",
-    "title": "稳定发布器与强制自检",
+    "version": "7.1.5",
+    "time": "2026-08-09 23:59",
+    "title": "Cloudflare发布稳定性修复",
     "sections": [
       {
-        "label": "Git 流程",
+        "label": "诊断",
         "items": [
-          "彻底修复 V7.1.3 的 Git 顺序问题：clone/checkout/pull 必须在新版文件覆盖之前完成。",
-          "发布永远使用临时干净仓库，不再依赖升级包目录或用户本地仓库状态。",
-          "新版覆盖前保存有效 wrangler.jsonc，覆盖后恢复；缺失时再从 Cloudflare 自动恢复 D1 Binding。"
+          "修复部署失败时Shell立即退出导致Wrangler错误不可见；现在完整打印stderr与exit code。",
+          "优先通过wrangler pages download config获取Cloudflare Pages当前真实配置。"
         ]
       },
       {
-        "label": "发布前检查",
+        "label": "D1",
         "items": [
-          "新增发布前强制检查：版本标记、核心 JS 语法、Worker、release metadata、Cloud Function 与 D1 Binding。",
-          "GitHub 提交发生在所有 preflight 通过之后，杜绝半成品进入 main。"
+          "在真实Pages配置上注入并校验WRITE_RULES_DB。"
         ]
       },
       {
-        "label": "线上验证",
+        "label": "发布流程",
         "items": [
-          "Cloudflare 部署后必须回读唯一 deployment URL 并确认 data-release=7.1.4。",
-          "额外检查 /api/rules/sync 状态，明确区分页面发布成功与 D1 Binding 状态。"
+          "继续强制clone→pull→覆盖新版→自检→GitHub→Pages的安全顺序。",
+          "Git commit/push、D1、Pages每一步都显示真实错误，不再静默。",
+          "最终成功要求唯一deployment=v7.1.5且/api/rules/sync返回ok:true。"
         ]
       },
       {
-        "label": "保留",
+        "label": "业务保护",
         "items": [
-          "V7.1.2/V7.1.3 已完成的规则学习 UI、缓存策略、IndexedDB+D1 和 FACT 核心保持不变。"
+          "本版不修改订单、会计、FACT和规则分类业务逻辑。"
         ]
       }
     ]
   },
   "history": [
+    {
+      "version": "7.1.5",
+      "time": "2026-08-09 23:59",
+      "title": "Cloudflare发布诊断重构与真实Pages配置",
+      "items": [
+        "修复部署失败时Shell立即退出导致Wrangler错误不可见；现在完整打印stderr与exit code。",
+        "优先通过wrangler pages download config获取Cloudflare Pages当前真实配置。",
+        "在真实Pages配置上注入并校验WRITE_RULES_DB。",
+        "继续强制clone→pull→覆盖新版→自检→GitHub→Pages的安全顺序。",
+        "Git commit/push、D1、Pages每一步都显示真实错误，不再静默。",
+        "最终成功要求唯一deployment=v7.1.5且/api/rules/sync返回ok:true。",
+        "本版不修改订单、会计、FACT和规则分类业务逻辑。"
+      ]
+    },
     {
       "version": "7.1.4",
       "time": "2026-08-09 23:45",
