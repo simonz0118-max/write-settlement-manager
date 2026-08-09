@@ -1,18 +1,17 @@
-# WRITE Settlement Manager v6.5.11
+# WRITE Settlement Manager V6.5.12
 
-## Root directory
-- `index.html` — WebApp entry
-- `src/` — application code
-- `assets/` — static assets
-- `publish.command` — push to GitHub and deploy to Cloudflare
-- `preview.command` — local preview
-- `CHANGELOG.md` — complete version history
+## 根目录
+- `index.html` — WebApp 入口
+- `src/` — 应用源码
+- `assets/` — 静态资源
+- `一键更新到GitHub并部署Cloudflare.command` — 正式一键升级
+- `本地预览.command` — 本地预览
+- `升级说明_请先看.txt` — 中文升级说明
+- `CHANGELOG.md` — 完整版本历史
 - `README.md` / `README_CN.md`
 - `RELEASE.txt`
-- `docs/` — test history and deployment notes
+- `docs/` — 测试记录与开发文档
 
 ## macOS
-If macOS blocks a `.command` file:
-1. Right-click the file.
-2. Choose **Open**.
-3. Confirm **Open** once.
+如果第一次运行 `.command` 被系统阻止：
+右键脚本 → **打开** → 再确认一次 **打开**。

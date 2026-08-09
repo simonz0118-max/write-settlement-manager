@@ -355,11 +355,11 @@ function exportAccounting(){
 function reimportFlow(){
   if(!classified){els.fileInput.click();return}
   openConfirm({title:'重新导入数据？',text:'当前统计结果会被清空，然后打开文件选择器重新导入。原始文件不会被修改。',confirmText:'清空并重新导入',action:()=>{
-// v6.5.11 release notes controller — show once per release per browser
+// v6.5.12 release notes controller — show once per release per browser
 const WRITE_RELEASE = {
   version: document.body.dataset.release || '6.5.8',
   date: '2026-08-09 00:14',
-  title: 'WRITE Settlement Manager v6.5.11',
+  title: 'WRITE Settlement Manager v6.5.12',
   sections: [
     {label:'修复', items:[
       '修复 FACT / Commercial Invoice 中部分小数实际为文本、导致 Excel 公式无法计算的问题。',
@@ -420,7 +420,7 @@ document.addEventListener('click',e=>{const btn=e.target.closest('[data-go-view]
 document.addEventListener('click',e=>{const btn=e.target.closest('.review-save');if(btn){const editor=btn.closest('.review-editor');if(editor)saveReviewRow(editor)}});
 
 
-// v6.5.11 theme controller: auto / light / dark
+// v6.5.12 theme controller: auto / light / dark
 const themeButton=document.getElementById('themeToggleButton');
 const themeLabel=document.getElementById('themeLabel');
 const themeMedia=window.matchMedia('(prefers-color-scheme: dark)');
@@ -458,7 +458,7 @@ applyTheme(getThemePreference(),{persist:false});
 resetState();
 
 
-// v6.5.11 — built-in version history (mirrors GitHub CHANGELOG)
+// v6.5.12 — built-in version history (mirrors GitHub CHANGELOG)
 const WRITE_HISTORY = [
   {version:'6.5.8',time:'2026-08-09 00:14',title:'发票数值类型与订单范围',items:['修复 FACT / Commercial Invoice 中部分小数被保存为文本导致 Excel 计算失败的问题。','COGs、Shipping 等运算字段回填为真正数值，显示继续采用法国/欧洲小数逗号。','导出 ZIP、会计报表与回填 FACT 文件名自动包含订单号范围。']},
   {version:'6.5.7',time:'2026-08-09 00:10',title:'历史更新中心',items:['左侧菜单新增「历史更新」，无需导入订单即可查看。','按时间倒序展示所有可追溯正式版本的更新时间与更新摘要。','从本版本开始，发布时间固定精确记录到分钟，并与 GitHub CHANGELOG 同步。']},

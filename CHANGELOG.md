@@ -1,3 +1,11 @@
+## v6.5.12 — 2026-08-09 12:20 (Europe/Paris)
+- 正式发布包恢复中文升级入口与中文升级说明。
+- 新增 `一键更新到GitHub并部署Cloudflare.command`、`本地预览.command`、`升级说明_请先看.txt`。
+- 中文文件名统一使用 UTF-8 ZIP 元数据，并加入打包后文件名完整性校验，避免 macOS 解压乱码。
+- 一键发布继续使用“clone 最新 GitHub main → 同步当前版本 → commit/push → Cloudflare”流程，避免 `fetch first`。
+- 正式包继续保持 Clean Package：根目录不堆放历史测试文件，测试记录统一存放于 `docs/tests/`。
+- 网页历史更新、首次打开更新弹窗、CHANGELOG、README、RELEASE 和部署终端版本信息统一为 V6.5.12。
+
 ## v6.5.11 — 2026-08-09 12:15 (Europe/Paris)
 - 修复一键发布脚本在 GitHub 远端 `main` 已更新时出现 `fetch first` / non-fast-forward 拒绝的问题。
 - 正式发布包不再携带任何 `.git` 历史或本地 Git 状态。
