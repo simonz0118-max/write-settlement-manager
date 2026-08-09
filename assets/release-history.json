@@ -1,27 +1,46 @@
 {
   "current": {
-    "version": "7.0.10",
-    "time": "2026-08-09 19:45",
-    "title": "修复 CN FACT 模板定位",
+    "version": "7.0.11",
+    "time": "2026-08-09 19:42",
+    "title": "彻底修复 CN FACT 生成",
     "sections": [
       {
-        "label": "修复",
+        "label": "根因修复",
         "items": [
-          "修复 V7.0.9 将 CN 模板工作表名称写死为 FACT-CN 导致真实模板无法定位的问题。",
-          "FACT 工作表改为基于 workbook relationship + FACT 名称匹配；单工作表 CN 模板可自动作为 FACT。",
-          "CN FACT 生成前校验 worksheet path 是否真实存在。",
-          "CN FACT Excel 重建后校验 Blob 非空，避免生成阶段静默失败。"
+          "确认根因：模板 relationship 使用 ns0:Relationship，而旧解析器只识别无前缀 Relationship，导致 rId1 永远无法解析。",
+          "CN 标准模板运行时优先直接使用发布前已验证的真实路径 xl/worksheets/sheet1.xml，彻底绕开模板发现失败。",
+          "备用 relationship 解析器同时支持 namespace 前缀、单双引号和带前缀 sheet 标签。",
+          "移除不存在的 archive.has() 调用，统一使用 PreserveZipArchive.get() 做 worksheet 存在性检查。"
+        ]
+      },
+      {
+        "label": "生成校验",
+        "items": [
+          "生成前后校验 sheetData、最终 XLSX Blob 和 ZIP 文件签名，确保 FACT 真正生成后才显示下载。"
         ]
       },
       {
         "label": "保留",
         "items": [
-          "V7.0.9 的国家×商品自动学习、动态 FACT 行、数量守恒和导出中心全部保留。"
+          "保留国家×商品自动学习、动态 FACT 行、数量守恒、会计 Excel 和完整 ZIP 导出中心。"
         ]
       }
     ]
   },
   "history": [
+    {
+      "version": "7.0.11",
+      "time": "2026-08-09 19:42",
+      "title": "彻底修复 CN FACT worksheet 定位与写入",
+      "items": [
+        "确认根因：模板 relationship 使用 ns0:Relationship，而旧解析器只识别无前缀 Relationship，导致 rId1 永远无法解析。",
+        "CN 标准模板运行时优先直接使用发布前已验证的真实路径 xl/worksheets/sheet1.xml，彻底绕开模板发现失败。",
+        "备用 relationship 解析器同时支持 namespace 前缀、单双引号和带前缀 sheet 标签。",
+        "移除不存在的 archive.has() 调用，统一使用 PreserveZipArchive.get() 做 worksheet 存在性检查。",
+        "生成前后校验 sheetData、最终 XLSX Blob 和 ZIP 文件签名，确保 FACT 真正生成后才显示下载。",
+        "保留国家×商品自动学习、动态 FACT 行、数量守恒、会计 Excel 和完整 ZIP 导出中心。"
+      ]
+    },
     {
       "version": "7.0.10",
       "time": "2026-08-09 19:45",

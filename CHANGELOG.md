@@ -1,3 +1,11 @@
+## v7.0.11 — 2026-08-09 19:42 (Europe/Paris)
+- 根因确认：CN 模板 `workbook.xml.rels` 使用 `<ns0:Relationship>`，旧解析器仅识别 `<Relationship>`，因此无法解析 `rId1 → worksheets/sheet1.xml`。
+- CN 标准模板优先使用发布时已验证路径 `xl/worksheets/sheet1.xml`，运行时不再依赖 XML 正则发现。
+- 备用 XML 解析同时支持 namespace 前缀与单双引号属性。
+- 删除不存在的 `archive.has()`，统一使用 `archive.get()`。
+- 增加 worksheet `sheetData`、生成 Blob、XLSX ZIP 签名三层校验。
+- 保留 V7.0.9/10 的国家×商品自动学习、动态 FACT、数量守恒和导出中心。
+
 ## v7.0.10 — 2026-08-09 19:45 (Europe/Paris)
 - 修复 CN FACT 模板工作表定位：不再要求显示名必须精确等于 `FACT-CN`。
 - 改为解析 `workbook.xml` 与 `workbook.xml.rels`，优先寻找名称含 `FACT` 的工作表；单工作表 CN 模板直接作为 FACT。
