@@ -1,8 +1,8 @@
-WRITE Settlement Manager V6.5.13
-Release time: 2026-08-09 12:30 Europe/Paris
+WRITE Settlement Manager V6.5.14
+Release time: 2026-08-09 13:28 Europe/Paris
 
 本版重点：
-- 当前版本、首次更新弹窗、历史更新统一数据源
-- 补齐 v6.5.9 至 v6.5.12 历史记录
-- 每个版本更新弹窗只显示一次
-- 全发布链路版本一致性校验
+- KPI 大数字强制单行显示
+- 大金额自动缩小字号，不再换行
+- 桌面 / iPad / iPhone 响应式显示继续优化
+- 全部版本日志入口同步

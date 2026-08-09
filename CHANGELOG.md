@@ -1,3 +1,9 @@
+## v6.5.14 — 2026-08-09 13:28 (Europe/Paris)
+- 修复顶部 KPI 大数字自动换行的问题，金额与货币符号保持同一行。
+- KPI 数字采用 `white-space: nowrap` + 响应式字号策略，数字越长只缩小字号，不再换行。
+- 优化桌面、iPad、iPhone 下的大金额、订单数和商品件数显示。
+- 同步更新网页首次更新弹窗、历史更新、CHANGELOG、README、RELEASE 和发布脚本版本。
+
 ## v6.5.13 — 2026-08-09 12:30 (Europe/Paris)
 - 修复 WebApp 当前版本、首次更新弹窗、历史更新页面与静态资源版本号不同步的问题。
 - 新增 `src/release-meta.js` + `assets/release-history.json` 作为统一版本数据源。
