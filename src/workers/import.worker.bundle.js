@@ -1,4 +1,4 @@
-/* WRITE Import Worker v7.0.11 build 20260809-1825 */
+/* WRITE Import Worker v7.0.12 build 20260809-1825 */
 /* WRITE Settlement Manager v5.3.3 - standalone import worker */
 const EOCD_SIG = 0x06054b50;
 const CEN_SIG = 0x02014b50;
@@ -300,6 +300,48 @@ function parseRelevantRow(rowXml, sharedStrings) {
   return { rowNum, values };
 }
 
+
+function isRepeatedHeaderDataRow(values=[]){
+  const recognized=values.map(v=>keyForHeader(v)).filter(Boolean);
+  const unique=new Set(recognized);
+  return CORE_FIELDS.every(field=>unique.has(field)) && unique.size>=5;
+}
+function looksLikeNarrativeOrFooter(value=''){
+  const text=String(value||'').trim();
+  if(!text)return false;
+  if(text.length>=70 && /\s/.test(text))return true;
+  if(/^(total|totaux|summary|résumé|resume|note|备注|说明|合计)\b/i.test(text))return true;
+  if(/colis|expédi|expedie|entrep[oô]t|warehouse|shipment|已发货|包裹/.test(text.toLowerCase()))return true;
+  return false;
+}
+function isPlausibleOrderData(order,rawValues=[]){
+  if(!order || !String(order.orderId||'').trim())return false;
+  if(isRepeatedHeaderDataRow(rawValues))return false;
+
+  const id=String(order.orderId||'').trim();
+  if(keyForHeader(id)==='orderId')return false;
+
+  const productText=String(order.productNames||'').trim();
+  const skuText=String(order.skuLines||'').trim();
+  const country=String(order.country||'').trim();
+  const amountRaw=order.orderAmount;
+  const productCountRaw=order.productCount;
+
+  const signals=[
+    productText.length>0,
+    skuText.length>0,
+    country.length>0,
+    amountRaw!=='' && amountRaw!=null,
+    productCountRaw!=='' && productCountRaw!=null
+  ].filter(Boolean).length;
+
+  if(signals===0 && looksLikeNarrativeOrFooter(id))return false;
+  if(signals===0)return false;
+  if(keyForHeader(productText)==='productNames')return false;
+  if(keyForHeader(country)==='country')return false;
+  return true;
+}
+
 async function parseSheetStream(archive, entry, sharedStrings, sourceFile, sheetName, progressCb) {
   const stream = await archive.stream(entry);
   const reader = stream.getReader();
@@ -341,6 +383,7 @@ async function parseSheetStream(archive, entry, sharedStrings, sourceFile, sheet
       const order = { sourceFile, sourceSheet: sheetName, sourceRow: row.rowNum };
       keyByColumn.forEach((key, col) => { if (key) order[key] = String(row.values[col] ?? '').trim(); });
       if (!order.orderId) continue;
+      if (!isPlausibleOrderData(order,row.values)) continue;
       order.orderAmount = normalizeNumber(order.orderAmount);
       order.productCount = normalizeNumber(order.productCount);
       order.currency = inferCurrency(sourceFile, order.currency);

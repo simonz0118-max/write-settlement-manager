@@ -1,3 +1,12 @@
+## v7.0.12 — 2026-08-09 20:20 (Europe/Paris)
+- Import Worker 从源头过滤重复订单表头，防止 `产品名称 / 收货人国家` 等字段标签成为商品。
+- 过滤只有第一列说明文字、其余业务字段全空的页尾/说明行，防止产生假“未知商品”。
+- `parseLineItems()` 增加结构字段二次过滤，上游即便异常，表头也无法进入分类与 FACT 学习。
+- 商品名为空但 SKU 有效时继续按 SKU 分类。
+- 真正未知商品审计增加 sourceSheet/sourceRow。
+- 真实样本回归：CN Sheet 第 712 行重复表头、FR Sheet 第 259 行说明文字均被识别为结构污染。
+- 保留 V7.0.11 CN FACT 直接 worksheet 写入、国家×商品自动学习、数量守恒与导出中心。
+
 ## v7.0.11 — 2026-08-09 19:42 (Europe/Paris)
 - 根因确认：CN 模板 `workbook.xml.rels` 使用 `<ns0:Relationship>`，旧解析器仅识别 `<Relationship>`，因此无法解析 `rId1 → worksheets/sheet1.xml`。
 - CN 标准模板优先使用发布时已验证路径 `xl/worksheets/sheet1.xml`，运行时不再依赖 XML 正则发现。

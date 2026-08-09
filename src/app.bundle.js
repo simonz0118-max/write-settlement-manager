@@ -68,6 +68,27 @@ function classifyLine(productName='', sku='') {
   return { category, categoryLabel: LABEL[category], isFree, quantity: quantityFromSku(sku) };
 }
 
+
+const STRUCTURAL_FIELD_LABELS=new Set([
+  '订单号','订单金额','产品总数','多品名','产品名称','商品名称','收货人国家','国家',
+  'order id','order amount','product count','sku','product name','country',
+  'commande','montant','produit','pays'
+].map(v=>low(v)));
+function isStructuralProductToken(value=''){
+  const t=low(norm(value)).replace(/[：:]+$/,'').trim();
+  if(!t)return false;
+  if(STRUCTURAL_FIELD_LABELS.has(t))return true;
+  if(/^(产品名称|商品名称|收货人国家|订单号|订单金额|产品总数|多品名)$/.test(t))return true;
+  return false;
+}
+function isMeaningfulProductLine(productName='',sku=''){
+  const name=norm(productName).trim();
+  const code=norm(sku).trim();
+  if(!name && !code)return false;
+  if(isStructuralProductToken(name)||isStructuralProductToken(code))return false;
+  return true;
+}
+
 function parseLineItems(order) {
   const names = norm(order.productNames).split(/\n+/).map(x=>x.trim());
   const skus = norm(order.skuLines).split(/\n+/).map(x=>x.trim());
@@ -76,7 +97,7 @@ function parseLineItems(order) {
   const items=[];
   for(let i=0;i<count;i++) {
     const productName=names[i]||''; const sku=skus[i]||'';
-    if(!productName && !sku && count>1) continue;
+    if(!isMeaningfulProductLine(productName,sku)) continue;
     const auto=classifyLine(productName,sku);
     const forced=manual[i+1];
     const resolved=forced && LABEL[forced] ? {...auto,category:forced,categoryLabel:LABEL[forced],manualCategory:true} : auto;
@@ -710,7 +731,18 @@ function factCompletenessAudit(workbookName,factRows){
     lineTargets.push({...line,targetType,country});
 
     if(targetType==='UNMAPPED'){
-      issues.push({type:'UNMAPPED_PRODUCT',orderId:line.orderId,product:line.productName,sku:line.sku,country,quantity:line.quantity});
+      const identity=norm(line.productName).trim()||norm(line.sku).trim()||`订单 ${line.orderId} 第 ${line.lineNo||'?'} 个商品`;
+      issues.push({
+        type:'UNMAPPED_PRODUCT',
+        orderId:line.orderId,
+        product:identity,
+        sku:line.sku,
+        country,
+        quantity:line.quantity,
+        sourceFile:line.sourceFile,
+        sourceSheet:line.sourceSheet,
+        sourceRow:line.sourceRow
+      });
     }else if(targetType!=='SYSTEM_EXCLUDED' && targetType!=='giftBox' && targetType!=='engraving' && !targetExists(targetType,country)){
       issues.push({type:'NO_FACT_TARGET',orderId:line.orderId,product:line.productName,sku:line.sku,country,quantity:line.quantity,target:targetType});
     }
@@ -930,7 +962,7 @@ window.addEventListener('unhandledrejection',event=>{
 function startImport(fileList){
   clearExportDownloadLink();
   const files=[...fileList].filter(f=>/\.(xlsx|zip)$/i.test(f.name)); if(!files.length||busy)return;
-  worker?.terminate(); worker=new Worker('./src/workers/import.worker.bundle.js?v=7.0.11-20260809-1942'); importStartedAt=performance.now(); importedFileNames=files.map(f=>f.name);
+  worker?.terminate(); worker=new Worker('./src/workers/import.worker.bundle.js?v=7.0.12-20260809-2020'); importStartedAt=performance.now(); importedFileNames=files.map(f=>f.name);
   setBusy(true); hideError(); els.importLanding.hidden=false; els.appViews.hidden=true; els.topActions.hidden=true;
   els.currentFile.textContent='准备读取…'; els.progressFill.style.width='0%'; els.progressText.textContent='0% · 大文件在独立线程运行';
   worker.onmessage=({data})=>{
@@ -1147,7 +1179,7 @@ function renderOrders(){
 }
 
 
-// v7.0.11 — mandatory FACT delivery: generate a FACT when the source workbook has none.
+// v7.0.12 — mandatory FACT delivery: generate a FACT when the source workbook has none.
 function currencyForWorkbook(workbookName=''){
   const n=String(workbookName||'').toUpperCase();
   if(/\bUSD\b|\$US|US\$/.test(n))return 'USD';
@@ -1304,14 +1336,14 @@ async function rebuildArchiveReplacingEntry(archive,path,newBytes){
   const centralSize=central.reduce((a,b)=>a+b.length,0),centralOffset=offset;parts.push(...central,new Uint8Array([...u32(ZIP_EOCD),...u16(0),...u16(0),...u16(entries.length),...u16(entries.length),...u32(centralSize),...u32(centralOffset),...u16(0)]));return new Blob(parts,{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
 }
 async function buildGeneratedPencilFactWorkbook(workbookName){
-  const resp=await fetch(`./assets/FACT_TEMPLATE_CN_CANONICAL_V1.xlsx?v=7.0.11`,{cache:'no-store'});
+  const resp=await fetch(`./assets/FACT_TEMPLATE_CN_CANONICAL_V1.xlsx?v=7.0.12`,{cache:'no-store'});
   if(!resp.ok)throw new Error(`无法读取 CN 标准 FACT 模板（HTTP ${resp.status}）`);
 
   const templateBlob=await resp.blob();
   if(!templateBlob?.size)throw new Error('CN 标准 FACT 模板文件为空');
   const archive=await PreserveZipArchive.open(templateBlob);
 
-  // V7.0.11: release-time verified canonical path. This removes runtime XML-discovery as a point of failure.
+  // V7.0.12: release-time verified canonical path. This removes runtime XML-discovery as a point of failure.
   const canonicalPath='xl/worksheets/sheet1.xml';
   let factPath=archive.get(canonicalPath)?canonicalPath:'';
 
@@ -1351,7 +1383,7 @@ async function buildGeneratedFactWorkbook(workbookName){
     return buildGeneratedPencilFactWorkbook(workbookName);
   }
   const data=generatedFactRowsForWorkbook(workbookName);
-  const resp=await fetch(`./assets/FACT_TEMPLATE_LEARNED_V1.xlsx?v=7.0.11`,{cache:'no-store'});if(!resp.ok)throw new Error('无法读取内置 FACT 学习模板');
+  const resp=await fetch(`./assets/FACT_TEMPLATE_LEARNED_V1.xlsx?v=7.0.12`,{cache:'no-store'});if(!resp.ok)throw new Error('无法读取内置 FACT 学习模板');
   const templateBlob=await resp.blob(),archive=await PreserveZipArchive.open(templateBlob),sheetPath='xl/worksheets/sheet1.xml';
   const xml=await archive.text(sheetPath,16*1024*1024),patched=patchLearnedTemplateSheetXml(xml,data,workbookName);
   return rebuildArchiveReplacingEntry(archive,sheetPath,enc.encode(patched));
@@ -1671,7 +1703,7 @@ async function exportAccounting(){
         exportCenterLog('✓ CN FACT 审计代码执行完成。','success');
         const hardAuditIssues=audit.issues.filter(x=>x.type==='UNMAPPED_PRODUCT');
         if(hardAuditIssues.length){
-          const sample=hardAuditIssues.slice(0,6).map(x=>`无法识别商品：${x.product||x.sku||'未知商品'} / ${x.country||''}`).join('；');
+          const sample=hardAuditIssues.slice(0,6).map(x=>`无法识别商品：${x.product||x.sku||'未命名商品'} / ${x.country||''}${x.sourceSheet?` / ${x.sourceSheet} 行 ${x.sourceRow||'?'}`:''}`).join('；');
           throw new Error(`CN FACT 仍有无法自动学习的商品：${sample}`);
         }
         exportCenterLog('→ 开始写入 CN FACT 模板…','info');
@@ -1799,12 +1831,12 @@ if(themeMedia.addEventListener)themeMedia.addEventListener('change',onSystemThem
 applyTheme(getThemePreference(),{persist:false});
 
 
-// v7.0.11 release notes controller — show once per release per browser
-const WRITE_RELEASE_META = window.WRITE_RELEASE_META || {current:{version:document.body.dataset.release||'7.0.11',time:'',title:'WRITE Settlement Manager',sections:[]},history:[]};
+// v7.0.12 release notes controller — show once per release per browser
+const WRITE_RELEASE_META = window.WRITE_RELEASE_META || {current:{version:document.body.dataset.release||'7.0.12',time:'',title:'WRITE Settlement Manager',sections:[]},history:[]};
 const WRITE_RELEASE = {
-  version: WRITE_RELEASE_META.current?.version || document.body.dataset.release || '7.0.11',
+  version: WRITE_RELEASE_META.current?.version || document.body.dataset.release || '7.0.12',
   date: WRITE_RELEASE_META.current?.time || '',
-  title: `WRITE Settlement Manager v${WRITE_RELEASE_META.current?.version || document.body.dataset.release || '7.0.11'}`,
+  title: `WRITE Settlement Manager v${WRITE_RELEASE_META.current?.version || document.body.dataset.release || '7.0.12'}`,
   sections: WRITE_RELEASE_META.current?.sections || []
 };
 function showReleaseNotesIfNeeded(){
@@ -1839,7 +1871,7 @@ document.documentElement.dataset.writeReady='true';
 
 
 
-// v7.0.11 — version history from unified release metadata
+// v7.0.12 — version history from unified release metadata
 const WRITE_HISTORY = Array.isArray(WRITE_RELEASE_META.history) ? WRITE_RELEASE_META.history : [];
 function renderReleaseHistory(){
   const host=document.getElementById('releaseHistory');
