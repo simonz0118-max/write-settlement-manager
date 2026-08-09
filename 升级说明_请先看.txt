@@ -1,20 +1,23 @@
-WRITE Settlement Manager V7.1.7 升级说明
+WRITE Settlement Manager V7.1.8 升级说明
 
-使用：
+这是 V7.1.7 → V7.1.8 的 Cloudflare Pages Functions 路由修复包。
+
+直接：
 1. 解压 ZIP。
 2. 双击“一键更新到GitHub并部署Cloudflare.command”。
-3. 只有最终同时看到：
-   - GitHub main 已更新
-   - 唯一 Cloudflare Pages Deployment URL
-   - 线上版本 v7.1.7
-   - /api/rules/sync 返回 ok:true
-   才算升级成功。
+3. 不要手动改文件。
 
-V7.1.7 只修复 V7.1.6 在 [6/8] 的发布器误判：
-旧版全文搜索自身脚本中的 --config，导致说明文字本身触发失败。
-新版只检查真正传给 Wrangler Pages deploy 的参数数组。
+本版新增：
+- 根 _routes.json：只让 /api/* 进入 Pages Functions
+- 发布前先编译 functions
+- 编译结果必须证明 /api/rules/sync 存在
+- 部署后必须：
+  1) 唯一 pages.dev deployment
+  2) data-release=v7.1.8
+  3) GET /api/rules/sync HTTP 200
+  4) JSON ok:true
+  5) D1 Binding 实际可用
 
-不会修改：
-订单统计、CN FACT 模板逻辑、FACT 自动生成/学习、数量守恒、
-会计结算报表、未知商品过滤、规则学习、IndexedDB、D1、
-离线能力、黑白模式及既有历史。
+如果 API 再失败，终端会直接显示 HTTP 状态和响应正文，不再只显示一个 curl 404。
+
+不会修改结算、FACT、订单、会计、规则学习和本地 IndexedDB 业务核心。

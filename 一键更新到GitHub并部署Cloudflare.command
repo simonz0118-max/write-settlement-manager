@@ -3,14 +3,15 @@ set -u
 set -o pipefail
 
 SOURCE_DIR="$(cd "$(dirname "$0")" && pwd)"
-EXPECTED_VERSION="7.1.7"
-BASE_VERSION="7.1.6"
+EXPECTED_VERSION="7.1.8"
+BASE_VERSION="7.1.7"
 PROJECT="write-settlement-manager"
 REPO_URL="https://github.com/simonz0118-max/write-settlement-manager.git"
 DB_NAME="write-settlement-rules"
 BINDING="WRITE_RULES_DB"
-RELEASE_TIME="2026-08-09 23:30"
-CACHE_TAG="7.1.7-2330"
+RELEASE_TIME="2026-08-09 23:38"
+CACHE_TAG="7.1.8-2338"
+CUSTOM_DOMAIN="https://f.neovora.co"
 
 pause_close() {
   if [ "${WRITE_NONINTERACTIVE:-0}" != "1" ]; then
@@ -46,9 +47,46 @@ contains_config_arg() {
   return 1
 }
 
+http_get_json_check() {
+  local url="$1"
+  local attempts="${2:-10}"
+  local i=1
+  local body status tmp errtmp curl_code errbody
+
+  while [ $i -le "$attempts" ]; do
+    tmp="$(mktemp /tmp/write-v718-http-body.XXXXXX)" || return 1
+    errtmp="$(mktemp /tmp/write-v718-http-err.XXXXXX)" || {
+      rm -f "$tmp"
+      return 1
+    }
+
+    status="$(curl -sS -L --connect-timeout 10 --max-time 30 \
+      -o "$tmp" -w '%{http_code}' \
+      "${url}?verify=$(date +%s)-$i" 2>"$errtmp")"
+    curl_code=$?
+    body="$(cat "$tmp" 2>/dev/null || true)"
+    errbody="$(cat "$errtmp" 2>/dev/null || true)"
+    rm -f "$tmp" "$errtmp"
+
+    if [ $curl_code -eq 0 ] && [ "$status" = "200" ] && \
+       printf '%s' "$body" | grep -Eq '"ok"[[:space:]]*:[[:space:]]*true'; then
+      printf '%s' "$body"
+      return 0
+    fi
+
+    echo "  API尝试 $i/$attempts → HTTP=${status:-curl_error} curl=$curl_code" >&2
+    [ -n "$errbody" ] && echo "  curl: $(printf '%s' "$errbody" | head -c 500)" >&2
+    [ -n "$body" ] && echo "  Response: $(printf '%s' "$body" | head -c 500)" >&2
+
+    i=$((i + 1))
+    sleep 2
+  done
+  return 1
+}
+
 echo "=================================================="
-echo "WRITE Settlement Manager V7.1.7"
-echo "发布器参数级预检修复版"
+echo "WRITE Settlement Manager V7.1.8"
+echo "Pages Functions 路由强验证修复版"
 echo "=================================================="
 
 cd "$SOURCE_DIR" || fail "无法进入升级包目录"
@@ -58,8 +96,8 @@ for cmd in git npx node curl; do
 done
 
 echo ""
-echo "[1/8] clone → checkout → pull 干净 GitHub main..."
-TMP_ROOT="$(mktemp -d /tmp/write-v717.XXXXXX)" || fail "无法创建临时目录"
+echo "[1/9] clone → checkout → pull 干净 GitHub main..."
+TMP_ROOT="$(mktemp -d /tmp/write-v718.XXXXXX)" || fail "无法创建临时目录"
 WORK_DIR="$TMP_ROOT/repo"
 cleanup() { rm -rf "$TMP_ROOT"; }
 trap cleanup EXIT
@@ -77,24 +115,33 @@ esac
 echo "✅ GitHub main 起点：v$BASE_ONLINE"
 
 echo ""
-echo "[2/8] 覆盖 V7.1.7 新版发布器 + 版本/日志元数据..."
+echo "[2/9] 覆盖 V7.1.8 发布器 + Functions 路由配置 + 版本日志..."
 
 cp "$SOURCE_DIR/一键更新到GitHub并部署Cloudflare.command" \
    "$WORK_DIR/一键更新到GitHub并部署Cloudflare.command" || fail "写入新版发布器失败"
 chmod +x "$WORK_DIR/一键更新到GitHub并部署Cloudflare.command" 2>/dev/null || true
 
 mkdir -p "$WORK_DIR/docs/tests"
-cp "$SOURCE_DIR/docs/tests/TEST_RESULTS_V7_1_7.md" \
-   "$WORK_DIR/docs/tests/TEST_RESULTS_V7_1_7.md" || fail "写入 V7.1.7 自检报告失败"
+cp "$SOURCE_DIR/docs/tests/TEST_RESULTS_V7_1_8.md" \
+   "$WORK_DIR/docs/tests/TEST_RESULTS_V7_1_8.md" || fail "写入 V7.1.8 自检报告失败"
 cp "$SOURCE_DIR/升级说明_请先看.txt" \
    "$WORK_DIR/升级说明_请先看.txt" || fail "写入升级说明失败"
 
+# 显式路由：仅 /api/* 进入 Pages Functions。
+# 这样静态页面继续直接由 Pages Assets 服务，不增加无意义 Functions 调用。
+cat > "$WORK_DIR/_routes.json" <<'ROUTES'
+{
+  "version": 1,
+  "include": ["/api/*"],
+  "exclude": []
+}
+ROUTES
+
 node <<'NODE'
 const fs = require("fs");
-
-const VERSION = "7.1.7";
-const RELEASE_TIME = "2026-08-09 23:30";
-const CACHE_TAG = "7.1.7-2330";
+const VERSION = "7.1.8";
+const RELEASE_TIME = "2026-08-09 23:38";
+const CACHE_TAG = "7.1.8-2338";
 
 function mustRead(path) {
   if (!fs.existsSync(path)) throw new Error(`缺少文件: ${path}`);
@@ -106,12 +153,12 @@ function write(path, text) {
 
 {
   let s = mustRead("index.html");
-  s = s.replace(/data-release="7\.1\.6"/g, 'data-release="7.1.7"');
-  s = s.replace(/<small>v7\.1\.6<\/small>/g, '<small>v7.1.7</small>');
-  s = s.replace(/id="historyCurrentVersion">v7\.1\.6</g, 'id="historyCurrentVersion">v7.1.7<');
-  s = s.replace(/v=7\.1\.6-[0-9]+/g, `v=${CACHE_TAG}`);
-  s = s.replace(/WRITE v7\.1\.6/g, "WRITE v7.1.7");
-  if (!s.includes('data-release="7.1.7"')) throw new Error("index.html data-release 更新失败");
+  s = s.replace(/data-release="7\.1\.7"/g, 'data-release="7.1.8"');
+  s = s.replace(/<small>v7\.1\.7<\/small>/g, '<small>v7.1.8</small>');
+  s = s.replace(/id="historyCurrentVersion">v7\.1\.7</g, 'id="historyCurrentVersion">v7.1.8<');
+  s = s.replace(/v=7\.1\.7-[0-9]+/g, `v=${CACHE_TAG}`);
+  s = s.replace(/WRITE v7\.1\.7/g, "WRITE v7.1.8");
+  if (!s.includes('data-release="7.1.8"')) throw new Error("index.html data-release 更新失败");
   write("index.html", s);
 }
 
@@ -122,66 +169,64 @@ for (const path of [
   "src/workers/import.worker.bundle.js"
 ]) {
   if (!fs.existsSync(path)) continue;
-  const before = mustRead(path);
-  const after = before.replace(/7\.1\.6/g, "7.1.7");
-  write(path, after);
+  write(path, mustRead(path).replace(/7\.1\.7/g, "7.1.8"));
 }
 
 {
   const path = "assets/release-history.json";
   const data = JSON.parse(mustRead(path));
-  const current = {
+  data.current = {
     version: VERSION,
     time: RELEASE_TIME,
-    title: "发布器参数级预检修复",
+    title: "Pages Functions 路由强验证修复",
     sections: [
       {
-        label: "发布器修复",
+        label: "根因修复",
         items: [
-          "修复V7.1.6发布前预检误报：不再全文搜索发布脚本中的`--config`文字。",
-          "Pages部署参数改为结构化数组，只检查真正传给Wrangler的`--config`或`--config=...`参数。"
+          "V7.1.7 页面与Pages部署成功，但/api/rules/sync在线返回404；API源码本身不会返回404，问题锁定在Pages Functions路由层。",
+          "新增根_routes.json，明确include=/api/*、exclude=[]，只让API请求进入Pages Functions。"
         ]
       },
       {
-        label: "发布流程",
+        label: "部署前验证",
         items: [
-          "继续固定clone→pull→覆盖新版→生成唯一根wrangler.jsonc→发布前自检→GitHub→Cloudflare Pages。",
-          "实际Pages命令保持为`npx wrangler pages deploy . --project-name=write-settlement-manager --branch=main`。",
-          "Wrangler输出中的pages.dev地址去重后必须恰好一个，才进入线上验证。"
+          "发布前运行wrangler pages functions build并输出编译后的_routes.json。",
+          "只有编译路由确认覆盖/api/rules/sync后，才允许提交GitHub和部署Cloudflare。"
         ]
       },
       {
-        label: "强验证",
+        label: "在线验证",
         items: [
-          "线上唯一deployment必须返回data-release=v7.1.7。",
-          "`/api/rules/sync`必须返回ok:true，否则发布判定失败。",
-          "解压升级目录无需.git；发布始终使用临时干净Git仓库。"
+          "部署后同时检查唯一pages.dev deployment的data-release=v7.1.8。",
+          "API验证记录HTTP状态码与响应正文；必须HTTP 200且JSON ok:true。",
+          "正式域名f.neovora.co也进行版本与API复核；deployment成功是硬条件，正式域名复核作为发布完成确认。"
         ]
       },
       {
         label: "业务保护",
         items: [
-          "不修改订单统计、CN FACT模板逻辑、FACT自动生成/学习、数量守恒、会计结算、未知商品过滤、规则学习、IndexedDB/D1、黑白模式。"
+          "不修改订单统计、CN FACT、FACT自动生成/学习、数量守恒、会计结算、未知商品过滤、规则学习、IndexedDB/D1及主题逻辑。"
         ]
       }
     ]
   };
-  const historyItem = {
+
+  const item = {
     version: VERSION,
     time: RELEASE_TIME,
-    title: "修复发布器全文搜索--config导致的必然误判",
+    title: "修复Pages Functions API路由404并增加编译路由强验证",
     items: [
-      "删除V7.1.6对发布脚本自身的全文`--config`扫描。",
-      "仅检查真正的Wrangler Pages部署参数数组，注释、说明文字和CHANGELOG出现`--config`不会触发失败。",
-      "真实部署参数出现`--config`或`--config=...`仍会立即中止。",
-      "固定clone→pull→覆盖新版→唯一根wrangler.jsonc→自检→GitHub→Pages顺序。",
-      "唯一deployment URL强校验、data-release=v7.1.7强校验、D1同步API ok:true强校验全部保留。",
+      "新增根_routes.json：仅/api/*进入Pages Functions。",
+      "发布前使用wrangler pages functions build生成Worker和routes产物。",
+      "编译后必须证明/api/rules/sync被路由规则覆盖，否则发布立即中止。",
+      "部署后API检查升级为HTTP状态码+响应正文+ok:true三重验证。",
+      "继续保持唯一wrangler.jsonc、D1自动绑定、唯一deployment URL和data-release强验证。",
       "本版不修改结算、FACT和规则学习业务逻辑。"
     ]
   };
-  data.current = current;
+
   data.history = Array.isArray(data.history) ? data.history.filter(x => x && x.version !== VERSION) : [];
-  data.history.unshift(historyItem);
+  data.history.unshift(item);
   write(path, JSON.stringify(data, null, 2));
   write("src/release-meta.js", "window.WRITE_RELEASE_META = " + JSON.stringify(data) + ";");
 }
@@ -189,62 +234,61 @@ for (const path of [
 {
   const path = "CHANGELOG.md";
   let s = mustRead(path);
-  if (!/^## v7\.1\.7\b/m.test(s)) {
-    const entry =
-`## v7.1.7 — ${RELEASE_TIME} (Europe/Paris)
-- 修复 V7.1.6 发布脚本在 Cloudflare Pages 配置预检阶段的误判。
-- 删除对发布脚本全文搜索 \`--config\` 的逻辑；改为只检查真正传给 Wrangler Pages deploy 的参数数组。
-- 注释、说明文字、CHANGELOG 中出现 \`--config\` 不再触发失败；真实部署参数出现 \`--config\` / \`--config=...\` 仍会中止。
-- 发布流程固定：clone → pull → 覆盖新版 → 唯一根 wrangler.jsonc → 自检 → GitHub → Pages → 唯一 deployment → 版本/API 强验证。
+  if (!/^## v7\.1\.8\b/m.test(s)) {
+    s =
+`## v7.1.8 — ${RELEASE_TIME} (Europe/Paris)
+- 修复 V7.1.7 Cloudflare Pages 部署成功但 \`/api/rules/sync\` 在线返回 404。
+- 新增根 \`_routes.json\`：\`include=["/api/*"]\`，明确只让 API 路径进入 Pages Functions。
+- 发布前执行 \`wrangler pages functions build\` 并生成路由产物；必须验证 \`/api/rules/sync\` 被路由覆盖后才能提交和部署。
+- 在线 API 验证升级为 HTTP 状态码 + response body + \`ok:true\` 三重检查。
 - 不修改订单、CN FACT、数量守恒、会计报表、未知商品过滤、规则学习及 IndexedDB/D1 业务逻辑。
 
-`;
-    s = entry + s;
+` + s;
   }
   write(path, s);
 }
 
 write("RELEASE.txt",
-`WRITE Settlement Manager V7.1.7
+`WRITE Settlement Manager V7.1.8
 Release: ${RELEASE_TIME}
 
-V7.1.7 只修发布器：
-- 不再全文扫描脚本中的 --config
-- 只检查真实 Wrangler Pages deploy 参数
-- 唯一根 wrangler.jsonc
-- WRITE_RULES_DB / write-settlement-rules 自动绑定
-- 唯一 deployment URL 强校验
-- data-release=v7.1.7 强校验
-- /api/rules/sync ok:true 强校验
-- 业务核心零逻辑修改
+Pages Functions API 路由修复：
+- explicit root _routes.json
+- include /api/*
+- predeploy pages functions build
+- compiled route verification for /api/rules/sync
+- HTTP 200 + JSON ok:true online verification
+- unique root wrangler.jsonc
+- WRITE_RULES_DB / write-settlement-rules
+- business logic unchanged
 `);
 
 if (fs.existsSync("PACKAGE_README.md")) {
   let s = mustRead("PACKAGE_README.md");
-  s = s.replace(/^# WRITE Settlement Manager V7\.1\.6/m, "# WRITE Settlement Manager V7.1.7");
-  s = s.replace(/当前正式版本：\*\*V7\.1\.6\*\*/g, "当前正式版本：**V7.1.7**");
+  s = s.replace(/^# WRITE Settlement Manager V7\.1\.7/m, "# WRITE Settlement Manager V7.1.8");
+  s = s.replace(/当前正式版本：\*\*V7\.1\.7\*\*/g, "当前正式版本：**V7.1.8**");
   write("PACKAGE_README.md", s);
 }
 
 for (const path of ["README.md", "README_CN.md"]) {
   if (!fs.existsSync(path)) continue;
   let s = mustRead(path);
-  s = s.replace(/Current release: \*\*V7\.1\.6\*\*/g, "Current release: **V7.1.7**");
-  s = s.replace(/V7\.1\.6 已用 FACT-/g, "V7.1.7 已用 FACT-");
-  s = s.replace(/## Current release — v7\.1\.6/g, "## Current release — v7.1.7");
-  s = s.replace(/## 当前版本 — v7\.1\.6/g, "## 当前版本 — v7.1.7");
-  s = s.replace(/### V7\.1\.6 highlights/g, "### V7.1.7 highlights");
-  s = s.replace(/### V7\.1\.6 重点/g, "### V7.1.7 重点");
+  s = s.replace(/Current release: \*\*V7\.1\.7\*\*/g, "Current release: **V7.1.8**");
+  s = s.replace(/V7\.1\.7 已用 FACT-/g, "V7.1.8 已用 FACT-");
+  s = s.replace(/## Current release — v7\.1\.7/g, "## Current release — v7.1.8");
+  s = s.replace(/## 当前版本 — v7\.1\.7/g, "## 当前版本 — v7.1.8");
+  s = s.replace(/### V7\.1\.7 highlights/g, "### V7.1.8 highlights");
+  s = s.replace(/### V7\.1\.7 重点/g, "### V7.1.8 重点");
   write(path, s);
 }
 NODE
 PATCH_CODE=$?
-[ $PATCH_CODE -eq 0 ] || fail "V7.1.7 版本/日志补丁失败"
+[ $PATCH_CODE -eq 0 ] || fail "V7.1.8 版本/日志补丁失败"
 
-echo "✅ V7.1.7 新版元数据、弹窗日志、历史更新、RELEASE 已同步"
+echo "✅ V7.1.8 路由配置、元数据、弹窗、历史、CHANGELOG、RELEASE 已同步"
 
 echo ""
-echo "[3/8] 查询 D1 并生成唯一根 wrangler.jsonc..."
+echo "[3/9] 查询 D1 并生成唯一根 wrangler.jsonc..."
 
 rm -f wrangler.toml
 
@@ -263,6 +307,7 @@ let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{
   if(d)process.stdout.write(d.uuid||d.id||"");
  }catch(e){}
 })')"
+
 [ -n "$DB_ID" ] || fail "Cloudflare 中找不到 write-settlement-rules"
 echo "✅ D1 database_id: $DB_ID"
 
@@ -280,16 +325,75 @@ const cfg={
 };
 fs.writeFileSync("wrangler.jsonc",JSON.stringify(cfg,null,2)+"\n");
 NODE
-CODE=$?
-[ $CODE -eq 0 ] || fail "生成根目录 wrangler.jsonc 失败"
-[ ! -f "wrangler.toml" ] || fail "检测到冲突配置 wrangler.toml"
-grep -q '"binding": "WRITE_RULES_DB"' wrangler.jsonc || fail "wrangler.jsonc 缺少 WRITE_RULES_DB"
-grep -q '"database_name": "write-settlement-rules"' wrangler.jsonc || fail "wrangler.jsonc D1 名称错误"
+[ $? -eq 0 ] || fail "生成根 wrangler.jsonc 失败"
+
+[ ! -f wrangler.toml ] || fail "存在冲突 wrangler.toml"
+grep -q '"binding": "WRITE_RULES_DB"' wrangler.jsonc || fail "缺少 WRITE_RULES_DB"
+grep -q '"database_name": "write-settlement-rules"' wrangler.jsonc || fail "D1 database_name 错误"
 grep -q "$DB_ID" wrangler.jsonc || fail "D1 database_id 写入失败"
 echo "✅ 唯一根 Wrangler 配置完成"
 
 echo ""
-echo "[4/8] 发布前完整自检..."
+echo "[4/9] 编译 Pages Functions 并验证真实路由..."
+
+[ -f functions/api/rules/sync.js ] || fail "缺少 functions/api/rules/sync.js"
+[ -f _routes.json ] || fail "缺少显式 _routes.json"
+
+node <<'NODE'
+const fs=require("fs");
+const r=JSON.parse(fs.readFileSync("_routes.json","utf8"));
+if(r.version!==1) throw new Error("_routes.json version必须为1");
+if(!Array.isArray(r.include) || !r.include.includes("/api/*")) throw new Error("_routes.json必须include /api/*");
+if(!Array.isArray(r.exclude)) throw new Error("_routes.json exclude必须为数组");
+if(r.exclude.some(x => x==="/api/*" || x==="/api/rules/sync")) throw new Error("_routes.json错误排除了API");
+NODE
+[ $? -eq 0 ] || fail "_routes.json 结构验证失败"
+
+FUNCTION_WORKER="$TMP_ROOT/pages-functions-worker.js"
+FUNCTION_ROUTES="$TMP_ROOT/pages-functions-routes.json"
+
+set +e
+FUNCTION_BUILD_OUT="$(npx wrangler pages functions build functions \
+  --outfile="$FUNCTION_WORKER" \
+  --output-routes-path="$FUNCTION_ROUTES" \
+  --project-directory="$WORK_DIR" 2>&1)"
+FUNCTION_BUILD_CODE=$?
+set -e
+
+echo "--------------- Functions build 输出 ---------------"
+echo "$FUNCTION_BUILD_OUT"
+echo "----------------------------------------------------"
+
+[ $FUNCTION_BUILD_CODE -eq 0 ] || fail "Pages Functions 编译失败（exit code: $FUNCTION_BUILD_CODE）"
+[ -s "$FUNCTION_WORKER" ] || fail "Functions build 未生成 Worker"
+[ -s "$FUNCTION_ROUTES" ] || fail "Functions build 未生成 routes JSON"
+
+node - "$FUNCTION_ROUTES" <<'NODE'
+const fs=require("fs");
+const p=process.argv[2];
+const r=JSON.parse(fs.readFileSync(p,"utf8"));
+const include=Array.isArray(r.include)?r.include:[];
+const exclude=Array.isArray(r.exclude)?r.exclude:[];
+function globMatch(rule,path){
+  if(rule===path)return true;
+  if(rule.endsWith("*")) return path.startsWith(rule.slice(0,-1));
+  return false;
+}
+const target="/api/rules/sync";
+const included=include.some(x=>globMatch(x,target));
+const excluded=exclude.some(x=>globMatch(x,target));
+if(!included || excluded){
+  console.error(JSON.stringify(r,null,2));
+  throw new Error(`编译路由没有覆盖 ${target}`);
+}
+console.log("✅ 编译路由确认覆盖",target);
+NODE
+[ $? -eq 0 ] || fail "编译后的 Pages Functions 路由验证失败"
+
+echo "✅ Functions源码 → Worker编译 → API路由 三层检查通过"
+
+echo ""
+echo "[5/9] 发布前完整业务保护自检..."
 
 CHECK_VERSION="$(grep -Eo 'data-release="[0-9.]+"' index.html | head -1 | cut -d'"' -f2 || true)"
 [ "$CHECK_VERSION" = "$EXPECTED_VERSION" ] || fail "工作区版本错误：$CHECK_VERSION"
@@ -302,6 +406,7 @@ for f in \
   functions/api/rules/sync.js \
   cloudflare/d1-schema.sql \
   assets/release-history.json \
+  _routes.json \
   RELEASE.txt \
   CHANGELOG.md
 do
@@ -314,9 +419,9 @@ run_checked "import.worker.bundle.js" node --check src/workers/import.worker.bun
 run_checked "release-meta.js" node --check src/release-meta.js
 run_checked "Cloudflare sync Function" node --check functions/api/rules/sync.js
 
-grep -q '"version": "7.1.7"' assets/release-history.json || fail "历史更新 JSON 未同步 v7.1.7"
-grep -q 'v7.1.7' CHANGELOG.md || fail "CHANGELOG 未同步 v7.1.7"
-grep -q 'V7.1.7' RELEASE.txt || fail "RELEASE 未同步 v7.1.7"
+grep -q '"version": "7.1.8"' assets/release-history.json || fail "历史更新未同步 v7.1.8"
+grep -q 'v7.1.8' CHANGELOG.md || fail "CHANGELOG 未同步 v7.1.8"
+grep -q 'V7.1.8' RELEASE.txt || fail "RELEASE 未同步 v7.1.8"
 
 DEPLOY_ARGS=(
   pages
@@ -326,28 +431,20 @@ DEPLOY_ARGS=(
   --branch=main
 )
 
-if contains_config_arg "${DEPLOY_ARGS[@]}"; then
-  fail "真实 Wrangler Pages deploy 参数意外包含禁止的 --config"
-fi
+contains_config_arg "${DEPLOY_ARGS[@]}" && fail "真实 Pages deploy 参数包含禁止的 --config"
+contains_config_arg pages deploy . --config bad.jsonc || fail "--config 检测器失效"
+contains_config_arg pages deploy . --config=bad.jsonc || fail "--config= 检测器失效"
 
-if ! contains_config_arg pages deploy . --config bad.jsonc; then
-  fail "参数级 --config 检测器自检失败"
-fi
-if ! contains_config_arg pages deploy . --config=bad.jsonc; then
-  fail "参数级 --config=... 检测器自检失败"
-fi
-
-echo "✅ 发布器参数级预检通过（说明文字中的 --config 不参与判断）"
-echo "✅ 代码 / 日志 / D1 / 关键资产自检通过"
+echo "✅ 发布前业务保护、自检、真实部署参数全部通过"
 
 echo ""
-echo "[5/8] 提交 GitHub..."
+echo "[6/9] 提交 GitHub..."
 git add -A || fail "git add 失败"
 
 if git diff --cached --quiet; then
-  echo "ℹ️ GitHub main 已经是相同 V7.1.7 内容"
+  echo "ℹ️ GitHub main 已经是相同 V7.1.8 内容"
 else
-  COMMIT_OUT="$(git commit -m "Deploy WRITE v7.1.7" 2>&1)"
+  COMMIT_OUT="$(git commit -m "Deploy WRITE v7.1.8" 2>&1)"
   COMMIT_CODE=$?
   echo "$COMMIT_OUT"
   [ $COMMIT_CODE -eq 0 ] || fail "git commit 失败（exit code: $COMMIT_CODE）"
@@ -360,19 +457,19 @@ fi
 echo "✅ GitHub main 已更新"
 
 echo ""
-echo "[6/8] Cloudflare Pages 配置预检..."
-echo "根配置：$WORK_DIR/wrangler.jsonc"
-echo "说明：Pages 部署禁止自定义 --config 参数；此文字不会被误判。"
-
-if contains_config_arg "${DEPLOY_ARGS[@]}"; then
-  fail "真实部署参数意外包含 --config"
-fi
+echo "[7/9] Cloudflare Pages 最终配置预检..."
+[ -f wrangler.jsonc ] || fail "缺少唯一根 wrangler.jsonc"
 [ ! -f wrangler.toml ] || fail "存在第二 Wrangler 配置"
-[ -f wrangler.jsonc ] || fail "唯一根 wrangler.jsonc 不存在"
-echo "✅ 真实部署参数通过；Pages 将读取当前目录唯一根 wrangler.jsonc"
+[ -f _routes.json ] || fail "缺少 _routes.json"
+contains_config_arg "${DEPLOY_ARGS[@]}" && fail "真实部署参数出现 --config"
+
+echo "✅ root wrangler.jsonc"
+echo "✅ root _routes.json → /api/*"
+echo "✅ pages functions build 路由已验证"
+echo "✅ deploy 参数无 --config"
 
 echo ""
-echo "[7/8] 部署 Cloudflare Pages..."
+echo "[8/9] 部署 Cloudflare Pages..."
 echo "执行：npx wrangler pages deploy . --project-name=$PROJECT --branch=main"
 
 set +e
@@ -385,53 +482,71 @@ echo "$DEPLOY_OUT"
 echo "--------------- 输出结束 --------------------"
 echo "Wrangler exit code: $DEPLOY_CODE"
 
-[ $DEPLOY_CODE -eq 0 ] || fail "Cloudflare Pages 部署失败。上方是完整 Wrangler 错误。"
+[ $DEPLOY_CODE -eq 0 ] || fail "Cloudflare Pages 部署失败"
 
 DEPLOY_URLS="$(printf '%s' "$DEPLOY_OUT" | grep -Eo 'https://[a-zA-Z0-9.-]+\.pages\.dev' | sort -u || true)"
 DEPLOY_URL_COUNT="$(printf '%s\n' "$DEPLOY_URLS" | sed '/^[[:space:]]*$/d' | wc -l | tr -d ' ')"
 [ "$DEPLOY_URL_COUNT" = "1" ] || {
-  echo "检测到的 pages.dev URL："
   echo "$DEPLOY_URLS"
-  fail "要求回读唯一 deployment URL，但实际检测到 $DEPLOY_URL_COUNT 个"
+  fail "要求唯一 deployment URL，实际检测到 $DEPLOY_URL_COUNT 个"
 }
 DEPLOY_URL="$(printf '%s\n' "$DEPLOY_URLS" | head -1)"
 echo "✅ 唯一 Deployment: $DEPLOY_URL"
 
 echo ""
-echo "[8/8] 在线版本 + D1 API 强验证..."
-VERIFIED=""
-for i in 1 2 3 4 5 6 7 8 9 10; do
+echo "[9/9] 线上版本 + API + D1 强验证..."
+
+VERSION_OK=""
+i=1
+while [ $i -le 10 ]; do
   REMOTE_HTML="$(curl -fsSL "${DEPLOY_URL}/?verify=$(date +%s)-$i" 2>/dev/null || true)"
-  if printf '%s' "$REMOTE_HTML" | grep -q 'data-release="7.1.7"'; then
-    VERIFIED="yes"
+  if printf '%s' "$REMOTE_HTML" | grep -q 'data-release="7.1.8"'; then
+    VERSION_OK="yes"
     break
   fi
+  echo "  版本确认尝试 $i/10"
+  i=$((i + 1))
   sleep 2
 done
-[ "$VERIFIED" = "yes" ] || fail "唯一 deployment 未确认 data-release=v7.1.7"
-echo "✅ 线上版本确认：v7.1.7"
+[ "$VERSION_OK" = "yes" ] || fail "唯一 deployment 未确认 data-release=v7.1.8"
+echo "✅ Deployment 在线版本：v7.1.8"
 
-set +e
-SYNC_BODY="$(curl -fsSL "${DEPLOY_URL}/api/rules/sync" 2>&1)"
-SYNC_CODE=$?
-set -e
-if [ $SYNC_CODE -ne 0 ]; then
-  echo "$SYNC_BODY"
-  fail "规则云同步 API 无法访问"
+echo "→ 验证 Deployment API: ${DEPLOY_URL}/api/rules/sync"
+API_BODY="$(http_get_json_check "${DEPLOY_URL}/api/rules/sync" 10)"
+[ $? -eq 0 ] || fail "Deployment /api/rules/sync 未达到 HTTP 200 + ok:true"
+echo "✅ Deployment API：HTTP 200 + ok:true"
+echo "✅ D1 Binding 可用"
+
+echo "→ 复核正式域名：$CUSTOM_DOMAIN"
+DOMAIN_VERSION=""
+i=1
+while [ $i -le 10 ]; do
+  REMOTE_HTML="$(curl -fsSL "${CUSTOM_DOMAIN}/?verify=$(date +%s)-$i" 2>/dev/null || true)"
+  if printf '%s' "$REMOTE_HTML" | grep -q 'data-release="7.1.8"'; then
+    DOMAIN_VERSION="yes"
+    break
+  fi
+  i=$((i + 1))
+  sleep 2
+done
+
+if [ "$DOMAIN_VERSION" = "yes" ]; then
+  echo "✅ 正式域名版本：v7.1.8"
+  if DOMAIN_API_BODY="$(http_get_json_check "${CUSTOM_DOMAIN}/api/rules/sync" 5)"; then
+    echo "✅ 正式域名 API：HTTP 200 + ok:true"
+  else
+    echo "⚠️ Deployment 已全部通过，但正式域名 API 尚未同步；请稍后刷新正式域名。"
+  fi
+else
+  echo "⚠️ Deployment 已全部通过，但正式域名暂未回读到 v7.1.8。"
 fi
-
-printf '%s' "$SYNC_BODY" | grep -Eq '"ok"[[:space:]]*:[[:space:]]*true' || {
-  echo "$SYNC_BODY"
-  fail "规则云同步 API 未返回 ok:true"
-}
-echo "✅ Cloudflare D1 云同步 API 正常"
 
 echo ""
 echo "=================================================="
-echo "✅ WRITE V7.1.7 全部发布检查通过"
+echo "✅ WRITE V7.1.8 核心发布验证全部通过"
 echo "GitHub: https://github.com/simonz0118-max/write-settlement-manager"
 echo "Deployment: $DEPLOY_URL"
-echo "正式域名: https://f.neovora.co/"
+echo "正式域名: $CUSTOM_DOMAIN"
 echo "D1: $DB_NAME / $BINDING"
 echo "=================================================="
 pause_close

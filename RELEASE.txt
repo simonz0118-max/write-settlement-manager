@@ -1,12 +1,12 @@
-WRITE Settlement Manager V7.1.7
-Release: 2026-08-09 23:30
+WRITE Settlement Manager V7.1.8
+Release: 2026-08-09 23:38
 
-V7.1.7 只修发布器：
-- 不再全文扫描脚本中的 --config
-- 只检查真实 Wrangler Pages deploy 参数
-- 唯一根 wrangler.jsonc
-- WRITE_RULES_DB / write-settlement-rules 自动绑定
-- 唯一 deployment URL 强校验
-- data-release=v7.1.7 强校验
-- /api/rules/sync ok:true 强校验
-- 业务核心零逻辑修改
+Pages Functions API 路由修复：
+- explicit root _routes.json
+- include /api/*
+- predeploy pages functions build
+- compiled route verification for /api/rules/sync
+- HTTP 200 + JSON ok:true online verification
+- unique root wrangler.jsonc
+- WRITE_RULES_DB / write-settlement-rules
+- business logic unchanged

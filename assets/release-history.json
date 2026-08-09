@@ -1,41 +1,53 @@
 {
   "current": {
-    "version": "7.1.7",
-    "time": "2026-08-09 23:30",
-    "title": "发布器参数级预检修复",
+    "version": "7.1.8",
+    "time": "2026-08-09 23:38",
+    "title": "Pages Functions 路由强验证修复",
     "sections": [
       {
-        "label": "发布器修复",
+        "label": "根因修复",
         "items": [
-          "修复V7.1.6发布前预检误报：不再全文搜索发布脚本中的`--config`文字。",
-          "Pages部署参数改为结构化数组，只检查真正传给Wrangler的`--config`或`--config=...`参数。"
+          "V7.1.7 页面与Pages部署成功，但/api/rules/sync在线返回404；API源码本身不会返回404，问题锁定在Pages Functions路由层。",
+          "新增根_routes.json，明确include=/api/*、exclude=[]，只让API请求进入Pages Functions。"
         ]
       },
       {
-        "label": "发布流程",
+        "label": "部署前验证",
         "items": [
-          "继续固定clone→pull→覆盖新版→生成唯一根wrangler.jsonc→发布前自检→GitHub→Cloudflare Pages。",
-          "实际Pages命令保持为`npx wrangler pages deploy . --project-name=write-settlement-manager --branch=main`。",
-          "Wrangler输出中的pages.dev地址去重后必须恰好一个，才进入线上验证。"
+          "发布前运行wrangler pages functions build并输出编译后的_routes.json。",
+          "只有编译路由确认覆盖/api/rules/sync后，才允许提交GitHub和部署Cloudflare。"
         ]
       },
       {
-        "label": "强验证",
+        "label": "在线验证",
         "items": [
-          "线上唯一deployment必须返回data-release=v7.1.7。",
-          "`/api/rules/sync`必须返回ok:true，否则发布判定失败。",
-          "解压升级目录无需.git；发布始终使用临时干净Git仓库。"
+          "部署后同时检查唯一pages.dev deployment的data-release=v7.1.8。",
+          "API验证记录HTTP状态码与响应正文；必须HTTP 200且JSON ok:true。",
+          "正式域名f.neovora.co也进行版本与API复核；deployment成功是硬条件，正式域名复核作为发布完成确认。"
         ]
       },
       {
         "label": "业务保护",
         "items": [
-          "不修改订单统计、CN FACT模板逻辑、FACT自动生成/学习、数量守恒、会计结算、未知商品过滤、规则学习、IndexedDB/D1、黑白模式。"
+          "不修改订单统计、CN FACT、FACT自动生成/学习、数量守恒、会计结算、未知商品过滤、规则学习、IndexedDB/D1及主题逻辑。"
         ]
       }
     ]
   },
   "history": [
+    {
+      "version": "7.1.8",
+      "time": "2026-08-09 23:38",
+      "title": "修复Pages Functions API路由404并增加编译路由强验证",
+      "items": [
+        "新增根_routes.json：仅/api/*进入Pages Functions。",
+        "发布前使用wrangler pages functions build生成Worker和routes产物。",
+        "编译后必须证明/api/rules/sync被路由规则覆盖，否则发布立即中止。",
+        "部署后API检查升级为HTTP状态码+响应正文+ok:true三重验证。",
+        "继续保持唯一wrangler.jsonc、D1自动绑定、唯一deployment URL和data-release强验证。",
+        "本版不修改结算、FACT和规则学习业务逻辑。"
+      ]
+    },
     {
       "version": "7.1.7",
       "time": "2026-08-09 23:30",

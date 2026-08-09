@@ -1,3 +1,10 @@
+## v7.1.8 — 2026-08-09 23:38 (Europe/Paris)
+- 修复 V7.1.7 Cloudflare Pages 部署成功但 `/api/rules/sync` 在线返回 404。
+- 新增根 `_routes.json`：`include=["/api/*"]`，明确只让 API 路径进入 Pages Functions。
+- 发布前执行 `wrangler pages functions build` 并生成路由产物；必须验证 `/api/rules/sync` 被路由覆盖后才能提交和部署。
+- 在线 API 验证升级为 HTTP 状态码 + response body + `ok:true` 三重检查。
+- 不修改订单、CN FACT、数量守恒、会计报表、未知商品过滤、规则学习及 IndexedDB/D1 业务逻辑。
+
 ## v7.1.7 — 2026-08-09 23:30 (Europe/Paris)
 - 修复 V7.1.6 发布脚本在 Cloudflare Pages 配置预检阶段的误判。
 - 删除对发布脚本全文搜索 `--config` 的逻辑；改为只检查真正传给 Wrangler Pages deploy 的参数数组。
