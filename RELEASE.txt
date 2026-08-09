@@ -1,6 +1,4 @@
-WRITE Settlement Manager V7.2.0
-Release: 2026-08-10 01:20
-Core invariant: NO SILENT DATA LOSS.
-Same orderId rows are preserved.
-Learning: ORDER_SCHEMA / PRODUCT_CATEGORY / COST_MODEL / CURRENCY_POLICY / FACT_MODEL / TAX_POLICY.
-Conflict-safe manual rules. IndexedDB + D1 sync retained.
+WRITE Settlement Manager V7.2.1
+Batch rule editor + optional unknown-cost export.
+UNKNOWN cost is not zero.
+D1 API validation uses JSON parsing.

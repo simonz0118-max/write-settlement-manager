@@ -971,7 +971,7 @@ async function startImport(fileList){
   const files=[...fileList].filter(f=>/\.(xlsx|zip)$/i.test(f.name)); if(!files.length||busy)return;
   await window.WRITE_KB?.init?.().catch(()=>{});
   const schemaRules=window.WRITE_SCHEMA?.getRules?.()||[];
-  worker?.terminate(); worker=new Worker('./src/workers/import.worker.bundle.js?v=7.2.0-20260810-0045'); importStartedAt=performance.now(); importedFileNames=files.map(f=>f.name);
+  worker?.terminate(); worker=new Worker('./src/workers/import.worker.bundle.js?v=7.2.1-20260810-0045'); importStartedAt=performance.now(); importedFileNames=files.map(f=>f.name);
   setBusy(true); hideError(); els.importLanding.hidden=false; els.appViews.hidden=true; els.topActions.hidden=true;
   els.currentFile.textContent='准备读取…'; els.progressFill.style.width='0%'; els.progressText.textContent='0% · 自适应识别订单结构';
   worker.onmessage=async ({data})=>{
@@ -1199,7 +1199,7 @@ function renderOrders(){
 }
 
 
-// v7.2.0 — mandatory FACT delivery: generate a FACT when the source workbook has none.
+// v7.2.1 — mandatory FACT delivery: generate a FACT when the source workbook has none.
 function currencyForWorkbook(workbookName=''){
   const n=String(workbookName||'').toUpperCase();
   if(/\bUSD\b|\$US|US\$/.test(n))return 'USD';
@@ -1273,7 +1273,8 @@ function generatedGenericFactRowsForWorkbook(workbookName){
   let no=1;
   for(const x of [...map.values()].sort((a,b)=>a.country.localeCompare(b.country,'en')||a.category.localeCompare(b.category,'zh')||a.product.localeCompare(b.product,'fr'))){
     const learned=learnedCostRateForDescription(x.product,x.country);
-    const kbCost=window.WRITE_KB?.calculateCost?.({productName:x.product,sku:x.sku,country:x.country,currency:x.currency,quantity:x.quantity,orderAmount:0});
+    const kbCost=window.WRITE_LEARNING_V2?.calculateCost?.({productName:x.product,sku:x.sku,country:x.country,currency:x.currency,quantity:x.quantity,orderAmount:0})
+      || window.WRITE_KB?.calculateCost?.({productName:x.product,sku:x.sku,country:x.country,currency:x.currency,quantity:x.quantity,orderAmount:0});
     const cogs=learned?.cogs??(kbCost?.resolved?kbCost.unitCost:null),shipping=learned?.shipping??(kbCost?.resolved?0:null),unitTotal=learned?.unitTotal??(kbCost?.resolved?kbCost.unitCost:null);
     const calcUnit=Number.isFinite(Number(unitTotal))?Number(unitTotal):((Number.isFinite(Number(cogs))?Number(cogs):0)+(Number.isFinite(Number(shipping))?Number(shipping):0));
     const hasCost=Number.isFinite(Number(unitTotal))||Number.isFinite(Number(cogs))||Number.isFinite(Number(shipping));
@@ -1281,9 +1282,9 @@ function generatedGenericFactRowsForWorkbook(workbookName){
       no:no++,country:x.country,
       description:`${x.category} · ${x.product}`,
       sku:x.sku,quantity:x.quantity,cogs,shipping,unitTotal,
-      amount:hasCost?Math.round((x.quantity*calcUnit+Number.EPSILON)*100)/100:0,
+      amount:hasCost?Math.round((x.quantity*calcUnit+Number.EPSILON)*100)/100:null,
       currency:x.currency,
-      costStatus:learned?'已使用历史 FACT 学习成本':kbCost?.resolved?'已使用长期成本模型':hasCost?'已使用学习成本':'待补成本（无可靠学习价格）',
+      costStatus:learned?'已使用历史 FACT 学习成本':kbCost?.resolved?(kbCost.session?'仅本次成本规则':'已使用长期成本模型'):hasCost?'已使用学习成本':'UNKNOWN',
       sourceFile:workbookName,sourceSheet:'AUTO_FACT',generated:true,
       orderCount:x.orders.size
     });
@@ -1357,14 +1358,14 @@ async function rebuildArchiveReplacingEntry(archive,path,newBytes){
   const centralSize=central.reduce((a,b)=>a+b.length,0),centralOffset=offset;parts.push(...central,new Uint8Array([...u32(ZIP_EOCD),...u16(0),...u16(0),...u16(entries.length),...u16(entries.length),...u32(centralSize),...u32(centralOffset),...u16(0)]));return new Blob(parts,{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
 }
 async function buildGeneratedPencilFactWorkbook(workbookName){
-  const resp=await fetch(`./assets/FACT_TEMPLATE_CN_CANONICAL_V1.xlsx?v=7.2.0`,{cache:'no-store'});
+  const resp=await fetch(`./assets/FACT_TEMPLATE_CN_CANONICAL_V1.xlsx?v=7.2.1`,{cache:'no-store'});
   if(!resp.ok)throw new Error(`无法读取 CN 标准 FACT 模板（HTTP ${resp.status}）`);
 
   const templateBlob=await resp.blob();
   if(!templateBlob?.size)throw new Error('CN 标准 FACT 模板文件为空');
   const archive=await PreserveZipArchive.open(templateBlob);
 
-  // V7.2.0: release-time verified canonical path. This removes runtime XML-discovery as a point of failure.
+  // V7.2.1: release-time verified canonical path. This removes runtime XML-discovery as a point of failure.
   const canonicalPath='xl/worksheets/sheet1.xml';
   let factPath=archive.get(canonicalPath)?canonicalPath:'';
 
@@ -1404,7 +1405,7 @@ async function buildGeneratedFactWorkbook(workbookName){
     return buildGeneratedPencilFactWorkbook(workbookName);
   }
   const data=generatedFactRowsForWorkbook(workbookName);
-  const resp=await fetch(`./assets/FACT_TEMPLATE_LEARNED_V1.xlsx?v=7.2.0`,{cache:'no-store'});if(!resp.ok)throw new Error('无法读取内置 FACT 学习模板');
+  const resp=await fetch(`./assets/FACT_TEMPLATE_LEARNED_V1.xlsx?v=7.2.1`,{cache:'no-store'});if(!resp.ok)throw new Error('无法读取内置 FACT 学习模板');
   const templateBlob=await resp.blob(),archive=await PreserveZipArchive.open(templateBlob),sheetPath='xl/worksheets/sheet1.xml';
   const xml=await archive.text(sheetPath,16*1024*1024),patched=patchLearnedTemplateSheetXml(xml,data,workbookName);
   return rebuildArchiveReplacingEntry(archive,sheetPath,enc.encode(patched));
@@ -1518,8 +1519,10 @@ function buildAccountingReport(){
   const totalItemQty=classified.lineItems.reduce((a,x)=>a+(Number(x.quantity)||1),0);
   const giftQty=classified.lineItems.filter(x=>x.isFree).reduce((a,x)=>a+(Number(x.quantity)||1),0);
   const factData=buildFactExportData();
-  const grossProfit=totalAmount-factData.totalAmount;
-  const grossMargin=totalAmount?grossProfit/totalAmount:0;
+  const unknownCostRows=(factData.factRows||[]).filter(r=>r.costStatus==='UNKNOWN'||r.amount===null||r.amount===undefined);
+  const costComplete=unknownCostRows.length===0;
+  const grossProfit=costComplete?totalAmount-factData.totalAmount:null;
+  const grossMargin=costComplete&&totalAmount?grossProfit/totalAmount:null;
   const sourceLabel=sourceNames.length===1?sourceNames[0]:`${sourceNames.length} 个文件`;
   const currencySummaryV7=currencyTotals();
   const multiCurrency=currencySummaryV7.length>1;
@@ -1531,9 +1534,9 @@ function buildAccountingReport(){
     [],
     ['指标','数值','会计口径','状态'],
     ['销售订单总额',multiCurrency?'见币种总览':totalAmount,multiCurrency?'多币种禁止直接合计':'去重后订单金额合计',multiCurrency?'分币种核算':'已核算'],
-    ['FACT 成本总额',factData.totalAmount,'FACT / 自动生成 FACT 的 Amount 合计',factData.factRows.length?(factData.active?'已解析':'已生成 · 成本待补'):'无 FACT 数据'],
-    ['估算毛利',multiCurrency?'—':grossProfit,multiCurrency?'多币种时不跨币种计算毛利':'销售订单总额 - FACT 成本总额',multiCurrency?'不计算':'估算值'],
-    ['估算毛利率',multiCurrency?'—':grossMargin,multiCurrency?'多币种时不跨币种计算毛利率':'估算毛利 ÷ 销售订单总额',multiCurrency?'不计算':'估算值'],
+    ['FACT 成本总额',costComplete?factData.totalAmount:'—',costComplete?'FACT / 自动生成 FACT 的 Amount 合计':`存在 ${unknownCostRows.length} 个未设置成本项目`,costComplete?(factData.factRows.length?(factData.active?'已解析':'已生成'):'无 FACT 数据'):'成本不完整'],
+    ['估算毛利',multiCurrency||!costComplete?'—':grossProfit,multiCurrency?'多币种时不跨币种计算毛利':!costComplete?'存在未设置成本，禁止伪造利润':'销售订单总额 - FACT 成本总额',multiCurrency||!costComplete?'不计算':'估算值'],
+    ['估算毛利率',multiCurrency||!costComplete?'—':grossMargin,multiCurrency?'多币种时不跨币种计算毛利率':!costComplete?'成本不完整，毛利率不可计算':'估算毛利 ÷ 销售订单总额',multiCurrency||!costComplete?'不计算':'估算值'],
     ['结算记录数',classified.orders.length,'每个源订单行均保留；订单号不作为删除依据','已核算'],
     ['商品件数',totalItemQty,'所有商品行数量合计','已核算'],
     ['赠品件数',giftQty,'🎁 / 100% off 自动识别','已识别'],
@@ -1871,12 +1874,12 @@ if(themeMedia.addEventListener)themeMedia.addEventListener('change',onSystemThem
 applyTheme(getThemePreference(),{persist:false});
 
 
-// v7.2.0 release notes controller — show once per release per browser
-const WRITE_RELEASE_META = window.WRITE_RELEASE_META || {current:{version:document.body.dataset.release||'7.2.0',time:'',title:'WRITE Settlement Manager',sections:[]},history:[]};
+// v7.2.1 release notes controller — show once per release per browser
+const WRITE_RELEASE_META = window.WRITE_RELEASE_META || {current:{version:document.body.dataset.release||'7.2.1',time:'',title:'WRITE Settlement Manager',sections:[]},history:[]};
 const WRITE_RELEASE = {
-  version: WRITE_RELEASE_META.current?.version || document.body.dataset.release || '7.2.0',
+  version: WRITE_RELEASE_META.current?.version || document.body.dataset.release || '7.2.1',
   date: WRITE_RELEASE_META.current?.time || '',
-  title: `WRITE Settlement Manager v${WRITE_RELEASE_META.current?.version || document.body.dataset.release || '7.2.0'}`,
+  title: `WRITE Settlement Manager v${WRITE_RELEASE_META.current?.version || document.body.dataset.release || '7.2.1'}`,
   sections: WRITE_RELEASE_META.current?.sections || []
 };
 function showReleaseNotesIfNeeded(){
@@ -1911,7 +1914,7 @@ document.documentElement.dataset.writeReady='true';
 
 
 
-// v7.2.0 — version history from unified release metadata
+// v7.2.1 — version history from unified release metadata
 const WRITE_HISTORY = Array.isArray(WRITE_RELEASE_META.history) ? WRITE_RELEASE_META.history : [];
 function renderReleaseHistory(){
   const host=document.getElementById('releaseHistory');
