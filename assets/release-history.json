@@ -1,32 +1,44 @@
 {
   "current": {
-    "version": "7.0.7",
-    "time": "2026-08-09 18:30",
-    "title": "可靠导出中心",
+    "version": "7.0.8",
+    "time": "2026-08-09 18:36",
+    "title": "修复 CN FACT key 异常",
     "sections": [
       {
-        "label": "下载机制",
+        "label": "修复",
         "items": [
-          "点击导出后固定打开“导出中心”，不再依赖浏览器后台自动下载。",
-          "会计 Excel 先独立生成并提供手动下载；FACT 与完整 ZIP 后续逐步生成。",
-          "每个生成文件都有独立真实下载链接，FACT/ZIP 失败不会影响已经生成的会计 Excel。"
+          "重写 CN FACT 数据聚合与完整性审计，移除 FACT 导出路径中的通用 key 变量。",
+          "统一使用 bucketId / targetId / targetType，避免作用域歧义导致 ReferenceError。"
         ]
       },
       {
         "label": "诊断",
         "items": [
-          "导出中心持续显示具体阶段和错误，不再出现“正在生成闪一下后消失”。"
+          "CN FACT 审计与文件写入增加独立异常边界。",
+          "导出中心增加 JavaScript stack 简要诊断，异常可直接定位。"
         ]
       },
       {
         "label": "保留",
         "items": [
-          "保留 CN FACT、数量守恒、零遗漏审计和会计分类四列对齐。"
+          "会计 Excel 独立下载、CN 唯一模板、数量守恒和零遗漏审计继续保留。"
         ]
       }
     ]
   },
   "history": [
+    {
+      "version": "7.0.8",
+      "time": "2026-08-09 18:36",
+      "title": "修复 CN FACT 导出 key 作用域异常",
+      "items": [
+        "重写 CN FACT 数据聚合与完整性审计，移除 FACT 导出路径中的通用 key 变量。",
+        "统一使用 bucketId / targetId / targetType，避免作用域歧义导致 ReferenceError。",
+        "CN FACT 审计与文件写入增加独立异常边界。",
+        "导出中心增加 JavaScript stack 简要诊断，异常可直接定位。",
+        "会计 Excel 独立下载、CN 唯一模板、数量守恒和零遗漏审计继续保留。"
+      ]
+    },
     {
       "version": "7.0.7",
       "time": "2026-08-09 18:30",

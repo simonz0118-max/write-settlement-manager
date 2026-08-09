@@ -1,3 +1,10 @@
+## v7.0.8 — 2026-08-09 18:36 (Europe/Paris)
+- 重写 CN FACT 数据聚合和完整性审计，移除 FACT 导出路径中的通用 `key` 变量。
+- 使用 `bucketId` / `targetId` / `targetType` 明确统计标识，修复 `key is not defined`。
+- CN FACT 审计与 CN FACT 文件写入拆分为独立异常边界。
+- 导出中心异常时显示 JavaScript stack 前三行。
+- 会计 Excel 独立下载、CN 唯一模板、数量守恒和零遗漏审计全部保留。
+
 ## v7.0.7 — 2026-08-09 18:30 (Europe/Paris)
 - 导出改为固定“导出中心”，不再依赖异步流程结束后的自动下载。
 - 第一步同步生成会计 Excel 并创建手动下载链接。

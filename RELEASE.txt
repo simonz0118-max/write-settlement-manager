@@ -1,8 +1,8 @@
-WRITE Settlement Manager V7.0.7
-Release time: 2026-08-09 18:30 Europe/Paris
+WRITE Settlement Manager V7.0.8
+Release time: 2026-08-09 18:36 Europe/Paris
 
-- 固定导出中心
-- 不再依赖浏览器自动下载
-- 会计 Excel / FACT / ZIP 独立下载
-- 导出错误持续可见
-- 保留 CN FACT 零遗漏审计
+- 修复 CN FACT 阶段 key is not defined
+- 重写 FACT 审计变量作用域
+- 增加审计 / FACT 写入独立异常边界
+- 导出中心显示 stack 诊断
+- 保留 CN 模板与零遗漏审计
