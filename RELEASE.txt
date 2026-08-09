@@ -1,8 +1,8 @@
-WRITE Settlement Manager V7.0.5
-Release time: 2026-08-09 19:00 Europe/Paris
+WRITE Settlement Manager V7.0.6
+Release time: 2026-08-09 18:17 Europe/Paris
 
-- 持久手动下载结算包
-- 自动下载失败仍可手动下载
-- 原始 / 重复 / 唯一订单透明统计
-- FACT 输出数量正确显示
+- 会计分类统计四列固定对齐
+- 导出分阶段状态可见
+- 导出错误固定悬浮显示
+- FACT/ZIP 失败时提供仅会计报表兜底下载
 - 保留 CN FACT 零遗漏审计
