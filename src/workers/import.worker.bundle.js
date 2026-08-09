@@ -1,5 +1,5 @@
+/* WRITE Import Worker v7.0.3 build 20260809-1825 */
 /* WRITE Settlement Manager v5.3.3 - standalone import worker */
-const REQUIRED_HEADERS = ['订单号', '订单金额', '产品总数', '产品名称', '收货人国家'];
 const EOCD_SIG = 0x06054b50;
 const CEN_SIG = 0x02014b50;
 const LOC_SIG = 0x04034b50;
@@ -203,25 +203,16 @@ function inferCurrency(sourceFile='',value=''){
 }
 
 function isFactSheet(name = '') {
-  return String(name).trim().toUpperCase() === 'FACT';
-}
-
-function scoreOrderHeader(row = []) {
-  const normalized = new Set(row.map((v) => String(v ?? '').trim()).filter(Boolean));
-  return ORDER_HEADERS.reduce((score, header) => score + (normalized.has(header) ? 1 : 0), 0);
-}
-
-function isOrderHeader(row = []) {
-  const normalized = new Set(row.map((v) => String(v ?? '').trim()).filter(Boolean));
-  return REQUIRED_HEADERS.every((header) => normalized.has(header)) && scoreOrderHeader(row) >= 8;
+  const n=String(name||'').trim().toUpperCase();
+  return /^FACT(?:\b|[-_ ])/.test(n) || /^\d+[-_ ]*FACT(?:\b|[-_ ])/.test(n);
 }
 
 function normalizeNumber(value) {
   if (value === '' || value == null) return null;
-  const n = Number(String(value).replace(',', '.'));
+  const raw=String(value).trim().replace(/\s/g,'').replace(',', '.');
+  const n = Number(raw);
   return Number.isFinite(n) ? n : null;
 }
-
 
 
 const textDecoder = new TextDecoder('utf-8');

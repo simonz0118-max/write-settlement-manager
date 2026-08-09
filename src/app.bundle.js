@@ -247,7 +247,7 @@ function findFactSheetPath(workbookXml,relsXml){
           path=rels.get(rid);
     if(path && /FACT/i.test(name))candidates.push({name,path});
   }
-  // V7.0.2.1: CN is the canonical WRITE FACT when multiple FACT sheets exist.
+  // V7.0.3: CN is the canonical WRITE FACT when multiple FACT sheets exist.
   const cn=candidates.find(x=>/CN/i.test(x.name));
   return cn?.path || candidates[0]?.path || '';
 }
@@ -659,7 +659,7 @@ function closeConfirm(){
 
 function startImport(fileList){
   const files=[...fileList].filter(f=>/\.(xlsx|zip)$/i.test(f.name)); if(!files.length||busy)return;
-  worker?.terminate(); worker=new Worker('./src/workers/import.worker.bundle.js?v=6.5.8'); importStartedAt=performance.now(); importedFileNames=files.map(f=>f.name);
+  worker?.terminate(); worker=new Worker('./src/workers/import.worker.bundle.js?v=7.0.3-20260809-1825'); importStartedAt=performance.now(); importedFileNames=files.map(f=>f.name);
   setBusy(true); hideError(); els.importLanding.hidden=false; els.appViews.hidden=true; els.topActions.hidden=true;
   els.currentFile.textContent='准备读取…'; els.progressFill.style.width='0%'; els.progressText.textContent='0% · 大文件在独立线程运行';
   worker.onmessage=({data})=>{
@@ -670,7 +670,24 @@ function startImport(fileList){
       if(data.detail) els.currentFile.textContent=data.detail;
     }
     if(data.type==='complete'){
-      orders=data.orders||[]; sheets=data.sheets||[]; sourceWorkbooks=data.workbooks||[]; duplicateCount=data.duplicates||0; classified=classifyOrders(orders); importDuration=(performance.now()-importStartedAt)/1000;
+      orders=data.orders||[]; sheets=data.sheets||[]; sourceWorkbooks=data.workbooks||[]; duplicateCount=data.duplicates||0; crossWorkbookDuplicates=data.crossWorkbookDuplicates||[];
+      importDuration=(performance.now()-importStartedAt)/1000;
+      const importedOrderSheets=sheets.filter(x=>x.status==='imported' && Number(x.orderCount)>0);
+      const factSheets=sheets.filter(x=>x.status==='ignored_fact');
+      if(!orders.length){
+        classified=null;
+        els.progressFill.style.width='100%';
+        els.progressText.textContent='100% · 未检测到订单数据';
+        els.currentFile.textContent='解析完成';
+        setBusy(false); renderResults();
+        if(factSheets.length && !importedOrderSheets.length){
+          showError(`只检测到 ${factSheets.length} 个 FACT 工作表，没有订单 Sheet。FACT 只包含成本/分类模板，不能单独进行订单结算。请导入包含订单 Sheet 的 Excel 或 ZIP。`);
+        }else{
+          showError('没有检测到有效订单。请检查订单 Sheet 是否包含订单号、金额、商品名称和国家等字段。');
+        }
+        worker?.terminate(); worker=null; return;
+      }
+      classified=classifyOrders(orders);
       els.progressFill.style.width='100%'; els.progressText.textContent='100% · 导入并分类完成'; els.currentFile.textContent='解析完成'; hideError(); setBusy(false); renderResults();
       worker?.terminate(); worker=null;
     }
@@ -846,7 +863,7 @@ function renderOrders(){
 }
 
 
-// v7.0.2.1 — mandatory FACT delivery: generate a FACT when the source workbook has none.
+// v7.0.3 — mandatory FACT delivery: generate a FACT when the source workbook has none.
 function currencyForWorkbook(workbookName=''){
   const n=String(workbookName||'').toUpperCase();
   if(/\bUSD\b|\$US|US\$/.test(n))return 'USD';
@@ -1014,7 +1031,7 @@ async function rebuildArchiveReplacingEntry(archive,path,newBytes){
   const centralSize=central.reduce((a,b)=>a+b.length,0),centralOffset=offset;parts.push(...central,new Uint8Array([...u32(ZIP_EOCD),...u16(0),...u16(0),...u16(entries.length),...u16(entries.length),...u32(centralSize),...u32(centralOffset),...u16(0)]));return new Blob(parts,{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
 }
 async function buildGeneratedPencilFactWorkbook(workbookName){
-  const resp=await fetch(`./assets/FACT_TEMPLATE_CN_CANONICAL_V1.xlsx?v=7.0.2.1`,{cache:'no-store'});
+  const resp=await fetch(`./assets/FACT_TEMPLATE_CN_CANONICAL_V1.xlsx?v=7.0.3`,{cache:'no-store'});
   if(!resp.ok)throw new Error('无法读取 CN 标准 FACT 模板');
   const templateBlob=await resp.blob(),
         archive=await PreserveZipArchive.open(templateBlob),
@@ -1039,7 +1056,7 @@ async function buildGeneratedFactWorkbook(workbookName){
     return buildGeneratedPencilFactWorkbook(workbookName);
   }
   const data=generatedFactRowsForWorkbook(workbookName);
-  const resp=await fetch(`./assets/FACT_TEMPLATE_LEARNED_V1.xlsx?v=7.0.2.1`,{cache:'no-store'});if(!resp.ok)throw new Error('无法读取内置 FACT 学习模板');
+  const resp=await fetch(`./assets/FACT_TEMPLATE_LEARNED_V1.xlsx?v=7.0.3`,{cache:'no-store'});if(!resp.ok)throw new Error('无法读取内置 FACT 学习模板');
   const templateBlob=await resp.blob(),archive=await PreserveZipArchive.open(templateBlob),sheetPath='xl/worksheets/sheet1.xml';
   const xml=await archive.text(sheetPath,16*1024*1024),patched=patchLearnedTemplateSheetXml(xml,data,workbookName);
   return rebuildArchiveReplacingEntry(archive,sheetPath,enc.encode(patched));
@@ -1251,7 +1268,7 @@ async function exportAccounting(){
       const profile=detectGeneratedFactProfile(wb.name);
 
       if(profile==='PENCIL_V1'){
-        // V7.0.2.1: WRITE pencil FACT always uses canonical CN template,
+        // V7.0.3: WRITE pencil FACT always uses canonical CN template,
         // regardless of whether the source workbook contained CN/FR/legacy FACT.
         const generated=await buildGeneratedPencilFactWorkbook(wb.name);
         deliverables.push({
@@ -1353,12 +1370,12 @@ if(themeMedia.addEventListener)themeMedia.addEventListener('change',onSystemThem
 applyTheme(getThemePreference(),{persist:false});
 
 
-// v7.0.2.1 release notes controller — show once per release per browser
-const WRITE_RELEASE_META = window.WRITE_RELEASE_META || {current:{version:document.body.dataset.release||'7.0.2.1',time:'',title:'WRITE Settlement Manager',sections:[]},history:[]};
+// v7.0.3 release notes controller — show once per release per browser
+const WRITE_RELEASE_META = window.WRITE_RELEASE_META || {current:{version:document.body.dataset.release||'7.0.3',time:'',title:'WRITE Settlement Manager',sections:[]},history:[]};
 const WRITE_RELEASE = {
-  version: WRITE_RELEASE_META.current?.version || document.body.dataset.release || '7.0.2.1',
+  version: WRITE_RELEASE_META.current?.version || document.body.dataset.release || '7.0.3',
   date: WRITE_RELEASE_META.current?.time || '',
-  title: `WRITE Settlement Manager v${WRITE_RELEASE_META.current?.version || document.body.dataset.release || '7.0.2.1'}`,
+  title: `WRITE Settlement Manager v${WRITE_RELEASE_META.current?.version || document.body.dataset.release || '7.0.3'}`,
   sections: WRITE_RELEASE_META.current?.sections || []
 };
 function showReleaseNotesIfNeeded(){
@@ -1393,7 +1410,7 @@ document.documentElement.dataset.writeReady='true';
 
 
 
-// v7.0.2.1 — version history from unified release metadata
+// v7.0.3 — version history from unified release metadata
 const WRITE_HISTORY = Array.isArray(WRITE_RELEASE_META.history) ? WRITE_RELEASE_META.history : [];
 function renderReleaseHistory(){
   const host=document.getElementById('releaseHistory');

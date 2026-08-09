@@ -1,9 +1,9 @@
-## v7.0.2.1 — 2026-08-09 18:05 (Europe/Paris)
-- 修复 `src/workers/import.worker.bundle.js` 中 `REQUIRED_HEADERS is not defined`。
-- 声明内容与 `src/lib/orderSchema.js` 保持一致：订单号、订单金额、产品总数、产品名称、收货人国家。
-- 恢复 Excel / ZIP 导入。
-- V7.0.2 CN FACT 与零遗漏统计规则保持不变。
-- 首次更新弹窗、历史更新、CHANGELOG、RELEASE、测试记录同步更新。
+## v7.0.3 — 2026-08-09 18:25 (Europe/Paris)
+- 根因修复：删除 `import.worker.bundle.js` 中重复的旧 `scoreOrderHeader()` / `isOrderHeader()`；旧函数曾覆盖 V7 自适应表头识别并调用不存在的 `REQUIRED_HEADERS/ORDER_HEADERS`。
+- Worker URL 从写死的 `?v=6.5.8` 改为 `?v=7.0.3-20260809-1825`。
+- FACT Sheet 支持 `FACT`、`1-FACT-CN`、`2-FACT-FR`、`FACT-CN` 等命名。
+- 仅含 FACT 的工作簿不再显示为“0 单成功导入”，改为明确提示没有订单 Sheet。
+- 保留 V7.0.2 CN FACT 唯一模板、Carnet/Gomme/Mines 映射、数量守恒和零遗漏审计。
 
 ## v7.0.2 — 2026-08-09 17:25 (Europe/Paris)
 - WRITE 铅笔业务正式锁定 `1-FACT-CN` 为唯一标准 FACT 模板；FR 模板不再参与自动生成。

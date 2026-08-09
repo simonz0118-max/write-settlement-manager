@@ -1,7 +1,8 @@
-WRITE Settlement Manager V7.0.2.1
-发布时间：2026-08-09 18:05 Europe/Paris
+WRITE Settlement Manager V7.0.3
+Release time: 2026-08-09 18:25 Europe/Paris
 
-紧急修复：
-- 修复 import worker 的 REQUIRED_HEADERS 未定义
-- 恢复 Excel / ZIP 导入
-- 保留 V7.0.2 全部 CN FACT 和零遗漏审计逻辑
+- 重构 Import Worker
+- 删除旧固定表头覆盖逻辑
+- Worker 使用 V7.0.3 独立缓存指纹
+- FACT-only 文件明确提示无订单 Sheet
+- 保留 CN FACT 与零遗漏审计
