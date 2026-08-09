@@ -317,3 +317,37 @@ html[data-theme="dark"] .release-notes-backdrop{background:rgba(0,0,0,.52)}html[
 .history-body{min-width:0}.history-body h3{margin:0 0 9px;font-size:15px;color:var(--text)}.history-body ul{margin:0;padding:0;list-style:none}.history-body li{position:relative;padding:4px 0 4px 16px;font-size:12.5px;line-height:1.65;color:var(--muted)}.history-body li::before{content:'—';position:absolute;left:0;color:var(--text)}
 @media(max-width:780px){.history-item{grid-template-columns:1fr;gap:10px}.history-meta{flex-direction:row;align-items:center;flex-wrap:wrap}.history-toolbar{padding:17px 18px}.release-history{padding:0 18px 6px}.history-current{display:none}}
 @media(max-width:600px){.history-item{padding:18px 0}.history-body h3{font-size:14px}.history-body li{font-size:12px}.history-toolbar{flex-direction:column;gap:8px}}
+
+
+/* v6.5.11 — review page theme consistency fix */
+html[data-theme="dark"] .review-help{
+  background:#202023;
+  color:#8d8d94;
+  border-color:#38383d;
+}
+html[data-theme="dark"] .review-editor{
+  background:#202023;
+  border-color:#333338;
+  color:#f1f1f2;
+}
+html[data-theme="dark"] .review-id strong{color:#f1f1f2}
+html[data-theme="dark"] .review-id small,
+html[data-theme="dark"] .review-editor label>span{color:#8d8d94}
+html[data-theme="dark"] .review-editor input,
+html[data-theme="dark"] .review-editor select{
+  background:#2c2c30;
+  border-color:#44444a;
+  color:#e8e8ea;
+}
+html[data-theme="dark"] .review-editor input::placeholder{color:#77777e}
+html[data-theme="dark"] .review-editor input:focus,
+html[data-theme="dark"] .review-editor select:focus{
+  border-color:#66666d!important;
+  box-shadow:0 0 0 3px rgba(255,255,255,.06)!important;
+}
+html[data-theme="dark"] .review-save{
+  background:#ededee;
+  color:#18181a;
+  border:1px solid #ededee;
+}
+html[data-theme="dark"] .review-save:hover{background:#d9d9dc;border-color:#d9d9dc}

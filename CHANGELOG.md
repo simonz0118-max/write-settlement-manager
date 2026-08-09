@@ -1,3 +1,22 @@
+## v6.5.11 — 2026-08-09 12:15 (Europe/Paris)
+- 修复一键发布脚本在 GitHub 远端 `main` 已更新时出现 `fetch first` / non-fast-forward 拒绝的问题。
+- 正式发布包不再携带任何 `.git` 历史或本地 Git 状态。
+- 发布流程改为：临时 clone 最新 GitHub main → 同步当前版本文件 → commit/push → Cloudflare Pages。
+- 保持 Clean Package 目录规范和既有业务功能不变。
+
+## v6.5.10 — 2026-08-09 12:10 (Europe/Paris)
+- 重构发布 ZIP 目录，根目录只保留运行、源码与发布所需文件。
+- 历史测试记录统一移动到 `docs/tests/`，避免根目录杂乱。
+- 所有可执行脚本改为 ASCII 文件名：`publish.command`、`preview.command`，彻底避免 macOS 解压中文文件名乱码。
+- 清理重复/乱码 `.command` 文件与重复部署说明。
+- 保留 v6.5.9 的深色待复核页面修复及现有业务逻辑。
+
+## v6.5.9 — 2026-08-09 12:06 (Europe/Paris)
+- 修复深色模式下「待复核」页面错误使用白色行背景的问题。
+- 待复核列表、输入框、下拉框、标签、按钮统一继承当前黑白主题。
+- 保持纯黑白/灰阶视觉，不引入其他强调色。
+- 延续 v6.5.8 的 Excel 真数值写入、小数逗号显示与订单号范围命名规则。
+
 # CHANGELOG
 
 ## v6.5.8 — 2026-08-09 00:14 (Europe/Paris)

@@ -131,7 +131,7 @@ function buildXlsx(sheets){const entries=[],workbookSheets=sheets.map((s,i)=>`<s
 function downloadBlob(blob,filename){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=filename;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000)}
 
 
-// v6.5.8 FACT template preservation + backfill engine.
+// v6.5.11 FACT template preservation + backfill engine.
 // The original XLSX is treated as a template. Only FACT data cell VALUES are replaced;
 // styles, borders, merged cells, row heights, column widths, formulas/layout and all other package parts are preserved.
 
@@ -299,7 +299,7 @@ function patchFactXml(xml,factRows,workbookName){
   for(const r of factRows){
     const row=Number(r.sourceRow),v=plan.get(row)||{quantity:0,amount:0};
     out=replaceNumericCell(out,`D${row}`,v.quantity>0?v.quantity:'');
-    // V6.5.8: FACT templates sometimes store decimal-looking COGs/Shipping cells as shared strings.
+    // V6.5.11: FACT templates sometimes store decimal-looking COGs/Shipping cells as shared strings.
     // Excel then treats them as text and formulas such as E+F fail. Re-write numeric inputs as real
     // XLSX numeric cells while keeping the original cell style/position unchanged.
     if(Number.isFinite(Number(r.cogs)))out=replaceNumericCell(out,`E${row}`,Number(r.cogs));
@@ -784,7 +784,7 @@ document.addEventListener('click',e=>{const btn=e.target.closest('[data-go-view]
 document.addEventListener('click',e=>{const btn=e.target.closest('.review-save');if(btn){const editor=btn.closest('.review-editor');if(editor)saveReviewRow(editor)}});
 
 
-// v6.5.8 theme controller: auto / light / dark
+// v6.5.11 theme controller: auto / light / dark
 const themeButton=document.getElementById('themeToggleButton');
 const themeLabel=document.getElementById('themeLabel');
 const themeMedia=window.matchMedia('(prefers-color-scheme: dark)');
@@ -820,11 +820,11 @@ if(themeMedia.addEventListener)themeMedia.addEventListener('change',onSystemThem
 applyTheme(getThemePreference(),{persist:false});
 
 
-// v6.5.8 release notes controller — show once per release per browser
+// v6.5.11 release notes controller — show once per release per browser
 const WRITE_RELEASE = {
   version: document.body.dataset.release || '6.5.8',
   date: '2026-08-09 00:14',
-  title: 'WRITE Settlement Manager v6.5.8',
+  title: 'WRITE Settlement Manager v6.5.11',
   sections: [
     {label:'修复', items:[
       '修复 FACT / Commercial Invoice 中部分小数实际为文本、导致 Excel 公式无法计算的问题。',
@@ -867,7 +867,7 @@ document.documentElement.dataset.writeReady='true';
 
 
 
-// v6.5.8 — built-in version history (mirrors GitHub CHANGELOG)
+// v6.5.11 — built-in version history (mirrors GitHub CHANGELOG)
 const WRITE_HISTORY = [
   {version:'6.5.8',time:'2026-08-09 00:14',title:'发票数值类型与订单范围',items:['修复 FACT / Commercial Invoice 中部分小数被保存为文本导致 Excel 计算失败的问题。','COGs、Shipping 等运算字段回填为真正数值，显示继续采用法国/欧洲小数逗号。','导出 ZIP、会计报表与回填 FACT 文件名自动包含订单号范围。']},
   {version:'6.5.7',time:'2026-08-09 00:10',title:'历史更新中心',items:['左侧菜单新增「历史更新」，无需导入订单即可查看。','按时间倒序展示所有可追溯正式版本的更新时间与更新摘要。','从本版本开始，发布时间固定精确记录到分钟，并与 GitHub CHANGELOG 同步。']},

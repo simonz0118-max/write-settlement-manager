@@ -1,4 +1,4 @@
-# WRITE Settlement Manager v6.5.8 — Test Results
+# WRITE Settlement Manager v6.5.9 — Test Results
 
 Release: 2026-08-09 00:14 (Europe/Paris)
 
@@ -7,7 +7,7 @@ Input: FACT_已回填_FACT- 10192_write-store_04_02_26(26172-26532).xlsx
 
 - Found 32 numeric-looking cells in FACT columns D:H that were physically stored as shared-string text instead of XLSX numbers.
 - Examples: F19="27.19", E20="7.65", F23="38.82".
-- V6.5.8 normalizes COGs (E), Shipping (F), and non-formula Unit Total (G) to true numeric cells when rebuilding FACT.
+- V6.5.9 normalizes COGs (E), Shipping (F), and non-formula Unit Total (G) to true numeric cells when rebuilding FACT.
 - Quantity (D) and Amount (H) continue to be rebuilt as true numeric cells.
 - Existing G formulas are preserved rather than replaced by static values.
 - Original cell styles/positions are preserved by reusing the existing cell attributes while removing only the text type marker.
