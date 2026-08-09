@@ -284,7 +284,7 @@ function findFactSheetPath(workbookXml,relsXml){
           path=rels.get(rid);
     if(path && /FACT/i.test(name))candidates.push({name,path});
   }
-  // V7.0.8: CN is the canonical WRITE FACT when multiple FACT sheets exist.
+  // V7.0.9: CN is the canonical WRITE FACT when multiple FACT sheets exist.
   const cn=candidates.find(x=>/CN/i.test(x.name));
   return cn?.path || candidates[0]?.path || '';
 }
@@ -451,6 +451,219 @@ function buildFactBackfillPlan(workbookName,factRows){
  *   B. explicitly designated as a derived/fixed/system charge.
  * A classified paid product is never allowed to disappear silently.
  */
+
+const AUTO_FACT_PRICE_STORAGE_KEY='write-auto-fact-price-rules-v1';
+
+function loadAutoFactPriceRules(){
+  try{
+    const data=JSON.parse(localStorage.getItem(AUTO_FACT_PRICE_STORAGE_KEY)||'{}');
+    return data&&typeof data==='object'?data:{};
+  }catch(e){return{}}
+}
+function saveAutoFactPriceRule(country,targetType,unitPrice,source='CURRENT_ORDER'){
+  const price=Number(unitPrice);
+  if(!Number.isFinite(price)||price<0)return;
+  const ruleId=`${normalizeCountry(country)}\u0001${targetType}`;
+  const rules=loadAutoFactPriceRules();
+  rules[ruleId]={
+    country:normalizeCountry(country),
+    targetType,
+    unitPrice:Math.round((price+Number.EPSILON)*10000)/10000,
+    source,
+    updatedAt:new Date().toISOString()
+  };
+  try{localStorage.setItem(AUTO_FACT_PRICE_STORAGE_KEY,JSON.stringify(rules))}catch(e){}
+}
+function savedAutoFactUnitPrice(country,targetType){
+  const rules=loadAutoFactPriceRules();
+  const ruleId=`${normalizeCountry(country)}\u0001${targetType}`;
+  const price=Number(rules[ruleId]?.unitPrice);
+  return Number.isFinite(price)?price:null;
+}
+function lineTargetType(line,pencilQtyByOrder){
+  const hasPencil=(pencilQtyByOrder.get(String(line.orderId))||0)>0;
+  const mode=hasPencil?'Upsell':'Base';
+  const packSize=accessoryPackSize(line);
+  if(line.category==='ERASER')return `eraser${mode}`;
+  if(line.category==='NOTEBOOK')return `notebook${mode}`;
+  if(line.category==='REFILL')return `refill${packSize}${mode}`;
+  if(line.category==='COLOR_REFILL'){
+    return packSize===12?`color12${mode}`:packSize===6?`color6${mode}`:'colorSingleUpsell';
+  }
+  if(line.category==='ENGRAVING')return 'engraving';
+  if(line.category==='GIFT_BOX')return 'giftBox';
+  return '';
+}
+function targetDescription(targetType,bucket=0){
+  const labels={
+    eraserBase:'Lot de 2 gommes',
+    eraserUpsell:'Lot de 2 gommes UPSELL',
+    notebookBase:'Carnet X1',
+    notebookUpsell:'Carnet X1 UPSELL',
+    refill4Base:'4 mines rechargeables',
+    refill4Upsell:'4 mines rechargeables UPSELL',
+    refill6Base:'Lot de 6 mines rechargeables',
+    refill6Upsell:'Lot de 6 mines rechargeables UPSELL',
+    color6Base:"Mines colorées - Pack de 6 mines |36% d'économie",
+    color6Upsell:"Mines colorées - Pack de 6 mines |36% d'économie UPSELL",
+    color12Base:"Mines colorées - Pack de 12 mines |47% d'économie",
+    color12Upsell:"Mines colorées - Pack de 12 mines |47% d'économie UPSELL",
+    colorSingleUpsell:'Mines colorées UPSELL'
+  };
+  if(targetType==='pencil')return `Stylo eternel X${bucket}`;
+  return labels[targetType]||targetType;
+}
+function inferUnitPriceFromCurrentOrders(workbookName,targetType,country,bucket=0){
+  const source=sourceDataForWorkbook(workbookName);
+  const targetCountry=normalizeCountry(country);
+  const orderById=new Map(source.wbOrders.map(o=>[String(o.orderId),o]));
+  const paidQtyByOrder=new Map();
+
+  for(const line of source.paidLines){
+    const orderId=String(line.orderId);
+    paidQtyByOrder.set(orderId,(paidQtyByOrder.get(orderId)||0)+(Number(line.quantity)||1));
+  }
+
+  let weightedValue=0,weightedQty=0;
+
+  if(targetType==='pencil'){
+    for(const order of source.wbOrders){
+      const orderId=String(order.orderId);
+      const pencilQty=Math.round(source.pencilQtyByOrder.get(orderId)||0);
+      if(pencilQty!==Number(bucket) || normalizeCountry(order.country)!==targetCountry)continue;
+      const orderAmount=Number(order.orderAmount)||0;
+      if(orderAmount<=0)continue;
+      const perUnit=orderAmount/Math.max(1,pencilQty);
+      weightedValue+=perUnit*pencilQty;
+      weightedQty+=pencilQty;
+    }
+  }else{
+    for(const line of source.paidLines){
+      if(normalizeCountry(line.country)!==targetCountry)continue;
+      if(lineTargetType(line,source.pencilQtyByOrder)!==targetType)continue;
+      const order=orderById.get(String(line.orderId));
+      const orderAmount=Number(order?.orderAmount)||0;
+      const totalPaidQty=paidQtyByOrder.get(String(line.orderId))||1;
+      if(orderAmount<=0)continue;
+      const inferred=orderAmount/Math.max(1,totalPaidQty);
+      const qty=Number(line.quantity)||1;
+      weightedValue+=inferred*qty;
+      weightedQty+=qty;
+    }
+  }
+
+  let learned=weightedQty>0?weightedValue/weightedQty:null;
+  if(!Number.isFinite(learned))learned=savedAutoFactUnitPrice(targetCountry,targetType);
+
+  // Last fallback: average the same learned CN product type from other countries.
+  if(!Number.isFinite(learned)){
+    const candidates=LEARNED_PENCIL_FACT_ROWS
+      .filter(row=>factDescriptionType(row.description).type===targetType)
+      .map(row=>{
+        const unit=Number(row.unitTotal);
+        return Number.isFinite(unit)?unit:((Number(row.cogs)||0)+(Number(row.shipping)||0));
+      })
+      .filter(Number.isFinite);
+    learned=candidates.length?candidates.reduce((a,b)=>a+b,0)/candidates.length:0;
+  }
+
+  learned=Math.max(0,Number(learned)||0);
+  saveAutoFactPriceRule(targetCountry,targetType,learned,'CURRENT_ORDER_OR_TEMPLATE');
+  return learned;
+}
+function buildDynamicFactSupplementRows(workbookName,factRows){
+  const source=sourceDataForWorkbook(workbookName);
+  const supplements=[];
+  const existingTargets=new Set();
+
+  for(const row of factRows){
+    const parsed=factDescriptionType(row.description);
+    const country=normalizeCountry(row.country);
+    existingTargets.add(`${country}\u0001${parsed.type}${parsed.type==='pencil'?`\u0001${parsed.bucket}`:''}`);
+  }
+
+  let nextRow=Math.max(172,...factRows.map(r=>Number(r.sourceRow)||0))+2;
+  const needed=new Map();
+
+  for(const line of source.paidLines){
+    if(['PENCIL','ENGRAVING','GIFT_BOX','B2B','GIFT_CARD'].includes(line.category))continue;
+    const targetType=lineTargetType(line,source.pencilQtyByOrder);
+    if(!targetType)continue;
+    const country=normalizeCountry(line.country);
+    const targetId=`${country}\u0001${targetType}`;
+    if(!needed.has(targetId))needed.set(targetId,{country,targetType,quantity:0});
+    needed.get(targetId).quantity+=(Number(line.quantity)||1);
+  }
+
+  for(const item of needed.values()){
+    const targetId=`${item.country}\u0001${item.targetType}`;
+    if(existingTargets.has(targetId))continue;
+    const unitPrice=inferUnitPriceFromCurrentOrders(workbookName,item.targetType,item.country);
+    supplements.push({
+      sourceRow:nextRow++,
+      country:item.country,
+      description:targetDescription(item.targetType),
+      quantity:item.quantity,
+      cogs:unitPrice,
+      shipping:0,
+      unitTotal:unitPrice,
+      amount:Math.round((item.quantity*unitPrice+Number.EPSILON)*100)/100,
+      dynamic:true,
+      learnedPrice:true
+    });
+  }
+
+  for(const [bucketId,orderCount] of source.pencilBucket.entries()){
+    const parts=String(bucketId).split('\u0001');
+    const country=parts[0]||'';
+    const bucket=Number(parts[1]||0);
+    const targetId=`${country}\u0001pencil\u0001${bucket}`;
+    if(existingTargets.has(targetId))continue;
+    const unitPrice=inferUnitPriceFromCurrentOrders(workbookName,'pencil',country,bucket);
+    supplements.push({
+      sourceRow:nextRow++,
+      country,
+      description:targetDescription('pencil',bucket),
+      quantity:orderCount,
+      cogs:unitPrice,
+      shipping:0,
+      unitTotal:unitPrice,
+      amount:Math.round((orderCount*unitPrice+Number.EPSILON)*100)/100,
+      dynamic:true,
+      learnedPrice:true
+    });
+  }
+
+  return supplements;
+}
+function factRowsWithAutoLearning(workbookName,factRows){
+  return [...factRows,...buildDynamicFactSupplementRows(workbookName,factRows)];
+}
+function dynamicFactRowXml(row){
+  const rn=Number(row.sourceRow);
+  const unit=Number(row.unitTotal)||0;
+  const qty=Number(row.quantity)||0;
+  const amount=Math.round((qty*unit+Number.EPSILON)*100)/100;
+  return `<row r="${rn}" s="80" customFormat="1" ht="18" customHeight="1" spans="1:8">`+
+    `<c r="A${rn}" s="94"/>`+
+    `<c r="B${rn}" s="124" t="inlineStr"><is><t>${esc(row.country||'')}</t></is></c>`+
+    `<c r="C${rn}" s="125" t="inlineStr"><is><t>${esc(row.description||'AUTO LEARNED')}</t></is></c>`+
+    `<c r="D${rn}" s="125"><v>${qty}</v></c>`+
+    `<c r="E${rn}" s="126"><v>${unit}</v></c>`+
+    `<c r="F${rn}" s="124"><v>0</v></c>`+
+    `<c r="G${rn}" s="126"><f>E${rn}+F${rn}</f><v>${unit}</v></c>`+
+    `<c r="H${rn}" s="127"><f>G${rn}*D${rn}</f><v>${amount}</v></c>`+
+    `</row>`;
+}
+function appendDynamicFactRows(xml,rows){
+  if(!rows?.length)return xml;
+  const maxRow=Math.max(...rows.map(r=>Number(r.sourceRow)||0));
+  let out=xml.replace(/<dimension ref="A1:J\d+"\/>/,`<dimension ref="A1:J${maxRow}"/>`);
+  const extra=rows.map(dynamicFactRowXml).join('');
+  out=out.replace('</sheetData>',extra+'</sheetData>');
+  return out;
+}
+
 function factCompletenessAudit(workbookName,factRows){
   const built=buildFactBackfillPlan(workbookName,factRows);
   const source=built.src;
@@ -707,7 +920,7 @@ window.addEventListener('unhandledrejection',event=>{
 function startImport(fileList){
   clearExportDownloadLink();
   const files=[...fileList].filter(f=>/\.(xlsx|zip)$/i.test(f.name)); if(!files.length||busy)return;
-  worker?.terminate(); worker=new Worker('./src/workers/import.worker.bundle.js?v=7.0.8-20260809-1836'); importStartedAt=performance.now(); importedFileNames=files.map(f=>f.name);
+  worker?.terminate(); worker=new Worker('./src/workers/import.worker.bundle.js?v=7.0.9-20260809-1920'); importStartedAt=performance.now(); importedFileNames=files.map(f=>f.name);
   setBusy(true); hideError(); els.importLanding.hidden=false; els.appViews.hidden=true; els.topActions.hidden=true;
   els.currentFile.textContent='准备读取…'; els.progressFill.style.width='0%'; els.progressText.textContent='0% · 大文件在独立线程运行';
   worker.onmessage=({data})=>{
@@ -924,7 +1137,7 @@ function renderOrders(){
 }
 
 
-// v7.0.8 — mandatory FACT delivery: generate a FACT when the source workbook has none.
+// v7.0.9 — mandatory FACT delivery: generate a FACT when the source workbook has none.
 function currencyForWorkbook(workbookName=''){
   const n=String(workbookName||'').toUpperCase();
   if(/\bUSD\b|\$US|US\$/.test(n))return 'USD';
@@ -967,30 +1180,19 @@ function learnedCostRateForDescription(description='',country=''){
   return {cogs:num(exact.cogs),shipping:num(exact.shipping),unitTotal:num(exact.unitTotal)};
 }
 function generatedPencilFactRowsForWorkbook(workbookName){
-  const {plan}=buildFactBackfillPlan(workbookName,LEARNED_PENCIL_FACT_ROWS);
-  const base=LEARNED_PENCIL_FACT_ROWS.map((r,i)=>{
-    const v=plan.get(Number(r.sourceRow))||{quantity:0,amount:0};
+  const effectiveRows=factRowsWithAutoLearning(workbookName,LEARNED_PENCIL_FACT_ROWS);
+  const {plan}=buildFactBackfillPlan(workbookName,effectiveRows);
+  return effectiveRows.map((r,i)=>{
+    const v=plan.get(Number(r.sourceRow))||{quantity:Number(r.quantity)||0,amount:Number(r.amount)||0};
     return {
       no:i+1,country:r.country||'',description:r.description,sku:'',quantity:v.quantity,
       cogs:r.cogs,shipping:r.shipping,unitTotal:r.unitTotal,amount:v.amount,currency:'EUR',
-      costStatus:'已使用 WRITE 铅笔 FACT 学习价格',sourceFile:workbookName,sourceSheet:'AUTO_FACT_PENCIL',generated:true
+      costStatus:r.dynamic?'自动学习当前订单价格':'已使用 WRITE CN FACT 学习价格',
+      sourceFile:workbookName,
+      sourceSheet:r.dynamic?'AUTO_FACT_DYNAMIC':'AUTO_FACT_PENCIL',
+      generated:true
     };
   });
-  const extra=new Map();
-  const lines=(classified?.lineItems||[]).filter(x=>String(x.sourceFile||'')===String(workbookName||'')&&(x.category==='ERASER'||x.category==='NOTEBOOK'));
-  for(const x of lines){
-    const desc=x.category==='ERASER'?'Gomme-capuchon Shield':'Le Carnet Parfait';
-    const key=[normalizeCountry(x.country),desc].join('\u0001');
-    const r=extra.get(key)||{country:normalizeCountry(x.country),description:desc,quantity:0};
-    r.quantity+=Number(x.quantity)||1;
-    extra.set(key,r);
-  }
-  for(const r of extra.values())base.push({
-    no:base.length+1,country:r.country,description:r.description,sku:'',quantity:r.quantity,
-    cogs:null,shipping:null,unitTotal:null,amount:0,currency:'EUR',
-    costStatus:'已分类 · 历史 FACT 无可靠成本价格',sourceFile:workbookName,sourceSheet:'AUTO_FACT_PENCIL_ACCESSORY',generated:true
-  });
-  return base;
 }
 function generatedGenericFactRowsForWorkbook(workbookName){
   const rows=[], map=new Map(), currency=currencyForWorkbook(workbookName);
@@ -1092,7 +1294,7 @@ async function rebuildArchiveReplacingEntry(archive,path,newBytes){
   const centralSize=central.reduce((a,b)=>a+b.length,0),centralOffset=offset;parts.push(...central,new Uint8Array([...u32(ZIP_EOCD),...u16(0),...u16(0),...u16(entries.length),...u16(entries.length),...u32(centralSize),...u32(centralOffset),...u16(0)]));return new Blob(parts,{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
 }
 async function buildGeneratedPencilFactWorkbook(workbookName){
-  const resp=await fetch(`./assets/FACT_TEMPLATE_CN_CANONICAL_V1.xlsx?v=7.0.8`,{cache:'no-store'});
+  const resp=await fetch(`./assets/FACT_TEMPLATE_CN_CANONICAL_V1.xlsx?v=7.0.9`,{cache:'no-store'});
   if(!resp.ok)throw new Error('无法读取 CN 标准 FACT 模板');
   const templateBlob=await resp.blob(),
         archive=await PreserveZipArchive.open(templateBlob),
@@ -1101,14 +1303,17 @@ async function buildGeneratedPencilFactWorkbook(workbookName){
         factPath=findFactSheetPath(wbXml,relsXml);
   if(!factPath)throw new Error('CN 标准模板缺少 FACT-CN 工作表');
 
-  const audit=factCompletenessAudit(workbookName,LEARNED_PENCIL_FACT_ROWS);
-  if(!audit.ok){
-    const sample=audit.issues.slice(0,8).map(x=>JSON.stringify(x)).join('\n');
-    throw new Error(`FACT 完整性审计未通过，禁止导出以避免漏统计。\n${sample}`);
+  const effectiveRows=factRowsWithAutoLearning(workbookName,LEARNED_PENCIL_FACT_ROWS);
+  const audit=factCompletenessAudit(workbookName,effectiveRows);
+  const hardIssues=audit.issues.filter(x=>x.type==='UNMAPPED_PRODUCT');
+  if(hardIssues.length){
+    throw new Error(`仍有无法识别商品：${hardIssues.slice(0,6).map(x=>x.product||x.sku||'未知商品').join(' / ')}`);
   }
 
-  const xml=await archive.text(factPath,16*1024*1024),
-        patched=patchFactXml(xml,LEARNED_PENCIL_FACT_ROWS,workbookName).xml;
+  const xml=await archive.text(factPath,16*1024*1024);
+  let patched=patchFactXml(xml,effectiveRows,workbookName).xml;
+  const dynamicRows=effectiveRows.filter(r=>r.dynamic);
+  patched=appendDynamicFactRows(patched,dynamicRows);
 
   return rebuildArchiveReplacingEntry(archive,factPath,enc.encode(patched));
 }
@@ -1117,7 +1322,7 @@ async function buildGeneratedFactWorkbook(workbookName){
     return buildGeneratedPencilFactWorkbook(workbookName);
   }
   const data=generatedFactRowsForWorkbook(workbookName);
-  const resp=await fetch(`./assets/FACT_TEMPLATE_LEARNED_V1.xlsx?v=7.0.8`,{cache:'no-store'});if(!resp.ok)throw new Error('无法读取内置 FACT 学习模板');
+  const resp=await fetch(`./assets/FACT_TEMPLATE_LEARNED_V1.xlsx?v=7.0.9`,{cache:'no-store'});if(!resp.ok)throw new Error('无法读取内置 FACT 学习模板');
   const templateBlob=await resp.blob(),archive=await PreserveZipArchive.open(templateBlob),sheetPath='xl/worksheets/sheet1.xml';
   const xml=await archive.text(sheetPath,16*1024*1024),patched=patchLearnedTemplateSheetXml(xml,data,workbookName);
   return rebuildArchiveReplacingEntry(archive,sheetPath,enc.encode(patched));
@@ -1419,22 +1624,26 @@ async function exportAccounting(){
       const profile=detectGeneratedFactProfile(wb.name);
       if(profile==='PENCIL_V1'){
         exportCenterStage(`2/4 审计并生成 CN FACT · ${basename(wb.name)}`);
+        exportCenterLog('→ 自动学习缺失的 国家 × 商品 价格与 FACT 落点…','info');
+        const effectiveFactRows=factRowsWithAutoLearning(wb.name,LEARNED_PENCIL_FACT_ROWS);
+        const learnedDynamicRows=effectiveFactRows.filter(r=>r.dynamic);
+        if(learnedDynamicRows.length){
+          exportCenterLog(`✓ 自动学习并新增 ${learnedDynamicRows.length} 个 FACT 组合。`,'success');
+        }else{
+          exportCenterLog('✓ 当前订单无需新增 FACT 组合。','success');
+        }
         exportCenterLog('→ 开始 CN FACT 完整性审计…','info');
         let audit;
         try{
-          audit=factCompletenessAudit(wb.name,LEARNED_PENCIL_FACT_ROWS);
+          audit=factCompletenessAudit(wb.name,effectiveFactRows);
         }catch(auditErr){
           throw new Error(`CN FACT 审计代码异常：${auditErr?.message||auditErr}`);
         }
         exportCenterLog('✓ CN FACT 审计代码执行完成。','success');
-        if(!audit.ok){
-          const sample=audit.issues.slice(0,8).map(x=>{
-            if(x.type==='NO_FACT_TARGET')return `无 FACT 落点：${x.product||x.sku||'未知商品'} / ${x.country||''}`;
-            if(x.type==='QUANTITY_MISMATCH')return `数量不一致：${x.targetId||'未知分类'}，订单 ${x.expected} / FACT ${x.actual}`;
-            if(x.type==='NO_PENCIL_BUCKET')return `缺少铅笔档位：${x.country} X${x.bucket}`;
-            return JSON.stringify(x);
-          }).join('；');
-          throw new Error(`CN FACT 完整性审计未通过：${sample}`);
+        const hardAuditIssues=audit.issues.filter(x=>x.type==='UNMAPPED_PRODUCT');
+        if(hardAuditIssues.length){
+          const sample=hardAuditIssues.slice(0,6).map(x=>`无法识别商品：${x.product||x.sku||'未知商品'} / ${x.country||''}`).join('；');
+          throw new Error(`CN FACT 仍有无法自动学习的商品：${sample}`);
         }
         exportCenterLog('→ 开始写入 CN FACT 模板…','info');
         let generated;
@@ -1561,12 +1770,12 @@ if(themeMedia.addEventListener)themeMedia.addEventListener('change',onSystemThem
 applyTheme(getThemePreference(),{persist:false});
 
 
-// v7.0.8 release notes controller — show once per release per browser
-const WRITE_RELEASE_META = window.WRITE_RELEASE_META || {current:{version:document.body.dataset.release||'7.0.8',time:'',title:'WRITE Settlement Manager',sections:[]},history:[]};
+// v7.0.9 release notes controller — show once per release per browser
+const WRITE_RELEASE_META = window.WRITE_RELEASE_META || {current:{version:document.body.dataset.release||'7.0.9',time:'',title:'WRITE Settlement Manager',sections:[]},history:[]};
 const WRITE_RELEASE = {
-  version: WRITE_RELEASE_META.current?.version || document.body.dataset.release || '7.0.8',
+  version: WRITE_RELEASE_META.current?.version || document.body.dataset.release || '7.0.9',
   date: WRITE_RELEASE_META.current?.time || '',
-  title: `WRITE Settlement Manager v${WRITE_RELEASE_META.current?.version || document.body.dataset.release || '7.0.8'}`,
+  title: `WRITE Settlement Manager v${WRITE_RELEASE_META.current?.version || document.body.dataset.release || '7.0.9'}`,
   sections: WRITE_RELEASE_META.current?.sections || []
 };
 function showReleaseNotesIfNeeded(){
@@ -1601,7 +1810,7 @@ document.documentElement.dataset.writeReady='true';
 
 
 
-// v7.0.8 — version history from unified release metadata
+// v7.0.9 — version history from unified release metadata
 const WRITE_HISTORY = Array.isArray(WRITE_RELEASE_META.history) ? WRITE_RELEASE_META.history : [];
 function renderReleaseHistory(){
   const host=document.getElementById('releaseHistory');

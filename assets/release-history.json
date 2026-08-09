@@ -1,32 +1,46 @@
 {
   "current": {
-    "version": "7.0.8",
-    "time": "2026-08-09 18:36",
-    "title": "修复 CN FACT key 异常",
+    "version": "7.0.9",
+    "time": "2026-08-09 19:20",
+    "title": "FACT 国家×商品自动学习",
     "sections": [
       {
-        "label": "修复",
+        "label": "自动学习",
         "items": [
-          "重写 CN FACT 数据聚合与完整性审计，移除 FACT 导出路径中的通用 key 变量。",
-          "统一使用 bucketId / targetId / targetType，避免作用域歧义导致 ReferenceError。"
+          "从当前订单金额和收费商品数量自动推导缺失 国家 × 商品 的单位 FACT 价格。",
+          "自动学习价格持久保存到浏览器规则库，后续同组合可以复用。",
+          "缺失组合动态追加到原 FACT-CN 工作表，写入国家、商品、Quantity、价格和 Amount。"
         ]
       },
       {
-        "label": "诊断",
+        "label": "导出规则",
         "items": [
-          "CN FACT 审计与文件写入增加独立异常边界。",
-          "导出中心增加 JavaScript stack 简要诊断，异常可直接定位。"
+          "CN 模板没有历史价格行时，不再因 NO_FACT_TARGET / QUANTITY_MISMATCH 中止 FACT。",
+          "按用户要求，成本价格准确性不作为导出阻断条件；只有真正无法识别商品类型才阻止 FACT。"
         ]
       },
       {
-        "label": "保留",
+        "label": "报表",
         "items": [
-          "会计 Excel 独立下载、CN 唯一模板、数量守恒和零遗漏审计继续保留。"
+          "专业会计报表 FACT 汇总同步包含动态学习生成的行。"
         ]
       }
     ]
   },
   "history": [
+    {
+      "version": "7.0.9",
+      "time": "2026-08-09 19:20",
+      "title": "缺失国家×商品自动学习并扩展 CN FACT",
+      "items": [
+        "CN 模板没有历史价格行时，不再因 NO_FACT_TARGET / QUANTITY_MISMATCH 中止 FACT。",
+        "从当前订单金额和收费商品数量自动推导缺失 国家 × 商品 的单位 FACT 价格。",
+        "自动学习价格持久保存到浏览器规则库，后续同组合可以复用。",
+        "缺失组合动态追加到原 FACT-CN 工作表，写入国家、商品、Quantity、价格和 Amount。",
+        "按用户要求，成本价格准确性不作为导出阻断条件；只有真正无法识别商品类型才阻止 FACT。",
+        "专业会计报表 FACT 汇总同步包含动态学习生成的行。"
+      ]
+    },
     {
       "version": "7.0.8",
       "time": "2026-08-09 18:36",

@@ -1,3 +1,12 @@
+## v7.0.9 — 2026-08-09 19:20 (Europe/Paris)
+- 新增缺失 `国家 × 商品` 自动学习：CN FACT 历史不存在的组合不再阻断导出。
+- 当前订单金额按收费商品数量分摊，自动推导缺失组合单位 FACT 价格；按用户要求价格准确性不作为阻断条件。
+- 自动学习价格保存到浏览器 `write-auto-fact-price-rules-v1`。
+- 动态缺失组合直接追加到 `FACT-CN` 工作表，并填写 Quantity、单位价格、COGs+Shipping、Amount。
+- `NO_FACT_TARGET` / 价格缺失不再作为硬错误；仅 `UNMAPPED_PRODUCT` 继续阻止导出。
+- 会计 FACT 汇总同步纳入动态学习行。
+- 更新首次弹窗、历史更新、README、RELEASE 与中文部署脚本。
+
 ## v7.0.8 — 2026-08-09 18:36 (Europe/Paris)
 - 重写 CN FACT 数据聚合和完整性审计，移除 FACT 导出路径中的通用 `key` 变量。
 - 使用 `bucketId` / `targetId` / `targetType` 明确统计标识，修复 `key is not defined`。
