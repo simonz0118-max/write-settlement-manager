@@ -1,23 +1,17 @@
-WRITE Settlement Manager V7.1.1 正式升级包
+WRITE Settlement Manager V7.1.4
 
-【最简单的升级方法】
-1. 解压整个 ZIP。
-2. 双击「一键更新到GitHub并部署Cloudflare.command」。
-3. 等待终端依次显示：
-   [1/4] 获取 GitHub 最新 main
-   [2/4] 同步当前版本
-   [3/4] GitHub 更新完成
-   [4/4] Cloudflare Pages 部署
-4. 最终看到“V7.1.1 升级完成”即可。
+推荐使用：
+双击「一键更新到GitHub并部署Cloudflare.command」
 
-【如果 macOS 第一次阻止脚本】
-右键脚本 → 打开 → 再点“打开”。
+此版本发布流程已经重构：
+1. 自动克隆 GitHub 到临时干净目录。
+2. 先 checkout/pull 最新 main。
+3. 再覆盖 V7.1.4 文件。
+4. 恢复或自动查询 D1 Binding。
+5. 执行发布前代码与配置自检。
+6. 自检通过后才 commit/push。
+7. 部署 Cloudflare。
+8. 自动回读本次唯一地址，确认线上确实是 v7.1.4。
+9. 检查规则云同步 API。
 
-【正式网站】
-https://write-settlement-manager.pages.dev/
-
-【说明】
-- 发布脚本每次都会先 clone GitHub 最新 main，因此不会再出现 fetch first / non-fast-forward。
-- 正式 ZIP 不包含 .git，不携带旧 Git 历史。
-- 中文脚本文件名使用 UTF-8 ZIP 元数据，并在发布前验证。
-- 完整更新历史见 CHANGELOG.md；网页左侧“历史更新”和首次打开更新弹窗同步维护。
+不需要把升级包放到 Git 仓库中。

@@ -1,34 +1,83 @@
 {
   "current": {
-    "version": "7.1.1",
-    "time": "2026-08-09 22:35",
-    "title": "D1 全自动配置与长期同步",
+    "version": "7.1.4",
+    "time": "2026-08-09 23:45",
+    "title": "稳定发布器与强制自检",
     "sections": [
       {
-        "label": "自动配置",
+        "label": "Git 流程",
         "items": [
-          "新增中文一键脚本：自动检查 Wrangler、查找或创建 D1 并取得 database_id。",
-          "自动生成 wrangler.jsonc，绑定 WRITE_RULES_DB，无需手动 Dashboard 添加 Binding。",
-          "自动执行远程 D1 Schema 并验证 write_rules 表。",
-          "自动更新 GitHub 并使用 D1 Binding 重新部署 Cloudflare Pages。"
+          "彻底修复 V7.1.3 的 Git 顺序问题：clone/checkout/pull 必须在新版文件覆盖之前完成。",
+          "发布永远使用临时干净仓库，不再依赖升级包目录或用户本地仓库状态。",
+          "新版覆盖前保存有效 wrangler.jsonc，覆盖后恢复；缺失时再从 Cloudflare 自动恢复 D1 Binding。"
         ]
       },
       {
-        "label": "自动同步",
+        "label": "发布前检查",
         "items": [
-          "联网时新规则即时同步；断线恢复、页面重新激活以及每5分钟自动检查同步。",
-          "D1 不可用继续使用 IndexedDB Local-first，不影响结算。"
+          "新增发布前强制检查：版本标记、核心 JS 语法、Worker、release metadata、Cloud Function 与 D1 Binding。",
+          "GitHub 提交发生在所有 preflight 通过之后，杜绝半成品进入 main。"
         ]
       },
       {
-        "label": "长期维护",
+        "label": "线上验证",
         "items": [
-          "以后普通一键升级自动沿用有效 wrangler.jsonc，不会丢失 D1 Binding。"
+          "Cloudflare 部署后必须回读唯一 deployment URL 并确认 data-release=7.1.4。",
+          "额外检查 /api/rules/sync 状态，明确区分页面发布成功与 D1 Binding 状态。"
+        ]
+      },
+      {
+        "label": "保留",
+        "items": [
+          "V7.1.2/V7.1.3 已完成的规则学习 UI、缓存策略、IndexedDB+D1 和 FACT 核心保持不变。"
         ]
       }
     ]
   },
   "history": [
+    {
+      "version": "7.1.4",
+      "time": "2026-08-09 23:45",
+      "title": "发布流程重构与发布前强制自检",
+      "items": [
+        "彻底修复 V7.1.3 的 Git 顺序问题：clone/checkout/pull 必须在新版文件覆盖之前完成。",
+        "发布永远使用临时干净仓库，不再依赖升级包目录或用户本地仓库状态。",
+        "新版覆盖前保存有效 wrangler.jsonc，覆盖后恢复；缺失时再从 Cloudflare 自动恢复 D1 Binding。",
+        "新增发布前强制检查：版本标记、核心 JS 语法、Worker、release metadata、Cloud Function 与 D1 Binding。",
+        "GitHub 提交发生在所有 preflight 通过之后，杜绝半成品进入 main。",
+        "Cloudflare 部署后必须回读唯一 deployment URL 并确认 data-release=7.1.4。",
+        "额外检查 /api/rules/sync 状态，明确区分页面发布成功与 D1 Binding 状态。",
+        "V7.1.2/V7.1.3 已完成的规则学习 UI、缓存策略、IndexedDB+D1 和 FACT 核心保持不变。"
+      ]
+    },
+    {
+      "version": "7.1.3",
+      "time": "2026-08-09 23:18",
+      "title": "修复升级包不是 Git 仓库导致无法发布",
+      "items": [
+        "修复解压升级包目录没有 .git 时出现 fatal: not a git repository。",
+        "一键升级现在自动判断环境：Git 仓库直接使用；普通解压目录自动 clone 正式 GitHub 仓库到临时目录。",
+        "新版文件通过 rsync 同步到真实仓库后再 commit/push，不要求用户理解 Git。",
+        "自动保留已有 wrangler.jsonc；如果缺失则从 Cloudflare 查询 write-settlement-rules 并恢复 WRITE_RULES_DB Binding。",
+        "D1 配置脚本不再依赖当前目录是 Git 仓库，完成 D1 后自动调用统一发布器。",
+        "部署后继续强制回读唯一 pages.dev 地址并确认 data-release=7.1.3。",
+        "V7.1.2 的缓存刷新、规则学习 UI 对齐、IndexedDB + D1 自动同步全部保留。"
+      ]
+    },
+    {
+      "version": "7.1.2",
+      "time": "2026-08-09 23:25",
+      "title": "部署一致性、缓存与规则学习UI修复",
+      "items": [
+        "重写两个发布脚本，删除历史叠加逻辑，统一部署前本地版本检查。",
+        "部署后回读唯一 Pages deployment URL，在线版本必须是 7.1.2 才判定成功。",
+        "HTML/JS/CSS/release history 强制 no-cache/revalidate。",
+        "规则学习四状态卡、知识库控制区和规则表重新对齐主系统栅格。",
+        "Knowledge Base 初始化改为 initPromise，避免停留初始化。",
+        "启动联网主动同步，保留断线恢复、前台恢复和5分钟同步。",
+        "D1/IndexedDB、规则迁移、FACT核心全部保留。"
+      ]
+    },
     {
       "version": "7.1.1",
       "time": "2026-08-09 22:35",

@@ -1,0 +1,17 @@
+/*
+  X-Content-Type-Options: nosniff
+
+/
+  Cache-Control: no-cache, no-store, must-revalidate
+
+/index.html
+  Cache-Control: no-cache, no-store, must-revalidate
+
+/src/*.js
+  Cache-Control: no-cache, must-revalidate
+
+/src/*.css
+  Cache-Control: no-cache, must-revalidate
+
+/assets/release-history.json
+  Cache-Control: no-cache, no-store, must-revalidate

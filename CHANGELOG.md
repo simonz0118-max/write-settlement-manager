@@ -1,3 +1,28 @@
+## v7.1.4 — 2026-08-09 23:45 (Europe/Paris)
+- 重构发布流程：clone → checkout → pull --ff-only → 保存 D1 配置 → rsync 新版 → 自检 → commit → push → Pages。
+- 发布始终使用临时干净 Git 工作区，不受升级包目录和用户本地 Git 状态影响。
+- 新增核心 JS / Worker / Function / release metadata / D1 Binding 发布前强制检查。
+- 所有检查通过后才允许 commit/push。
+- Cloudflare 部署后回读唯一 deployment URL 校验 data-release=v7.1.4。
+- 检查 `/api/rules/sync`，明确报告 D1 云同步是否可用。
+- 保留现有规则学习、IndexedDB、D1、UI 和 FACT 核心。
+
+## v7.1.3 — 2026-08-09 23:18 (Europe/Paris)
+- 修复升级包普通解压目录执行时 `fatal: not a git repository`。
+- 无 `.git` 时自动 clone `simonz0118-max/write-settlement-manager` 到临时目录。
+- 自动 rsync 新版本文件、commit、push，不要求升级包本身包含 Git 元数据。
+- 自动保留/恢复 Cloudflare D1 `WRITE_RULES_DB` binding。
+- D1 初始化脚本改为与当前目录 Git 状态完全解耦。
+- 部署后继续校验唯一 Pages deployment 的 `data-release=v7.1.3`。
+- 保留 V7.1.2 UI、缓存与长期规则学习逻辑。
+
+## v7.1.2 — 2026-08-09 23:25 (Europe/Paris)
+- 重写 GitHub/Cloudflare 与 D1 配置脚本。
+- 加入部署前后版本双校验。
+- 强制缓存 revalidate。
+- 规则学习 UI 对齐。
+- Knowledge Base 初始化修复与首次同步增强。
+
 ## v7.1.1 — 2026-08-09 22:35 (Europe/Paris)
 - 新增 D1 全自动配置脚本。
 - 自动查找/创建 `write-settlement-rules` D1。

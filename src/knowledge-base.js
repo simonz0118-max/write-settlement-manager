@@ -19,6 +19,7 @@ const PRIORITY={
 
 let db=null;
 let ready=false;
+let initPromise=null;
 let syncing=false;
 let cache=new Map();
 let pending=new Set();
@@ -204,19 +205,26 @@ function setSyncMeta(patch){
   renderStatus();
 }
 async function init(){
-  try{
-    await openDb();
-    await migrateLegacy();
-    rebuild(await allRules());
-    ready=true;
+  if(initPromise)return initPromise;
+  initPromise=(async()=>{
     renderStatus();
-    if(navigator.onLine)sync().catch(()=>{});
-  }catch(err){
-    ready=false;
-    console.warn('Knowledge base running in legacy localStorage fallback',err);
-    renderStatus();
-  }
-  window.dispatchEvent(new CustomEvent('write-kb-ready'));
+    try{
+      await openDb();
+      await migrateLegacy();
+      rebuild(await allRules());
+      ready=true;
+      renderStatus();
+      window.dispatchEvent(new CustomEvent('write-kb-ready'));
+      if(navigator.onLine)await sync().catch(()=>{});
+    }catch(err){
+      ready=false;
+      setSyncMeta({cloudStatus:'local-only',lastError:String(err?.message||err)});
+      renderStatus();
+      window.dispatchEvent(new CustomEvent('write-kb-ready'));
+    }
+    return ready;
+  })();
+  return initPromise;
 }
 async function sync({force=false}={}){
   if(syncing||!ready||!navigator.onLine)return;
@@ -281,13 +289,14 @@ function renderStatus(){
   const el=document.getElementById('knowledgeStatus');if(!el)return;
   const st=stats();
   const last=st.lastSyncAt?new Date(st.lastSyncAt).toLocaleString('zh-CN'):'尚未同步';
-  const state=st.syncing?'同步中':!st.online?'离线':st.cloud?'云端已连接':'仅本地';
+  const state=st.syncing?'同步中':!st.ready?'本地初始化':!st.online?'离线':st.cloud?'云端已连接':'仅本地';
   el.innerHTML=`<div><b>${st.total}</b><span>长期规则</span></div><div><b>${st.pending}</b><span>待同步</span></div><div><b>${state}</b><span>同步状态</span></div><div><b>${last}</b><span>最后同步</span></div>`;
   const dot=document.getElementById('knowledgeCloudDot');
   if(dot)dot.dataset.state=st.syncing?'syncing':!st.online?'offline':st.cloud?'online':'local';
 }
 window.addEventListener('online',()=>sync().catch(()=>{}));
 window.addEventListener('offline',renderStatus);
+setTimeout(()=>{if(navigator.onLine)sync().catch(()=>{})},1500);
 
 window.addEventListener('visibilitychange',()=>{
   if(document.visibilityState==='visible'&&navigator.onLine)sync().catch(()=>{});

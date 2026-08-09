@@ -1,4 +1,11 @@
-WRITE Settlement Manager V7.1.1
-Cloudflare D1 一键自动配置
-Local-first + Cloud Sync
-Release: 2026-08-09 22:35
+WRITE Settlement Manager V7.1.4
+Release: 2026-08-09 23:45
+
+稳定发布器：
+- clone/pull 在覆盖新版之前
+- 临时干净 Git 工作区
+- D1 Binding 保留/恢复
+- 发布前强制代码自检
+- GitHub 后再 Cloudflare
+- 线上版本回读验证
+- 云同步 API 状态检查
