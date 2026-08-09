@@ -247,7 +247,7 @@ function findFactSheetPath(workbookXml,relsXml){
           path=rels.get(rid);
     if(path && /FACT/i.test(name))candidates.push({name,path});
   }
-  // V7.0.3: CN is the canonical WRITE FACT when multiple FACT sheets exist.
+  // V7.0.4: CN is the canonical WRITE FACT when multiple FACT sheets exist.
   const cn=candidates.find(x=>/CN/i.test(x.name));
   return cn?.path || candidates[0]?.path || '';
 }
@@ -657,9 +657,17 @@ function closeConfirm(){
   modalAction=null;
 }
 
+
+window.addEventListener('unhandledrejection',event=>{
+  const reason=event?.reason;
+  if(reason){
+    console.error('Unhandled promise rejection',reason);
+  }
+});
+
 function startImport(fileList){
   const files=[...fileList].filter(f=>/\.(xlsx|zip)$/i.test(f.name)); if(!files.length||busy)return;
-  worker?.terminate(); worker=new Worker('./src/workers/import.worker.bundle.js?v=7.0.3-20260809-1825'); importStartedAt=performance.now(); importedFileNames=files.map(f=>f.name);
+  worker?.terminate(); worker=new Worker('./src/workers/import.worker.bundle.js?v=7.0.4-20260809-1825'); importStartedAt=performance.now(); importedFileNames=files.map(f=>f.name);
   setBusy(true); hideError(); els.importLanding.hidden=false; els.appViews.hidden=true; els.topActions.hidden=true;
   els.currentFile.textContent='准备读取…'; els.progressFill.style.width='0%'; els.progressText.textContent='0% · 大文件在独立线程运行';
   worker.onmessage=({data})=>{
@@ -863,7 +871,7 @@ function renderOrders(){
 }
 
 
-// v7.0.3 — mandatory FACT delivery: generate a FACT when the source workbook has none.
+// v7.0.4 — mandatory FACT delivery: generate a FACT when the source workbook has none.
 function currencyForWorkbook(workbookName=''){
   const n=String(workbookName||'').toUpperCase();
   if(/\bUSD\b|\$US|US\$/.test(n))return 'USD';
@@ -1031,7 +1039,7 @@ async function rebuildArchiveReplacingEntry(archive,path,newBytes){
   const centralSize=central.reduce((a,b)=>a+b.length,0),centralOffset=offset;parts.push(...central,new Uint8Array([...u32(ZIP_EOCD),...u16(0),...u16(0),...u16(entries.length),...u16(entries.length),...u32(centralSize),...u32(centralOffset),...u16(0)]));return new Blob(parts,{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
 }
 async function buildGeneratedPencilFactWorkbook(workbookName){
-  const resp=await fetch(`./assets/FACT_TEMPLATE_CN_CANONICAL_V1.xlsx?v=7.0.3`,{cache:'no-store'});
+  const resp=await fetch(`./assets/FACT_TEMPLATE_CN_CANONICAL_V1.xlsx?v=7.0.4`,{cache:'no-store'});
   if(!resp.ok)throw new Error('无法读取 CN 标准 FACT 模板');
   const templateBlob=await resp.blob(),
         archive=await PreserveZipArchive.open(templateBlob),
@@ -1056,7 +1064,7 @@ async function buildGeneratedFactWorkbook(workbookName){
     return buildGeneratedPencilFactWorkbook(workbookName);
   }
   const data=generatedFactRowsForWorkbook(workbookName);
-  const resp=await fetch(`./assets/FACT_TEMPLATE_LEARNED_V1.xlsx?v=7.0.3`,{cache:'no-store'});if(!resp.ok)throw new Error('无法读取内置 FACT 学习模板');
+  const resp=await fetch(`./assets/FACT_TEMPLATE_LEARNED_V1.xlsx?v=7.0.4`,{cache:'no-store'});if(!resp.ok)throw new Error('无法读取内置 FACT 学习模板');
   const templateBlob=await resp.blob(),archive=await PreserveZipArchive.open(templateBlob),sheetPath='xl/worksheets/sheet1.xml';
   const xml=await archive.text(sheetPath,16*1024*1024),patched=patchLearnedTemplateSheetXml(xml,data,workbookName);
   return rebuildArchiveReplacingEntry(archive,sheetPath,enc.encode(patched));
@@ -1257,20 +1265,56 @@ function buildAccountingReport(){
   return {blob,fileName:`WRITE_会计结算_${currentOrderRangeLabel()}_${localDateStamp()}.xlsx`};
 }
 
+function setExportBusy(active){
+  const buttons=[els.exportButton,els.topExportButton,els.quickExportButton,els.heroExportButton].filter(Boolean);
+  for(const btn of buttons){
+    if(active){
+      if(!btn.dataset.exportOriginalHtml)btn.dataset.exportOriginalHtml=btn.innerHTML;
+      btn.disabled=true;
+      btn.setAttribute('aria-busy','true');
+      if(btn===els.heroExportButton){
+        btn.innerHTML='<span>…</span><div><b>正在生成结算报表…</b><small>正在执行 FACT 完整性审计与 ZIP 打包</small></div>';
+      }else{
+        btn.textContent='正在生成…';
+      }
+    }else{
+      btn.disabled=false;
+      btn.removeAttribute('aria-busy');
+      if(btn.dataset.exportOriginalHtml){
+        btn.innerHTML=btn.dataset.exportOriginalHtml;
+        delete btn.dataset.exportOriginalHtml;
+      }
+    }
+  }
+}
+
 async function exportAccounting(){
-  if(!classified)return;
-  const report=buildAccountingReport();
-  const hasFact=workbooksWithFact();
+  if(!classified){
+    showError('当前没有可导出的结算数据，请先导入订单。');
+    return;
+  }
+
+  setExportBusy(true);
+  hideError();
+
+  // Let the browser paint the busy state before heavy XLSX/ZIP work begins.
+  await new Promise(resolve=>requestAnimationFrame(()=>setTimeout(resolve,0)));
 
   try{
+    // V7.0.4: the accounting workbook build is intentionally INSIDE try/catch.
+    // Previously an exception here caused a silent no-response click.
+    const report=buildAccountingReport();
+    if(!report?.blob)throw new Error('专业会计报表生成失败：未返回有效 Excel 文件。');
+
+    const hasFact=workbooksWithFact();
     const deliverables=[];
+
     for(const wb of (sourceWorkbooks||[])){
       const profile=detectGeneratedFactProfile(wb.name);
 
       if(profile==='PENCIL_V1'){
-        // V7.0.3: WRITE pencil FACT always uses canonical CN template,
-        // regardless of whether the source workbook contained CN/FR/legacy FACT.
         const generated=await buildGeneratedPencilFactWorkbook(wb.name);
+        if(!generated)throw new Error(`${basename(wb.name)}：CN FACT 生成失败。`);
         deliverables.push({
           name:`FACT_CN_已统计_${currentOrderRangeLabel()}_${basename(wb.name).replace(/\.xlsx$/i,'')}.xlsx`,
           data:generated
@@ -1283,9 +1327,11 @@ async function exportAccounting(){
           throw new Error(`${basename(wb.name)} FACT 完整性审计未通过。\n${sample}`);
         }
         const patched=await rebuildFactWorkbook(wb.blob,wb.name);
+        if(!patched)throw new Error(`${basename(wb.name)}：FACT 回填失败。`);
         deliverables.push({name:`FACT_已回填_${currentOrderRangeLabel()}_${basename(wb.name)}`,data:patched});
       }else{
         const generated=await buildGeneratedFactWorkbook(wb.name);
+        if(!generated)throw new Error(`${basename(wb.name)}：自动 FACT 生成失败。`);
         deliverables.push({
           name:`FACT_自动生成_${currentOrderRangeLabel()}_${basename(wb.name).replace(/\.xlsx$/i,'')}.xlsx`,
           data:generated
@@ -1296,6 +1342,7 @@ async function exportAccounting(){
     if(!deliverables.length){
       const fallbackName=(importedFileNames?.[0]||'订单数据.xlsx').replace(/\.zip$/i,'.xlsx');
       const generated=await buildGeneratedFactWorkbook(fallbackName);
+      if(!generated)throw new Error('没有生成任何 FACT 交付文件。');
       deliverables.push({
         name:`FACT_自动生成_${currentOrderRangeLabel()}_${basename(fallbackName).replace(/\.xlsx$/i,'')}.xlsx`,
         data:generated
@@ -1303,12 +1350,18 @@ async function exportAccounting(){
     }
 
     const packageBlob=await zipStoreBlobs([{name:report.fileName,data:report.blob},...deliverables]);
+    if(!packageBlob || !packageBlob.size)throw new Error('ZIP 打包失败：生成的结算包为空。');
+
     downloadBlob(packageBlob,`WRITE_结算交付包_${currentOrderRangeLabel()}_${localDateStamp()}.zip`);
   }catch(err){
-    console.error(err);
-    showError(`导出被完整性校验拦截：${err?.message||err}`);
+    console.error('WRITE export failed',err);
+    const message=err?.message||String(err)||'未知导出错误';
+    showError(`导出失败：${message}`);
+  }finally{
+    setExportBusy(false);
   }
 }
+
 function reimportFlow(){
   if(!classified){els.fileInput.click();return}
   openConfirm({title:'重新导入数据？',text:'当前统计结果会被清空，然后打开文件选择器重新导入。原始文件不会被修改。',confirmText:'清空并重新导入',action:()=>{resetState(); setTimeout(()=>els.fileInput.click(),80)}});
@@ -1370,12 +1423,12 @@ if(themeMedia.addEventListener)themeMedia.addEventListener('change',onSystemThem
 applyTheme(getThemePreference(),{persist:false});
 
 
-// v7.0.3 release notes controller — show once per release per browser
-const WRITE_RELEASE_META = window.WRITE_RELEASE_META || {current:{version:document.body.dataset.release||'7.0.3',time:'',title:'WRITE Settlement Manager',sections:[]},history:[]};
+// v7.0.4 release notes controller — show once per release per browser
+const WRITE_RELEASE_META = window.WRITE_RELEASE_META || {current:{version:document.body.dataset.release||'7.0.4',time:'',title:'WRITE Settlement Manager',sections:[]},history:[]};
 const WRITE_RELEASE = {
-  version: WRITE_RELEASE_META.current?.version || document.body.dataset.release || '7.0.3',
+  version: WRITE_RELEASE_META.current?.version || document.body.dataset.release || '7.0.4',
   date: WRITE_RELEASE_META.current?.time || '',
-  title: `WRITE Settlement Manager v${WRITE_RELEASE_META.current?.version || document.body.dataset.release || '7.0.3'}`,
+  title: `WRITE Settlement Manager v${WRITE_RELEASE_META.current?.version || document.body.dataset.release || '7.0.4'}`,
   sections: WRITE_RELEASE_META.current?.sections || []
 };
 function showReleaseNotesIfNeeded(){
@@ -1410,7 +1463,7 @@ document.documentElement.dataset.writeReady='true';
 
 
 
-// v7.0.3 — version history from unified release metadata
+// v7.0.4 — version history from unified release metadata
 const WRITE_HISTORY = Array.isArray(WRITE_RELEASE_META.history) ? WRITE_RELEASE_META.history : [];
 function renderReleaseHistory(){
   const host=document.getElementById('releaseHistory');

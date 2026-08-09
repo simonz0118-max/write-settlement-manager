@@ -1,3 +1,11 @@
+## v7.0.4 — 2026-08-09 18:45 (Europe/Paris)
+- 修复 `exportAccounting()` 中 `buildAccountingReport()` 位于 `try/catch` 外的问题；此前这里抛错会表现为“点击导出完全没反应”。
+- 整个导出流程统一纳入异常捕获：会计工作簿 → FACT 完整性审计 → FACT 生成/回填 → ZIP 打包 → 下载准备。
+- 导出按钮点击后立即进入“正在生成…”状态，并防止重复点击。
+- 对空会计报表、空 FACT、空 ZIP 增加显式失败检查。
+- 所有导出异常通过页面错误条显示具体原因，不再只留在浏览器 Console。
+- 保留 V7.0.3 Import Worker 修复，以及 CN FACT 和零遗漏审计。
+
 ## v7.0.3 — 2026-08-09 18:25 (Europe/Paris)
 - 根因修复：删除 `import.worker.bundle.js` 中重复的旧 `scoreOrderHeader()` / `isOrderHeader()`；旧函数曾覆盖 V7 自适应表头识别并调用不存在的 `REQUIRED_HEADERS/ORDER_HEADERS`。
 - Worker URL 从写死的 `?v=6.5.8` 改为 `?v=7.0.3-20260809-1825`。

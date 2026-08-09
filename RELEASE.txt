@@ -1,8 +1,9 @@
-WRITE Settlement Manager V7.0.3
-Release time: 2026-08-09 18:25 Europe/Paris
+WRITE Settlement Manager V7.0.4
+Release time: 2026-08-09 18:45 Europe/Paris
 
-- 重构 Import Worker
-- 删除旧固定表头覆盖逻辑
-- Worker 使用 V7.0.3 独立缓存指纹
-- FACT-only 文件明确提示无订单 Sheet
-- 保留 CN FACT 与零遗漏审计
+本版核心：
+- 修复导出按钮“点击完全无反应”
+- buildAccountingReport 纳入 try/catch
+- 导出按钮显示正在生成
+- FACT / ZIP / Excel 全链路错误可见
+- 保留 V7.0.3 导入器和 CN FACT 零遗漏逻辑
