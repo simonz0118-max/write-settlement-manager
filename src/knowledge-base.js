@@ -196,6 +196,59 @@ async function learnSchema(schema={},manual=true){
   });
 }
 
+
+function payloadSignature(v){try{const stable=x=>Array.isArray(x)?x.map(stable):x&&typeof x==='object'?Object.fromEntries(Object.keys(x).sort().map(k=>[k,stable(x[k])])):x;return JSON.stringify(stable(v))}catch{return String(v)}}
+async function recordConflict(ruleType,lookupKey,existingPayload,incomingPayload,source='AUTO'){
+  return upsert({type:'RULE_CONFLICT',lookupKey:ruleType+'\\u0001'+lookupKey+'\\u0001'+Date.now(),
+    payload:{ruleType,lookupKey,existingPayload,incomingPayload,status:'OPEN'},confidenceLevel:'MANUAL_CONFIRMED',
+    confirmed:false,source:'CONFLICT:'+source});
+}
+function costLookupKeys(spec={}){
+  const sku=norm(spec.sku),name=norm(spec.productName),c=country(spec.country),cur=String(spec.currency||'').toUpperCase();
+  const keys=[];if(sku)keys.push('sku:'+sku+'\\u0001'+c+'\\u0001'+cur,'sku:'+sku+'\\u0001'+c+'\\u0001','sku:'+sku);
+  if(name)keys.push('name:'+name+'\\u0001'+c+'\\u0001'+cur,'name:'+name+'\\u0001'+c+'\\u0001','name:'+name);
+  return keys;
+}
+function costModel(spec={}){for(const k of costLookupKeys(spec)){const r=find('COST_MODEL',k);if(r)return r}return null}
+function calculateCost(spec={}){
+  const rule=costModel(spec);if(!rule)return {resolved:false};
+  const m=rule.payload||{},q=Math.max(0,Number(spec.quantity)||0),amount=Number(spec.orderAmount)||0;let total=null,unit=null;
+  if(m.strategy==='UNIT_FIXED'){unit=Number(m.unitCost);if(Number.isFinite(unit))total=q*unit}
+  else if(m.strategy==='ORDER_FIXED'){total=Number(m.orderCost);if(Number.isFinite(total))unit=q?total/q:total}
+  else if(m.strategy==='PERCENT_ORDER'){const pct=Number(m.percent);if(Number.isFinite(pct)){total=amount*pct/100;unit=q?total/q:total}}
+  else if(m.strategy==='TIER_UNIT'){const tiers=Array.isArray(m.tiers)?m.tiers:[];const t=tiers.find(x=>q>=Number(x.min||0)&&(x.max==null||q<=Number(x.max)));if(t){unit=Number(t.unitCost);if(Number.isFinite(unit))total=q*unit}}
+  return Number.isFinite(total)?{resolved:true,totalCost:total,unitCost:unit,strategy:m.strategy,rule}:{resolved:false,rule};
+}
+async function learnCostModel(spec={},manual=true){
+  const keys=costLookupKeys(spec);if(!keys.length)throw new Error('成本规则缺少商品身份');
+  const lookupKey=keys[0],payload={productName:String(spec.productName||''),sku:String(spec.sku||''),country:country(spec.country),currency:String(spec.currency||'').toUpperCase(),
+    strategy:String(spec.strategy||'UNIT_FIXED'),unitCost:spec.unitCost,orderCost:spec.orderCost,percent:spec.percent,tiers:Array.isArray(spec.tiers)?spec.tiers:[],
+    cogs:spec.cogs,shipping:spec.shipping,sourceFactDescription:String(spec.sourceFactDescription||''),sourceFile:String(spec.sourceFile||''),confidence:Number(spec.confidence)||0};
+  const existing=find('COST_MODEL',lookupKey);
+  if(existing?.confirmed && payloadSignature(existing.payload)!==payloadSignature(payload)){
+    const conflict=await recordConflict('COST_MODEL',lookupKey,existing.payload,payload,manual?'MANUAL':'AUTO');return {conflict:true,rule:existing,conflictRule:conflict};
+  }
+  return upsert({type:'COST_MODEL',lookupKey,payload,confidenceLevel:manual?'MANUAL_CONFIRMED':'AUTO_INFERRED',confirmed:!!manual,source:manual?'MANUAL_COST':'FACT_LEARNING'});
+}
+function currencyPolicy(key='DEFAULT'){return find('CURRENCY_POLICY',String(key||'DEFAULT'))}
+async function learnCurrencyPolicy(key='DEFAULT',payload={},manual=true){
+  const lookupKey=String(key||'DEFAULT'),existing=find('CURRENCY_POLICY',lookupKey);
+  if(existing?.confirmed&&payloadSignature(existing.payload)!==payloadSignature(payload)){const c=await recordConflict('CURRENCY_POLICY',lookupKey,existing.payload,payload,manual?'MANUAL':'AUTO');return{conflict:true,rule:existing,conflictRule:c}}
+  return upsert({type:'CURRENCY_POLICY',lookupKey,payload,confidenceLevel:manual?'MANUAL_CONFIRMED':'AUTO_INFERRED',confirmed:!!manual,source:manual?'MANUAL_CURRENCY':'AUTO_CURRENCY'});
+}
+function taxPolicy(key='DEFAULT'){return find('TAX_POLICY',String(key||'DEFAULT'))}
+async function learnTaxPolicy(key='DEFAULT',payload={},manual=false){
+  if(!manual)throw new Error('VAT/税务规则必须人工确认后才能学习');
+  const lookupKey=String(key||'DEFAULT'),existing=find('TAX_POLICY',lookupKey);
+  if(existing?.confirmed&&payloadSignature(existing.payload)!==payloadSignature(payload)){const c=await recordConflict('TAX_POLICY',lookupKey,existing.payload,payload,'MANUAL');return{conflict:true,rule:existing,conflictRule:c}}
+  return upsert({type:'TAX_POLICY',lookupKey,payload,confidenceLevel:'MANUAL_CONFIRMED',confirmed:true,source:'MANUAL_TAX'});
+}
+async function learnFactModel(model={},manual=false){
+  const lookupKey=String(model.sourceFile||'FACT')+'\\u0001'+String(model.sheetName||'FACT');
+  return upsert({type:'FACT_MODEL',lookupKey,payload:model,confidenceLevel:manual?'MANUAL_CONFIRMED':'AUTO_INFERRED',confirmed:!!manual,source:manual?'MANUAL_FACT':'HISTORICAL_FACT'});
+}
+function conflicts(){return [...cache.values()].filter(r=>r.type==='RULE_CONFLICT'&&!r.deleted&&r.payload?.status!=='RESOLVED')}
+
 async function migrateLegacy(){
   if((await allRules()).length)return;
   const now=new Date().toISOString();
@@ -293,6 +346,11 @@ function stats(){
     productRules:rules.filter(r=>r.type==='PRODUCT_CATEGORY').length,
     priceRules:rules.filter(r=>r.type==='FACT_PRICE').length,
     schemaRules:rules.filter(r=>r.type==='ORDER_SCHEMA').length,
+    costRules:rules.filter(r=>r.type==='COST_MODEL').length,
+    currencyRules:rules.filter(r=>r.type==='CURRENCY_POLICY').length,
+    taxRules:rules.filter(r=>r.type==='TAX_POLICY').length,
+    factModels:rules.filter(r=>r.type==='FACT_MODEL').length,
+    conflicts:rules.filter(r=>r.type==='RULE_CONFLICT'&&r.payload?.status!=='RESOLVED').length,
     syncing,ready,
     online:navigator.onLine,
     cloud:getSyncMeta().cloudStatus==='connected',
@@ -334,7 +392,7 @@ setInterval(()=>{if(navigator.onLine)sync().catch(()=>{})},5*60*1000);
 
 
 window.WRITE_KB={
-  init,sync,stats,list,productCategory,factPrice,learnProduct,learnPrice,learnSchema,schemaRules,schemaFor,exportBackup,importBackup,renderStatus,
+  init,sync,stats,list,productCategory,factPrice,learnProduct,learnPrice,learnSchema,schemaRules,schemaFor,costModel,calculateCost,learnCostModel,currencyPolicy,learnCurrencyPolicy,taxPolicy,learnTaxPolicy,learnFactModel,conflicts,exportBackup,importBackup,renderStatus,
   priority:PRIORITY
 };
 })();

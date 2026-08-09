@@ -1,4 +1,4 @@
-/* WRITE Import Worker v7.1.10 build 20260809-1825 */
+/* WRITE Import Worker v7.2.0 build 20260809-1825 */
 /* WRITE Settlement Manager v5.3.3 - standalone import worker */
 const EOCD_SIG = 0x06054b50;
 const CEN_SIG = 0x02014b50;
@@ -734,29 +734,35 @@ self.onmessage = async ({ data }) => {
     }
 
     const rawOrders = all.flatMap((s) => s.orders || []);
-    // V7: dedupe only inside each workbook. Same order id in another workbook is retained and flagged.
-    const seenLocal = new Set();
+    // V7.2 invariant: orderId is a business association key, NOT a unique row key.
+    // Never silently delete a source row merely because another row has the same orderId.
     const byOrderId = new Map();
+    const byLocalOrderId = new Map();
     const orders = [];
-    let duplicates = 0;
     for (const order of rawOrders) {
       const orderId = String(order.orderId || '').trim();
       if (!orderId) continue;
-      const localKey = `${order.sourceFile}\u0001${orderId}`;
-      if (seenLocal.has(localKey)) { duplicates++; continue; }
-      seenLocal.add(localKey);
+      order.recordKey=[order.sourceFile,order.sourceSheet,order.sourceRow,orderId,order.trackingNo||''].map(v=>String(v??'')).join('\u0001');
       orders.push(order);
-      const arr=byOrderId.get(orderId)||[];
-      arr.push({sourceFile:order.sourceFile,sourceSheet:order.sourceSheet});
-      byOrderId.set(orderId,arr);
+      const globalRefs=byOrderId.get(orderId)||[];
+      globalRefs.push({recordKey:order.recordKey,sourceFile:order.sourceFile,sourceSheet:order.sourceSheet,sourceRow:order.sourceRow,trackingNo:order.trackingNo||'',amount:order.orderAmount,productCount:order.productCount});
+      byOrderId.set(orderId,globalRefs);
+      const localKey=`${order.sourceFile}\u0001${orderId}`;
+      const localRefs=byLocalOrderId.get(localKey)||[];
+      localRefs.push(globalRefs[globalRefs.length-1]);byLocalOrderId.set(localKey,localRefs);
     }
+    const sameWorkbookOrderIdGroups=[...byLocalOrderId.entries()]
+      .filter(([,refs])=>refs.length>1)
+      .map(([key,refs])=>({key,orderId:key.split('\u0001').pop(),refs}));
+    const sameOrderIdExtraRows=sameWorkbookOrderIdGroups.reduce((a,g)=>a+Math.max(0,g.refs.length-1),0);
     const crossWorkbookDuplicates=[...byOrderId.entries()]
       .filter(([,refs])=>new Set(refs.map(r=>r.sourceFile)).size>1)
       .map(([orderId,refs])=>({orderId,refs}));
+    const duplicates=0;
     const sheets = all.map(({ orders: _orders, ...rest }) => rest);
     const schemaCandidates=all.map(s=>s.schemaCandidate).filter(Boolean);
     const schemaReviews=all.filter(s=>s.status==='needs_schema_review').map(s=>s.schemaCandidate).filter(Boolean);
-    self.postMessage({ type: 'complete', progress: 1, orders, sheets, duplicates, crossWorkbookDuplicates, workbooks, schemaCandidates, schemaReviews });
+    self.postMessage({ type: 'complete', progress: 1, orders, sheets, duplicates, sameOrderIdExtraRows, sameWorkbookOrderIdGroups, sourceRecordCount:rawOrders.length, crossWorkbookDuplicates, workbooks, schemaCandidates, schemaReviews });
   } catch (error) {
     self.postMessage({ type: 'error', message: error?.message || String(error), stack: error?.stack || '' });
   }

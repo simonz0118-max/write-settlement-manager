@@ -132,7 +132,7 @@ function classifyOrder(order) {
 function classifyOrders(orders=[]) {
   const classified=orders.map(classifyOrder);
   const lineItems=[];
-  for(const o of classified) for(const item of o.lineItems) lineItems.push({...item, orderId:o.orderId, orderAmount:o.orderAmount, country:o.country, sourceFile:o.sourceFile, sourceSheet:o.sourceSheet});
+  for(const o of classified) for(const item of o.lineItems) lineItems.push({...item, recordKey:o.recordKey, sourceRow:o.sourceRow, orderId:o.orderId, orderAmount:o.orderAmount, country:o.country, currency:o.currency, sourceFile:o.sourceFile, sourceSheet:o.sourceSheet});
   const orderMap=new Map();
   for(const o of classified){
     const k=o.accountingCategory; const r=orderMap.get(k)||{category:k,orders:0,amount:0,review:0}; r.orders++; r.amount+=Number(o.orderAmount)||0; if(o.classificationStatus==='需复核')r.review++; orderMap.set(k,r);
@@ -140,7 +140,7 @@ function classifyOrders(orders=[]) {
   const lineMap=new Map();
   for(const item of lineItems){
     const k=item.categoryLabel; const r=lineMap.get(k)||{category:k,lines:0,quantity:0,freeQuantity:0,orders:new Set(),touchedAmountOrders:new Map()};
-    r.lines++; r.quantity+=Number(item.quantity)||1; if(item.isFree)r.freeQuantity+=Number(item.quantity)||1; r.orders.add(item.orderId); r.touchedAmountOrders.set(item.orderId,Number(item.orderAmount)||0); lineMap.set(k,r);
+    r.lines++; r.quantity+=Number(item.quantity)||1; if(item.isFree)r.freeQuantity+=Number(item.quantity)||1; const rid=item.recordKey||item.orderId; r.orders.add(rid); r.touchedAmountOrders.set(rid,Number(item.orderAmount)||0); lineMap.set(k,r);
   }
   const orderSummary=[...orderMap.values()].sort((a,b)=>b.amount-a.amount);
   const lineSummary=[...lineMap.values()].map(r=>({category:r.category,lines:r.lines,quantity:r.quantity,freeQuantity:r.freeQuantity,orders:r.orders.size,touchedAmount:[...r.touchedAmountOrders.values()].reduce((a,b)=>a+b,0)})).sort((a,b)=>b.quantity-a.quantity);
@@ -368,7 +368,7 @@ function sourceDataForWorkbook(workbookName){
   const pencilQtyByOrder=new Map();
   for(const line of paidLines){
     if(line.category==='PENCIL'){
-      const orderId=String(line.orderId);
+      const orderId=String(line.recordKey||line.orderId);
       pencilQtyByOrder.set(orderId,(pencilQtyByOrder.get(orderId)||0)+(Number(line.quantity)||1));
     }
   }
@@ -376,7 +376,7 @@ function sourceDataForWorkbook(workbookName){
   const pencilBucket=new Map();
   for(const order of wbOrders){
     const country=normalizeCountry(order.country);
-    const qty=Math.round(pencilQtyByOrder.get(String(order.orderId))||0);
+    const qty=Math.round(pencilQtyByOrder.get(String(order.recordKey||order.orderId))||0);
     if(qty>0){
       const bucketId=`${country}\u0001${qty}`;
       pencilBucket.set(bucketId,(pencilBucket.get(bucketId)||0)+1);
@@ -398,7 +398,7 @@ function sourceDataForWorkbook(workbookName){
   for(const line of paidLines){
     const quantity=Math.max(0,Number(line.quantity)||1);
     const country=normalizeCountry(line.country);
-    const hasPencil=(pencilQtyByOrder.get(String(line.orderId))||0)>0;
+    const hasPencil=(pencilQtyByOrder.get(String(line.recordKey||line.orderId))||0)>0;
     const mode=hasPencil?'Upsell':'Base';
 
     addLedger(line.category,quantity);
@@ -518,7 +518,7 @@ function savedAutoFactUnitPrice(country,targetType){
   return Number.isFinite(price)?price:null;
 }
 function lineTargetType(line,pencilQtyByOrder){
-  const hasPencil=(pencilQtyByOrder.get(String(line.orderId))||0)>0;
+  const hasPencil=(pencilQtyByOrder.get(String(line.recordKey||line.orderId))||0)>0;
   const mode=hasPencil?'Upsell':'Base';
   const packSize=accessoryPackSize(line);
   if(line.category==='ERASER')return `eraser${mode}`;
@@ -553,11 +553,11 @@ function targetDescription(targetType,bucket=0){
 function inferUnitPriceFromCurrentOrders(workbookName,targetType,country,bucket=0){
   const source=sourceDataForWorkbook(workbookName);
   const targetCountry=normalizeCountry(country);
-  const orderById=new Map(source.wbOrders.map(o=>[String(o.orderId),o]));
+  const orderById=new Map(source.wbOrders.map(o=>[String(o.recordKey||o.orderId),o]));
   const paidQtyByOrder=new Map();
 
   for(const line of source.paidLines){
-    const orderId=String(line.orderId);
+    const orderId=String(line.recordKey||line.orderId);
     paidQtyByOrder.set(orderId,(paidQtyByOrder.get(orderId)||0)+(Number(line.quantity)||1));
   }
 
@@ -565,7 +565,7 @@ function inferUnitPriceFromCurrentOrders(workbookName,targetType,country,bucket=
 
   if(targetType==='pencil'){
     for(const order of source.wbOrders){
-      const orderId=String(order.orderId);
+      const orderId=String(order.recordKey||order.orderId);
       const pencilQty=Math.round(source.pencilQtyByOrder.get(orderId)||0);
       if(pencilQty!==Number(bucket) || normalizeCountry(order.country)!==targetCountry)continue;
       const orderAmount=Number(order.orderAmount)||0;
@@ -578,9 +578,9 @@ function inferUnitPriceFromCurrentOrders(workbookName,targetType,country,bucket=
     for(const line of source.paidLines){
       if(normalizeCountry(line.country)!==targetCountry)continue;
       if(lineTargetType(line,source.pencilQtyByOrder)!==targetType)continue;
-      const order=orderById.get(String(line.orderId));
+      const order=orderById.get(String(line.recordKey||line.orderId));
       const orderAmount=Number(order?.orderAmount)||0;
-      const totalPaidQty=paidQtyByOrder.get(String(line.orderId))||1;
+      const totalPaidQty=paidQtyByOrder.get(String(line.recordKey||line.orderId))||1;
       if(orderAmount<=0)continue;
       const inferred=orderAmount/Math.max(1,totalPaidQty);
       const qty=Number(line.quantity)||1;
@@ -718,7 +718,7 @@ function factCompletenessAudit(workbookName,factRows){
     if(line.category==='PENCIL')continue;
 
     const country=normalizeCountry(line.country);
-    const hasPencil=(source.pencilQtyByOrder.get(String(line.orderId))||0)>0;
+    const hasPencil=(source.pencilQtyByOrder.get(String(line.recordKey||line.orderId))||0)>0;
     const mode=hasPencil?'Upsell':'Base';
     const packSize=accessoryPackSize(line);
 
@@ -896,7 +896,7 @@ const decimalFormat = new Intl.NumberFormat('fr-FR',{maximumFractionDigits:1});
 const decimal2Format = new Intl.NumberFormat('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2});
 const durationFormat = new Intl.NumberFormat('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2});
 const percentDisplayFormat = new Intl.NumberFormat('fr-FR',{minimumFractionDigits:1,maximumFractionDigits:1});
-let worker=null, orders=[], sheets=[], classified=null, busy=false, duplicateCount=0, crossWorkbookDuplicates=[], importStartedAt=0, importDuration=0, importedFileNames=[], sourceWorkbooks=[];
+let worker=null, orders=[], sheets=[], classified=null, busy=false, duplicateCount=0, sameOrderIdExtraRows=0, sameWorkbookOrderIdGroups=[], sourceRecordCount=0, crossWorkbookDuplicates=[], importStartedAt=0, importDuration=0, importedFileNames=[], sourceWorkbooks=[];
 let modalAction=null;
 
 function escapeHtml(v){return String(v??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}
@@ -912,7 +912,7 @@ function setView(view){
   document.querySelectorAll('.view[data-view-panel]').forEach(panel=>panel.classList.toggle('active',panel.dataset.viewPanel===view));
 }
 function resetState({showLanding=true}={}){
-  worker?.terminate(); worker=null; orders=[]; sheets=[]; classified=null; busy=false; duplicateCount=0; crossWorkbookDuplicates=[]; importDuration=0; importedFileNames=[]; sourceWorkbooks=[];
+  worker?.terminate(); worker=null; orders=[]; sheets=[]; classified=null; busy=false; duplicateCount=0; sameOrderIdExtraRows=0; sameWorkbookOrderIdGroups=[]; sourceRecordCount=0; crossWorkbookDuplicates=[]; importDuration=0; importedFileNames=[]; sourceWorkbooks=[];
   setBusy(false); hideError(); els.progressFill.style.width='0%'; els.fileInput.value=''; els.searchInput.value='';
   els.countrySelect.innerHTML='<option value="ALL">全部国家</option>'; els.categorySelect.innerHTML='<option value="ALL">全部会计分类</option>';
   els.appViews.hidden=true; els.topActions.hidden=true; els.importLanding.hidden=!showLanding; els.sidebarResetButton.disabled=true;
@@ -971,7 +971,7 @@ async function startImport(fileList){
   const files=[...fileList].filter(f=>/\.(xlsx|zip)$/i.test(f.name)); if(!files.length||busy)return;
   await window.WRITE_KB?.init?.().catch(()=>{});
   const schemaRules=window.WRITE_SCHEMA?.getRules?.()||[];
-  worker?.terminate(); worker=new Worker('./src/workers/import.worker.bundle.js?v=7.1.10-20260810-0045'); importStartedAt=performance.now(); importedFileNames=files.map(f=>f.name);
+  worker?.terminate(); worker=new Worker('./src/workers/import.worker.bundle.js?v=7.2.0-20260810-0045'); importStartedAt=performance.now(); importedFileNames=files.map(f=>f.name);
   setBusy(true); hideError(); els.importLanding.hidden=false; els.appViews.hidden=true; els.topActions.hidden=true;
   els.currentFile.textContent='准备读取…'; els.progressFill.style.width='0%'; els.progressText.textContent='0% · 自适应识别订单结构';
   worker.onmessage=async ({data})=>{
@@ -992,7 +992,7 @@ async function startImport(fileList){
         window.WRITE_SCHEMA?.promptReview?.(schemaReviews,()=>startImport(files));
         return;
       }
-      orders=data.orders||[];sheets=data.sheets||[];sourceWorkbooks=data.workbooks||[];duplicateCount=data.duplicates||0;crossWorkbookDuplicates=data.crossWorkbookDuplicates||[];
+      orders=data.orders||[];sheets=data.sheets||[];sourceWorkbooks=data.workbooks||[];duplicateCount=data.duplicates||0;sameOrderIdExtraRows=data.sameOrderIdExtraRows||0;sameWorkbookOrderIdGroups=data.sameWorkbookOrderIdGroups||[];sourceRecordCount=data.sourceRecordCount||orders.length;crossWorkbookDuplicates=data.crossWorkbookDuplicates||[];
       importDuration=(performance.now()-importStartedAt)/1000;
       const importedOrderSheets=sheets.filter(x=>x.status==='imported'&&Number(x.orderCount)>0);
       const factSheets=sheets.filter(x=>x.status==='ignored_fact');
@@ -1005,6 +1005,7 @@ async function startImport(fileList){
       }
       classified=classifyOrders(orders);
       els.progressFill.style.width='100%';els.progressText.textContent='100% · 结构识别、导入与分类完成';els.currentFile.textContent='解析完成';hideError();setBusy(false);renderResults();
+      window.dispatchEvent(new CustomEvent('write-import-complete',{detail:{sourceRecordCount,records:orders.length,sameOrderIdGroups:sameWorkbookOrderIdGroups.length}}));
       worker?.terminate();worker=null;
     }
     if(data.type==='error'){setBusy(false);showError(data.message||'未知导入错误');worker?.terminate();worker=null}
@@ -1076,8 +1077,8 @@ function renderLearningCenter(){
   const host=document.getElementById('learningList'),meta=document.getElementById('learningMeta');
   if(!host||!meta)return;
   const rules=window.WRITE_KB?.list?.()||[];
-  const stats=window.WRITE_KB?.stats?.()||{total:0,productRules:0,priceRules:0,schemaRules:0};
-  meta.textContent=`长期知识库 ${stats.total} 条 · 商品规则 ${stats.productRules} · 价格规则 ${stats.priceRules} · 表格结构 ${stats.schemaRules||0}`;
+  const stats=window.WRITE_KB?.stats?.()||{total:0,productRules:0,priceRules:0,schemaRules:0,costRules:0,currencyRules:0,taxRules:0,factModels:0,conflicts:0};
+  meta.textContent=`长期知识库 ${stats.total} 条 · 商品 ${stats.productRules} · 成本 ${stats.costRules||0} · 表格结构 ${stats.schemaRules||0} · 币种 ${stats.currencyRules||0} · FACT模型 ${stats.factModels||0} · 冲突 ${stats.conflicts||0}`;
   window.WRITE_KB?.renderStatus?.();
   host.innerHTML=rules.slice(0,500).map(rule=>{
     const product=rule.type==='PRODUCT_CATEGORY',schema=rule.type==='ORDER_SCHEMA';
@@ -1091,9 +1092,8 @@ function renderLearningCenter(){
 
 
 function importOrderStats(){
-  const unique=classified?.orders?.length||orders.length||0;
-  const duplicates=Number(duplicateCount)||0;
-  return {raw:unique+duplicates,duplicates,unique};
+  const records=classified?.orders?.length||orders.length||0;
+  return {raw:Number(sourceRecordCount)||records,duplicates:Number(sameOrderIdExtraRows)||0,unique:records};
 }
 function expectedFactDeliverableCount(){
   const files=new Set((orders||[]).map(o=>o.sourceFile).filter(Boolean));
@@ -1110,7 +1110,7 @@ function renderResults(){
 
   const orderStats=importOrderStats(),factOutput=expectedFactDeliverableCount();
   els.metricOrders.textContent=numberFormat.format(orderStats.unique); els.metricAmount.textContent=singleCurrency?(currencySummary[0].currency==='EUR'?moneyFormat.format(amount):`${decimal2Format.format(amount)} ${currencySummary[0].currency}`):'多币种'; els.metricSheets.textContent=numberFormat.format(imported.length);
-  els.metricFacts.textContent=numberFormat.format(factOutput); els.metricDuplicates.textContent=`原始 ${numberFormat.format(orderStats.raw)} · 重复 ${numberFormat.format(orderStats.duplicates)} · 唯一 ${numberFormat.format(orderStats.unique)}`; els.metricReview.textContent=numberFormat.format(review); els.metricGift.textContent=numberFormat.format(itemQty);
+  els.metricFacts.textContent=numberFormat.format(factOutput); els.metricDuplicates.textContent=`源记录 ${numberFormat.format(orderStats.raw)} · 同订单号额外记录 ${numberFormat.format(orderStats.duplicates)} · 全部保留 ${numberFormat.format(orderStats.unique)}`; els.metricReview.textContent=numberFormat.format(review); els.metricGift.textContent=numberFormat.format(itemQty);
   els.navReviewCount.textContent=numberFormat.format(review); els.navReviewCount.hidden=review===0; els.quickReviewCount.textContent=numberFormat.format(review);
   els.systemStatus.textContent='就绪'; els.lastImportText.textContent=`上次导入 · ${nowText()}`; document.querySelector('.system-card')?.classList.add('ready'); els.sidebarResetButton.disabled=false;
 
@@ -1122,7 +1122,7 @@ function renderResults(){
 
   const fileLabel=importedFileNames.length===1?importedFileNames[0]:`${importedFileNames.length} 个上传文件`;
   const orderStatsSummary=importOrderStats(),factOutputSummary=expectedFactDeliverableCount();
-  const summaryData=[['文件',fileLabel],['Excel 工作簿',`${uniqueBooks} 个`],['订单 Sheet',`${imported.length} 个`],['原始 FACT Sheet',`${facts.length} 个`],['FACT 输出',`${factOutputSummary} 个${facts.length===0&&factOutputSummary>0?' · 自动生成':''}`],['原始订单行',`${numberFormat.format(orderStatsSummary.raw)} 行`],['重复订单',`${numberFormat.format(orderStatsSummary.duplicates)} 个`],['唯一订单',`${numberFormat.format(orderStatsSummary.unique)} 个`],['解析数据量',formatBytes(inflated)],['处理耗时',`${durationFormat.format(importDuration)} 秒`]];
+  const summaryData=[['文件',fileLabel],['Excel 工作簿',`${uniqueBooks} 个`],['订单 Sheet',`${imported.length} 个`],['原始 FACT Sheet',`${facts.length} 个`],['FACT 输出',`${factOutputSummary} 个${facts.length===0&&factOutputSummary>0?' · 自动生成':''}`],['原始订单行',`${numberFormat.format(orderStatsSummary.raw)} 行`],['同订单号额外记录',`${numberFormat.format(orderStatsSummary.duplicates)} 条（全部保留）`],['结算记录',`${numberFormat.format(orderStatsSummary.unique)} 条`],['解析数据量',formatBytes(inflated)],['处理耗时',`${durationFormat.format(importDuration)} 秒`]];
   els.importSummary.innerHTML=summaryData.map(([k,v])=>`<div><dt>${escapeHtml(k)}</dt><dd>${escapeHtml(v)}</dd></div>`).join('');
 
   els.importLanding.hidden=true; els.appViews.hidden=false; els.topActions.hidden=false; hideError(); setView('dashboard');
@@ -1148,9 +1148,9 @@ function reviewCategoryOptions(selected='AUTO'){
 function renderUnknown(){
   const unknown=classified.unknown||[]; els.emptyReview.hidden=unknown.length>0;
   els.unknownList.innerHTML=unknown.map(x=>{
-    const order=orders.find(o=>String(o.orderId)===String(x.orderId))||{};
+    const order=orders.find(o=>x.recordKey?String(o.recordKey)===String(x.recordKey):(String(o.orderId)===String(x.orderId)&&(!x.sourceRow||Number(o.sourceRow)===Number(x.sourceRow))))||{};
     const forced=order.manualLineCategories?.[x.lineNo]||'AUTO';
-    return `<div class="review-editor" data-order-id="${escapeHtml(x.orderId)}" data-line-no="${x.lineNo||1}">
+    return `<div class="review-editor" data-record-key="${escapeHtml(x.recordKey||'')}" data-order-id="${escapeHtml(x.orderId)}" data-line-no="${x.lineNo||1}">
       <div class="review-id"><strong>${escapeHtml(x.orderId)}</strong><small>第 ${x.lineNo||1} 个商品 · ${escapeHtml(order.country||x.country||'—')}</small></div>
       <label><span>产品名称</span><input class="review-name" value="${escapeHtml(x.productName||'')}" placeholder="补充或修改产品名称" /></label>
       <label><span>SKU</span><input class="review-sku" value="${escapeHtml(x.sku||'')}" placeholder="补充或修改 SKU" /></label>
@@ -1163,8 +1163,8 @@ function setLineValue(order,key,lineNo,value){
   const arr=String(order[key]||'').split(/\n/); while(arr.length<lineNo)arr.push(''); arr[lineNo-1]=String(value||'').trim(); order[key]=arr.join('\n');
 }
 function saveReviewRow(editor){
-  const orderId=editor.dataset.orderId, lineNo=Number(editor.dataset.lineNo)||1;
-  const order=orders.find(o=>String(o.orderId)===String(orderId)); if(!order)return;
+  const recordKey=editor.dataset.recordKey||'',orderId=editor.dataset.orderId, lineNo=Number(editor.dataset.lineNo)||1;
+  const order=orders.find(o=>recordKey?String(o.recordKey)===String(recordKey):String(o.orderId)===String(orderId)); if(!order)return;
   setLineValue(order,'productNames',lineNo,editor.querySelector('.review-name').value);
   setLineValue(order,'skuLines',lineNo,editor.querySelector('.review-sku').value);
   const chosen=editor.querySelector('.review-category').value;
@@ -1199,7 +1199,7 @@ function renderOrders(){
 }
 
 
-// v7.1.10 — mandatory FACT delivery: generate a FACT when the source workbook has none.
+// v7.2.0 — mandatory FACT delivery: generate a FACT when the source workbook has none.
 function currencyForWorkbook(workbookName=''){
   const n=String(workbookName||'').toUpperCase();
   if(/\bUSD\b|\$US|US\$/.test(n))return 'USD';
@@ -1267,13 +1267,14 @@ function generatedGenericFactRowsForWorkbook(workbookName){
     const key=[country,category,product,sku].join('\u0001');
     const cur=map.get(key)||{country,category,product,sku,quantity:0,currency,orders:new Set()};
     cur.quantity += Number(x.quantity)||1;
-    cur.orders.add(String(x.orderId||''));
+    cur.orders.add(String(x.recordKey||x.orderId||''));
     map.set(key,cur);
   }
   let no=1;
   for(const x of [...map.values()].sort((a,b)=>a.country.localeCompare(b.country,'en')||a.category.localeCompare(b.category,'zh')||a.product.localeCompare(b.product,'fr'))){
     const learned=learnedCostRateForDescription(x.product,x.country);
-    const cogs=learned?.cogs??null,shipping=learned?.shipping??null,unitTotal=learned?.unitTotal??null;
+    const kbCost=window.WRITE_KB?.calculateCost?.({productName:x.product,sku:x.sku,country:x.country,currency:x.currency,quantity:x.quantity,orderAmount:0});
+    const cogs=learned?.cogs??(kbCost?.resolved?kbCost.unitCost:null),shipping=learned?.shipping??(kbCost?.resolved?0:null),unitTotal=learned?.unitTotal??(kbCost?.resolved?kbCost.unitCost:null);
     const calcUnit=Number.isFinite(Number(unitTotal))?Number(unitTotal):((Number.isFinite(Number(cogs))?Number(cogs):0)+(Number.isFinite(Number(shipping))?Number(shipping):0));
     const hasCost=Number.isFinite(Number(unitTotal))||Number.isFinite(Number(cogs))||Number.isFinite(Number(shipping));
     rows.push({
@@ -1282,7 +1283,7 @@ function generatedGenericFactRowsForWorkbook(workbookName){
       sku:x.sku,quantity:x.quantity,cogs,shipping,unitTotal,
       amount:hasCost?Math.round((x.quantity*calcUnit+Number.EPSILON)*100)/100:0,
       currency:x.currency,
-      costStatus:hasCost?'已使用学习成本':'待补成本（无可靠学习价格）',
+      costStatus:learned?'已使用历史 FACT 学习成本':kbCost?.resolved?'已使用长期成本模型':hasCost?'已使用学习成本':'待补成本（无可靠学习价格）',
       sourceFile:workbookName,sourceSheet:'AUTO_FACT',generated:true,
       orderCount:x.orders.size
     });
@@ -1356,14 +1357,14 @@ async function rebuildArchiveReplacingEntry(archive,path,newBytes){
   const centralSize=central.reduce((a,b)=>a+b.length,0),centralOffset=offset;parts.push(...central,new Uint8Array([...u32(ZIP_EOCD),...u16(0),...u16(0),...u16(entries.length),...u16(entries.length),...u32(centralSize),...u32(centralOffset),...u16(0)]));return new Blob(parts,{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
 }
 async function buildGeneratedPencilFactWorkbook(workbookName){
-  const resp=await fetch(`./assets/FACT_TEMPLATE_CN_CANONICAL_V1.xlsx?v=7.1.10`,{cache:'no-store'});
+  const resp=await fetch(`./assets/FACT_TEMPLATE_CN_CANONICAL_V1.xlsx?v=7.2.0`,{cache:'no-store'});
   if(!resp.ok)throw new Error(`无法读取 CN 标准 FACT 模板（HTTP ${resp.status}）`);
 
   const templateBlob=await resp.blob();
   if(!templateBlob?.size)throw new Error('CN 标准 FACT 模板文件为空');
   const archive=await PreserveZipArchive.open(templateBlob);
 
-  // V7.1.10: release-time verified canonical path. This removes runtime XML-discovery as a point of failure.
+  // V7.2.0: release-time verified canonical path. This removes runtime XML-discovery as a point of failure.
   const canonicalPath='xl/worksheets/sheet1.xml';
   let factPath=archive.get(canonicalPath)?canonicalPath:'';
 
@@ -1403,7 +1404,7 @@ async function buildGeneratedFactWorkbook(workbookName){
     return buildGeneratedPencilFactWorkbook(workbookName);
   }
   const data=generatedFactRowsForWorkbook(workbookName);
-  const resp=await fetch(`./assets/FACT_TEMPLATE_LEARNED_V1.xlsx?v=7.1.10`,{cache:'no-store'});if(!resp.ok)throw new Error('无法读取内置 FACT 学习模板');
+  const resp=await fetch(`./assets/FACT_TEMPLATE_LEARNED_V1.xlsx?v=7.2.0`,{cache:'no-store'});if(!resp.ok)throw new Error('无法读取内置 FACT 学习模板');
   const templateBlob=await resp.blob(),archive=await PreserveZipArchive.open(templateBlob),sheetPath='xl/worksheets/sheet1.xml';
   const xml=await archive.text(sheetPath,16*1024*1024),patched=patchLearnedTemplateSheetXml(xml,data,workbookName);
   return rebuildArchiveReplacingEntry(archive,sheetPath,enc.encode(patched));
@@ -1533,7 +1534,7 @@ function buildAccountingReport(){
     ['FACT 成本总额',factData.totalAmount,'FACT / 自动生成 FACT 的 Amount 合计',factData.factRows.length?(factData.active?'已解析':'已生成 · 成本待补'):'无 FACT 数据'],
     ['估算毛利',multiCurrency?'—':grossProfit,multiCurrency?'多币种时不跨币种计算毛利':'销售订单总额 - FACT 成本总额',multiCurrency?'不计算':'估算值'],
     ['估算毛利率',multiCurrency?'—':grossMargin,multiCurrency?'多币种时不跨币种计算毛利率':'估算毛利 ÷ 销售订单总额',multiCurrency?'不计算':'估算值'],
-    ['去重后订单数',classified.orders.length,'最终纳入结算的唯一订单','已核算'],
+    ['结算记录数',classified.orders.length,'每个源订单行均保留；订单号不作为删除依据','已核算'],
     ['商品件数',totalItemQty,'所有商品行数量合计','已核算'],
     ['赠品件数',giftQty,'🎁 / 100% off 自动识别','已识别'],
     ['待复核订单',reviewOrders.length,'正式交付前建议归零',reviewOrders.length?'需处理':'通过']
@@ -1567,15 +1568,15 @@ function buildAccountingReport(){
   for(const x of classified.lineItems){
     const key=[x.categoryLabel||'待确认',x.productName||'',x.sku||''].join('\u0001');
     const cur=productMap.get(key)||{category:x.categoryLabel||'待确认',product:x.productName||'',sku:x.sku||'',qty:0,free:0,orders:new Set()};
-    const qty=Number(x.quantity)||1; cur.qty+=qty; if(x.isFree)cur.free+=qty; cur.orders.add(x.orderId); productMap.set(key,cur);
+    const qty=Number(x.quantity)||1; cur.qty+=qty; if(x.isFree)cur.free+=qty; cur.orders.add(x.recordKey||x.orderId); productMap.set(key,cur);
   }
   const productRows=[['商品分类','产品名称','SKU','总件数','付费件数','赠品件数','涉及订单数']];
   [...productMap.values()].sort((a,b)=>b.qty-a.qty||a.category.localeCompare(b.category)).forEach(x=>productRows.push([x.category,x.product,x.sku,x.qty,Math.max(0,x.qty-x.free),x.free,x.orders.size]));
 
   // 06: Review only.
-  const byId=new Map(classified.orders.map(o=>[o.orderId,o]));
+  const byId=new Map(classified.orders.map(o=>[String(o.recordKey||o.orderId),o]));
   const reviewRows=[['订单号','订单金额','客户','国家/地区','待确认产品','SKU','建议处理']];
-  for(const x of classified.unknown){const o=byId.get(x.orderId)||{};reviewRows.push([x.orderId,Number(o.orderAmount)||0,o.buyerName||'',o.country||x.country||'',x.productName||'',x.sku||'','请在 WebApp「待复核」页修改并保存']);}
+  for(const x of classified.unknown){const o=byId.get(String(x.recordKey||x.orderId))||{};reviewRows.push([x.orderId,Number(o.orderAmount)||0,o.buyerName||'',o.country||x.country||'',x.productName||'',x.sku||'','请在 WebApp「待复核」页修改并保存']);}
   if(reviewRows.length===1)reviewRows.push(['—',0,'','','无待复核商品','','全部已完成分类']);
 
   const auditRows=[['订单号','订单金额','会计分类','分类状态','人工修正','来源文件','来源 Sheet','源行号','店铺账号','付款时间','发货时间']];
@@ -1691,6 +1692,8 @@ async function exportAccounting(){
   hideError();
   let report=null;
   try{
+    await window.WRITE_LEARNING_V2?.beforeExport?.();
+    exportCenterLog('✓ V7.2 源记录 / 商品数量守恒检查通过。','success');
     exportCenterStage('1/4 正在生成会计 Excel…');
     report=buildAccountingReport();
     if(!report?.blob?.size)throw new Error('会计报表生成失败：Excel 文件为空。');
@@ -1868,12 +1871,12 @@ if(themeMedia.addEventListener)themeMedia.addEventListener('change',onSystemThem
 applyTheme(getThemePreference(),{persist:false});
 
 
-// v7.1.10 release notes controller — show once per release per browser
-const WRITE_RELEASE_META = window.WRITE_RELEASE_META || {current:{version:document.body.dataset.release||'7.1.10',time:'',title:'WRITE Settlement Manager',sections:[]},history:[]};
+// v7.2.0 release notes controller — show once per release per browser
+const WRITE_RELEASE_META = window.WRITE_RELEASE_META || {current:{version:document.body.dataset.release||'7.2.0',time:'',title:'WRITE Settlement Manager',sections:[]},history:[]};
 const WRITE_RELEASE = {
-  version: WRITE_RELEASE_META.current?.version || document.body.dataset.release || '7.1.10',
+  version: WRITE_RELEASE_META.current?.version || document.body.dataset.release || '7.2.0',
   date: WRITE_RELEASE_META.current?.time || '',
-  title: `WRITE Settlement Manager v${WRITE_RELEASE_META.current?.version || document.body.dataset.release || '7.1.10'}`,
+  title: `WRITE Settlement Manager v${WRITE_RELEASE_META.current?.version || document.body.dataset.release || '7.2.0'}`,
   sections: WRITE_RELEASE_META.current?.sections || []
 };
 function showReleaseNotesIfNeeded(){
@@ -1908,7 +1911,7 @@ document.documentElement.dataset.writeReady='true';
 
 
 
-// v7.1.10 — version history from unified release metadata
+// v7.2.0 — version history from unified release metadata
 const WRITE_HISTORY = Array.isArray(WRITE_RELEASE_META.history) ? WRITE_RELEASE_META.history : [];
 function renderReleaseHistory(){
   const host=document.getElementById('releaseHistory');

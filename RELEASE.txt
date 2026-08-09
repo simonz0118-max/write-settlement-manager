@@ -1,11 +1,6 @@
-WRITE Settlement Manager V7.1.10
-Release: 2026-08-10 00:55
-
-Adaptive Order Schema Learning
-- automatic unfamiliar table recognition
-- one-time field mapping when confidence is insufficient
-- ORDER_SCHEMA in IndexedDB + Cloudflare D1
-- learned schema reuse and cloud sync
-- required-field safety gate
-- product quantity derivation
-- existing accounting / FACT / conservation logic preserved
+WRITE Settlement Manager V7.2.0
+Release: 2026-08-10 01:20
+Core invariant: NO SILENT DATA LOSS.
+Same orderId rows are preserved.
+Learning: ORDER_SCHEMA / PRODUCT_CATEGORY / COST_MODEL / CURRENCY_POLICY / FACT_MODEL / TAX_POLICY.
+Conflict-safe manual rules. IndexedDB + D1 sync retained.
