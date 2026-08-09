@@ -269,24 +269,38 @@ function normalizeTargetLocal(target){
   return clean.startsWith('xl/')?clean:`xl/${clean}`;
 }
 function findFactSheetPath(workbookXml,relsXml){
-  const rels=new Map();let m;
-  const rr=/<Relationship\b([^>]*)\/?\s*>/g;
-  while((m=rr.exec(relsXml))){
-    const id=/\bId="([^"]+)"/.exec(m[1])?.[1],
-          target=/\bTarget="([^"]+)"/.exec(m[1])?.[1];
-    if(id&&target)rels.set(id,normalizeTargetLocal(target));
+  const relationships=new Map();
+  let match;
+  const relRe=/<Relationship\b([^>]*)\/?\s*>/g;
+  while((match=relRe.exec(relsXml))){
+    const attrs=match[1];
+    const id=/\bId="([^"]+)"/.exec(attrs)?.[1];
+    const target=/\bTarget="([^"]+)"/.exec(attrs)?.[1];
+    if(id&&target)relationships.set(id,normalizeTargetLocal(target));
   }
-  const candidates=[];
-  const sr=/<sheet\b([^>]*)\/?\s*>/g;
-  while((m=sr.exec(workbookXml))){
-    const name=xmlDecodeLocal(/\bname="([^"]+)"/.exec(m[1])?.[1]||''),
-          rid=/\br:id="([^"]+)"/.exec(m[1])?.[1],
-          path=rels.get(rid);
-    if(path && /FACT/i.test(name))candidates.push({name,path});
+
+  const sheets=[];
+  const sheetRe=/<sheet\b([^>]*)\/?\s*>/g;
+  while((match=sheetRe.exec(workbookXml))){
+    const attrs=match[1];
+    const name=xmlDecodeLocal(/\bname="([^"]+)"/.exec(attrs)?.[1]||'');
+    const rid=/\br:id="([^"]+)"/.exec(attrs)?.[1];
+    const path=relationships.get(rid)||'';
+    if(path)sheets.push({name,path});
   }
-  // V7.0.9: CN is the canonical WRITE FACT when multiple FACT sheets exist.
-  const cn=candidates.find(x=>/CN/i.test(x.name));
-  return cn?.path || candidates[0]?.path || '';
+
+  // Prefer any sheet whose name contains FACT. Do not require exact FACT-CN.
+  const named=sheets.filter(item=>/FACT/i.test(item.name));
+  if(named.length){
+    const cn=named.find(item=>/CN/i.test(item.name));
+    return (cn||named[0]).path;
+  }
+
+  // Canonical V7 fallback: if the cleaned CN template contains a single worksheet,
+  // that worksheet is the FACT sheet even if its display name was changed.
+  if(sheets.length===1)return sheets[0].path;
+
+  return '';
 }
 function normalizeCountry(v=''){
   const s=norm(v).toUpperCase().replace(/\s+/g,' ');
@@ -920,7 +934,7 @@ window.addEventListener('unhandledrejection',event=>{
 function startImport(fileList){
   clearExportDownloadLink();
   const files=[...fileList].filter(f=>/\.(xlsx|zip)$/i.test(f.name)); if(!files.length||busy)return;
-  worker?.terminate(); worker=new Worker('./src/workers/import.worker.bundle.js?v=7.0.9-20260809-1920'); importStartedAt=performance.now(); importedFileNames=files.map(f=>f.name);
+  worker?.terminate(); worker=new Worker('./src/workers/import.worker.bundle.js?v=7.0.10-20260809-1945'); importStartedAt=performance.now(); importedFileNames=files.map(f=>f.name);
   setBusy(true); hideError(); els.importLanding.hidden=false; els.appViews.hidden=true; els.topActions.hidden=true;
   els.currentFile.textContent='准备读取…'; els.progressFill.style.width='0%'; els.progressText.textContent='0% · 大文件在独立线程运行';
   worker.onmessage=({data})=>{
@@ -1137,7 +1151,7 @@ function renderOrders(){
 }
 
 
-// v7.0.9 — mandatory FACT delivery: generate a FACT when the source workbook has none.
+// v7.0.10 — mandatory FACT delivery: generate a FACT when the source workbook has none.
 function currencyForWorkbook(workbookName=''){
   const n=String(workbookName||'').toUpperCase();
   if(/\bUSD\b|\$US|US\$/.test(n))return 'USD';
@@ -1294,14 +1308,14 @@ async function rebuildArchiveReplacingEntry(archive,path,newBytes){
   const centralSize=central.reduce((a,b)=>a+b.length,0),centralOffset=offset;parts.push(...central,new Uint8Array([...u32(ZIP_EOCD),...u16(0),...u16(0),...u16(entries.length),...u16(entries.length),...u32(centralSize),...u32(centralOffset),...u16(0)]));return new Blob(parts,{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
 }
 async function buildGeneratedPencilFactWorkbook(workbookName){
-  const resp=await fetch(`./assets/FACT_TEMPLATE_CN_CANONICAL_V1.xlsx?v=7.0.9`,{cache:'no-store'});
+  const resp=await fetch(`./assets/FACT_TEMPLATE_CN_CANONICAL_V1.xlsx?v=7.0.10`,{cache:'no-store'});
   if(!resp.ok)throw new Error('无法读取 CN 标准 FACT 模板');
   const templateBlob=await resp.blob(),
         archive=await PreserveZipArchive.open(templateBlob),
         wbXml=await archive.text('xl/workbook.xml',4*1024*1024),
         relsXml=await archive.text('xl/_rels/workbook.xml.rels',4*1024*1024),
         factPath=findFactSheetPath(wbXml,relsXml);
-  if(!factPath)throw new Error('CN 标准模板缺少 FACT-CN 工作表');
+  if(!factPath)throw new Error('CN 标准模板中未找到可写入的 FACT 工作表');
 
   const effectiveRows=factRowsWithAutoLearning(workbookName,LEARNED_PENCIL_FACT_ROWS);
   const audit=factCompletenessAudit(workbookName,effectiveRows);
@@ -1310,19 +1324,22 @@ async function buildGeneratedPencilFactWorkbook(workbookName){
     throw new Error(`仍有无法识别商品：${hardIssues.slice(0,6).map(x=>x.product||x.sku||'未知商品').join(' / ')}`);
   }
 
+  if(!archive.has(factPath))throw new Error(`CN FACT 工作表路径不存在：${factPath}`);
   const xml=await archive.text(factPath,16*1024*1024);
   let patched=patchFactXml(xml,effectiveRows,workbookName).xml;
   const dynamicRows=effectiveRows.filter(r=>r.dynamic);
   patched=appendDynamicFactRows(patched,dynamicRows);
 
-  return rebuildArchiveReplacingEntry(archive,factPath,enc.encode(patched));
+  const rebuilt=await rebuildArchiveReplacingEntry(archive,factPath,enc.encode(patched));
+  if(!rebuilt || !rebuilt.size)throw new Error('CN FACT Excel 生成结果为空');
+  return rebuilt;
 }
 async function buildGeneratedFactWorkbook(workbookName){
   if(detectGeneratedFactProfile(workbookName)==='PENCIL_V1'){
     return buildGeneratedPencilFactWorkbook(workbookName);
   }
   const data=generatedFactRowsForWorkbook(workbookName);
-  const resp=await fetch(`./assets/FACT_TEMPLATE_LEARNED_V1.xlsx?v=7.0.9`,{cache:'no-store'});if(!resp.ok)throw new Error('无法读取内置 FACT 学习模板');
+  const resp=await fetch(`./assets/FACT_TEMPLATE_LEARNED_V1.xlsx?v=7.0.10`,{cache:'no-store'});if(!resp.ok)throw new Error('无法读取内置 FACT 学习模板');
   const templateBlob=await resp.blob(),archive=await PreserveZipArchive.open(templateBlob),sheetPath='xl/worksheets/sheet1.xml';
   const xml=await archive.text(sheetPath,16*1024*1024),patched=patchLearnedTemplateSheetXml(xml,data,workbookName);
   return rebuildArchiveReplacingEntry(archive,sheetPath,enc.encode(patched));
@@ -1770,12 +1787,12 @@ if(themeMedia.addEventListener)themeMedia.addEventListener('change',onSystemThem
 applyTheme(getThemePreference(),{persist:false});
 
 
-// v7.0.9 release notes controller — show once per release per browser
-const WRITE_RELEASE_META = window.WRITE_RELEASE_META || {current:{version:document.body.dataset.release||'7.0.9',time:'',title:'WRITE Settlement Manager',sections:[]},history:[]};
+// v7.0.10 release notes controller — show once per release per browser
+const WRITE_RELEASE_META = window.WRITE_RELEASE_META || {current:{version:document.body.dataset.release||'7.0.10',time:'',title:'WRITE Settlement Manager',sections:[]},history:[]};
 const WRITE_RELEASE = {
-  version: WRITE_RELEASE_META.current?.version || document.body.dataset.release || '7.0.9',
+  version: WRITE_RELEASE_META.current?.version || document.body.dataset.release || '7.0.10',
   date: WRITE_RELEASE_META.current?.time || '',
-  title: `WRITE Settlement Manager v${WRITE_RELEASE_META.current?.version || document.body.dataset.release || '7.0.9'}`,
+  title: `WRITE Settlement Manager v${WRITE_RELEASE_META.current?.version || document.body.dataset.release || '7.0.10'}`,
   sections: WRITE_RELEASE_META.current?.sections || []
 };
 function showReleaseNotesIfNeeded(){
@@ -1810,7 +1827,7 @@ document.documentElement.dataset.writeReady='true';
 
 
 
-// v7.0.9 — version history from unified release metadata
+// v7.0.10 — version history from unified release metadata
 const WRITE_HISTORY = Array.isArray(WRITE_RELEASE_META.history) ? WRITE_RELEASE_META.history : [];
 function renderReleaseHistory(){
   const host=document.getElementById('releaseHistory');

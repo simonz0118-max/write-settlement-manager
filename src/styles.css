@@ -448,7 +448,7 @@ html[data-theme="dark"] .model-head,html[data-theme="dark"] .learning-head{backg
   .export-status-toast{right:12px;bottom:108px;width:calc(100vw - 24px)}
 }
 
-/* V7.0.9 — explicit export center; no automatic browser download dependency */
+/* V7.0.10 — explicit export center; no automatic browser download dependency */
 .export-center{
   position:fixed;right:24px;bottom:24px;z-index:10050;
   width:min(620px,calc(100vw - 48px));max-height:min(72vh,720px);overflow:auto;

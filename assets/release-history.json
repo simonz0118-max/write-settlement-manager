@@ -1,33 +1,39 @@
 {
   "current": {
-    "version": "7.0.9",
-    "time": "2026-08-09 19:20",
-    "title": "FACT 国家×商品自动学习",
+    "version": "7.0.10",
+    "time": "2026-08-09 19:45",
+    "title": "修复 CN FACT 模板定位",
     "sections": [
       {
-        "label": "自动学习",
+        "label": "修复",
         "items": [
-          "从当前订单金额和收费商品数量自动推导缺失 国家 × 商品 的单位 FACT 价格。",
-          "自动学习价格持久保存到浏览器规则库，后续同组合可以复用。",
-          "缺失组合动态追加到原 FACT-CN 工作表，写入国家、商品、Quantity、价格和 Amount。"
+          "修复 V7.0.9 将 CN 模板工作表名称写死为 FACT-CN 导致真实模板无法定位的问题。",
+          "FACT 工作表改为基于 workbook relationship + FACT 名称匹配；单工作表 CN 模板可自动作为 FACT。",
+          "CN FACT 生成前校验 worksheet path 是否真实存在。",
+          "CN FACT Excel 重建后校验 Blob 非空，避免生成阶段静默失败。"
         ]
       },
       {
-        "label": "导出规则",
+        "label": "保留",
         "items": [
-          "CN 模板没有历史价格行时，不再因 NO_FACT_TARGET / QUANTITY_MISMATCH 中止 FACT。",
-          "按用户要求，成本价格准确性不作为导出阻断条件；只有真正无法识别商品类型才阻止 FACT。"
-        ]
-      },
-      {
-        "label": "报表",
-        "items": [
-          "专业会计报表 FACT 汇总同步包含动态学习生成的行。"
+          "V7.0.9 的国家×商品自动学习、动态 FACT 行、数量守恒和导出中心全部保留。"
         ]
       }
     ]
   },
   "history": [
+    {
+      "version": "7.0.10",
+      "time": "2026-08-09 19:45",
+      "title": "稳定版：修复 CN FACT 模板工作表定位",
+      "items": [
+        "修复 V7.0.9 将 CN 模板工作表名称写死为 FACT-CN 导致真实模板无法定位的问题。",
+        "FACT 工作表改为基于 workbook relationship + FACT 名称匹配；单工作表 CN 模板可自动作为 FACT。",
+        "CN FACT 生成前校验 worksheet path 是否真实存在。",
+        "CN FACT Excel 重建后校验 Blob 非空，避免生成阶段静默失败。",
+        "V7.0.9 的国家×商品自动学习、动态 FACT 行、数量守恒和导出中心全部保留。"
+      ]
+    },
     {
       "version": "7.0.9",
       "time": "2026-08-09 19:20",

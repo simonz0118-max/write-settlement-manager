@@ -1,3 +1,10 @@
+## v7.0.10 — 2026-08-09 19:45 (Europe/Paris)
+- 修复 CN FACT 模板工作表定位：不再要求显示名必须精确等于 `FACT-CN`。
+- 改为解析 `workbook.xml` 与 `workbook.xml.rels`，优先寻找名称含 `FACT` 的工作表；单工作表 CN 模板直接作为 FACT。
+- CN FACT 写入前验证 worksheet path 存在。
+- CN FACT Excel 重建后验证生成 Blob 非空。
+- 保留国家×商品自动学习、动态 FACT 行、数量守恒、会计 Excel 与完整 ZIP 导出中心。
+
 ## v7.0.9 — 2026-08-09 19:20 (Europe/Paris)
 - 新增缺失 `国家 × 商品` 自动学习：CN FACT 历史不存在的组合不再阻断导出。
 - 当前订单金额按收费商品数量分摊，自动推导缺失组合单位 FACT 价格；按用户要求价格准确性不作为阻断条件。

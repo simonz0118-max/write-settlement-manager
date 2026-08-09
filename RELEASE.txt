@@ -1,9 +1,8 @@
-WRITE Settlement Manager V7.0.9
-Release time: 2026-08-09 19:20 Europe/Paris
+WRITE Settlement Manager V7.0.10
+Release time: 2026-08-09 19:45 Europe/Paris
 
-- 缺失 国家 × 商品 自动学习
-- 当前订单金额自动推导 FACT 单位价格
-- 自动价格学习持久化
-- 自动扩展 FACT-CN
-- 价格准确性不阻断导出
-- 仅无法识别商品才阻止 FACT
+- 修复 CN FACT 工作表定位
+- 不再写死 FACT-CN 名称
+- relationship 路径真实校验
+- CN FACT 生成结果非空校验
+- 保留 V7.0.9 全部自动学习与动态 FACT 功能
