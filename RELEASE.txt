@@ -1,4 +1,3 @@
-WRITE Settlement Manager V7.2.1
-Batch rule editor + optional unknown-cost export.
-UNKNOWN cost is not zero.
-D1 API validation uses JSON parsing.
+WRITE Settlement Manager V7.2.2
+Batch modal UI and close-interaction hotfix.
+No business-logic changes.

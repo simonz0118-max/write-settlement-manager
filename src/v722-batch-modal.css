@@ -1,0 +1,94 @@
+/* WRITE Settlement Manager v7.2.2 — batch modal hotfix */
+html.v722-modal-open,html.v722-modal-open body{overflow:hidden}
+#v722BatchModal{
+  z-index:240;
+  padding:24px;
+  align-items:center;
+  justify-items:center;
+  overflow:hidden;
+  background:rgba(10,11,15,.44);
+  backdrop-filter:blur(12px);
+  -webkit-backdrop-filter:blur(12px)
+}
+#v722BatchModal .v722-batch-card{
+  width:min(1180px,calc(100vw - 48px));
+  max-width:none;
+  height:min(820px,calc(100vh - 48px));
+  max-height:calc(100vh - 48px);
+  padding:0;
+  overflow:hidden;
+  display:flex;
+  flex-direction:column;
+  border-radius:18px;
+  background:var(--panel);
+  color:var(--text);
+  box-shadow:0 30px 100px rgba(0,0,0,.30)
+}
+.v722-batch-header{
+  flex:0 0 auto;
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:24px;
+  padding:22px 24px 16px;
+  border-bottom:1px solid var(--line);
+  background:var(--panel)
+}
+.v722-batch-header h3{margin:6px 0 5px;font-size:22px;line-height:1.15}
+.v722-batch-header p{margin:0;font-size:12px;line-height:1.5;color:var(--muted)}
+.v722-close{
+  flex:0 0 auto;width:34px;height:34px;border:1px solid var(--line2);
+  border-radius:10px;background:transparent;color:var(--muted);font-size:22px;
+  line-height:1;display:grid;place-items:center
+}
+.v722-close:hover{background:rgba(127,127,127,.10);color:var(--text)}
+.v722-batch-body{min-height:0;flex:1 1 auto;display:flex;flex-direction:column;overflow:hidden}
+.v722-bulk-toolbar{
+  flex:0 0 auto;
+  display:grid;
+  grid-template-columns:auto minmax(180px,1fr) minmax(130px,.8fr) minmax(170px,1fr) minmax(140px,.8fr) minmax(160px,.9fr) auto;
+  gap:8px;align-items:center;padding:12px 16px;border-bottom:1px solid var(--line);
+  background:var(--panel)
+}
+.v722-bulk-toolbar label{font-size:11px;white-space:nowrap;display:flex;align-items:center;gap:6px}
+.v722-bulk-toolbar input,.v722-bulk-toolbar select{
+  min-width:0;width:100%;height:34px;padding:0 9px;border:1px solid var(--line2);
+  border-radius:8px;background:var(--panel);color:var(--text);font-size:11px
+}
+.v722-bulk-toolbar .toolbar-button{height:34px;white-space:nowrap}
+.v722-batch-table-wrap{flex:1 1 auto;min-height:0;overflow:auto;overscroll-behavior:contain;background:var(--panel)}
+#v722BatchModal .data-table{min-width:1050px;width:100%;table-layout:fixed;font-size:11px}
+#v722BatchModal .data-table th{
+  position:sticky;top:0;z-index:2;background:var(--panel);border-bottom:1px solid var(--line2);
+  padding:10px 8px;white-space:nowrap
+}
+#v722BatchModal .data-table td{padding:9px 8px;vertical-align:middle}
+#v722BatchModal .data-table th:nth-child(1){width:46px}
+#v722BatchModal .data-table th:nth-child(2){width:250px}
+#v722BatchModal .data-table th:nth-child(3){width:105px}
+#v722BatchModal .data-table th:nth-child(4){width:70px}
+#v722BatchModal .data-table th:nth-child(5){width:68px}
+#v722BatchModal .data-table th:nth-child(6){width:135px}
+#v722BatchModal .data-table th:nth-child(7){width:150px}
+#v722BatchModal .data-table th:nth-child(8){width:130px}
+#v722BatchModal .data-table th:nth-child(9){width:125px}
+#v722BatchModal td strong{display:block;font-size:11px;line-height:1.25;overflow-wrap:anywhere}
+#v722BatchModal td small{display:block;margin-top:3px;font-size:9px;color:var(--muted);overflow-wrap:anywhere}
+#v722BatchModal td select,#v722BatchModal td input{
+  width:100%;min-width:0;height:32px;padding:0 7px;border:1px solid var(--line2);
+  border-radius:7px;background:var(--panel);color:var(--text);font-size:10px
+}
+.v722-hint{flex:0 0 auto;margin:0;padding:10px 16px;border-top:1px solid var(--line);font-size:10px}
+.v722-actions{
+  flex:0 0 auto;margin:0!important;padding:13px 16px;border-top:1px solid var(--line);
+  background:var(--panel);display:flex;gap:8px;justify-content:flex-end
+}
+.v722-actions .toolbar-button{min-height:34px;font-size:11px}
+@media(max-width:980px){
+  #v722BatchModal{padding:12px}
+  #v722BatchModal .v722-batch-card{width:calc(100vw - 24px);height:calc(100vh - 24px);max-height:none}
+  .v722-bulk-toolbar{grid-template-columns:1fr 1fr}
+  .v722-bulk-toolbar label{grid-column:1/-1}
+  .v722-batch-header{padding:18px 16px 14px}
+  .v722-actions{overflow-x:auto;justify-content:flex-start}
+}
