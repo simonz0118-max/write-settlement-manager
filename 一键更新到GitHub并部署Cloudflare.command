@@ -2,7 +2,7 @@
 set -e
 
 ROOT="$(cd "$(dirname "$0")" && pwd)"
-VERSION="6.5.12"
+VERSION="6.5.13"
 REPO_URL="https://github.com/simonz0118-max/write-settlement-manager.git"
 PROJECT_NAME="write-settlement-manager"
 TMP_DIR="$(mktemp -d -t write-settlement-publish.XXXXXX)"

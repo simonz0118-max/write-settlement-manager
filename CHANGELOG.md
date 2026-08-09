@@ -1,3 +1,11 @@
+## v6.5.13 — 2026-08-09 12:30 (Europe/Paris)
+- 修复 WebApp 当前版本、首次更新弹窗、历史更新页面与静态资源版本号不同步的问题。
+- 新增 `src/release-meta.js` + `assets/release-history.json` 作为统一版本数据源。
+- 补齐 v6.5.9、v6.5.10、v6.5.11、v6.5.12 的历史更新记录。
+- 首次更新弹窗改为按版本独立 localStorage key，确保每个新版本只弹一次。
+- `index.html` 的 `data-release`、CSS/JS cache-busting、左上角版本、历史更新当前版本统一为 v6.5.13。
+- 发布前加入版本一致性测试，要求 CHANGELOG、README、README_CN、RELEASE、网页 metadata、部署脚本全部一致。
+
 ## v6.5.12 — 2026-08-09 12:20 (Europe/Paris)
 - 正式发布包恢复中文升级入口与中文升级说明。
 - 新增 `一键更新到GitHub并部署Cloudflare.command`、`本地预览.command`、`升级说明_请先看.txt`。

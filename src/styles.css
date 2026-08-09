@@ -319,7 +319,7 @@ html[data-theme="dark"] .release-notes-backdrop{background:rgba(0,0,0,.52)}html[
 @media(max-width:600px){.history-item{padding:18px 0}.history-body h3{font-size:14px}.history-body li{font-size:12px}.history-toolbar{flex-direction:column;gap:8px}}
 
 
-/* v6.5.12 — review page theme consistency fix */
+/* v6.5.13 — review page theme consistency fix */
 html[data-theme="dark"] .review-help{
   background:#202023;
   color:#8d8d94;
