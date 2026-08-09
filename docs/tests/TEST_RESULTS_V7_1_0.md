@@ -1,0 +1,13 @@
+# V7.1.0 Knowledge Base Regression
+- standalone knowledge module syntax: PASS
+- IndexedDB local store: PASS
+- legacy localStorage migration: PASS
+- product category bridge: PASS
+- FACT price bridge: PASS
+- offline local-only mode: PASS
+- online D1 sync client: PASS
+- conflict priority model: PASS
+- JSON backup / restore: PASS
+- Cloudflare Pages Function syntax: PASS
+- D1 schema included: PASS
+- V7.0.12 accounting/FACT runtime retained: PASS

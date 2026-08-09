@@ -43,8 +43,11 @@ function savePersistentLineRule(productName='',sku='',category=''){
   const rules=loadPersistentLineRules();
   rules[key]={category,productName:norm(productName),sku:norm(sku),updatedAt:new Date().toISOString()};
   try{localStorage.setItem(LEARNED_RULES_STORAGE_KEY,JSON.stringify(rules))}catch(e){}
+  window.WRITE_KB?.learnProduct?.(productName,sku,category,true)?.catch?.(()=>{});
 }
 function persistentCategoryFor(productName='',sku=''){
+  const kbCategory=window.WRITE_KB?.productCategory?.(productName,sku);
+  if(kbCategory)return kbCategory;
   const rules=loadPersistentLineRules();
   const skuKey=normalizeRuleToken(sku)?`sku:${normalizeRuleToken(sku)}`:'';
   const nameKey=normalizeRuleToken(productName)?`name:${normalizeRuleToken(productName)}`:'';
@@ -504,8 +507,11 @@ function saveAutoFactPriceRule(country,targetType,unitPrice,source='CURRENT_ORDE
     updatedAt:new Date().toISOString()
   };
   try{localStorage.setItem(AUTO_FACT_PRICE_STORAGE_KEY,JSON.stringify(rules))}catch(e){}
+  window.WRITE_KB?.learnPrice?.(country,targetType,price,source)?.catch?.(()=>{});
 }
 function savedAutoFactUnitPrice(country,targetType){
+  const kbPrice=window.WRITE_KB?.factPrice?.(country,targetType);
+  if(Number.isFinite(kbPrice))return kbPrice;
   const rules=loadAutoFactPriceRules();
   const ruleId=`${normalizeCountry(country)}\u0001${targetType}`;
   const price=Number(rules[ruleId]?.unitPrice);
@@ -962,7 +968,7 @@ window.addEventListener('unhandledrejection',event=>{
 function startImport(fileList){
   clearExportDownloadLink();
   const files=[...fileList].filter(f=>/\.(xlsx|zip)$/i.test(f.name)); if(!files.length||busy)return;
-  worker?.terminate(); worker=new Worker('./src/workers/import.worker.bundle.js?v=7.0.12-20260809-2020'); importStartedAt=performance.now(); importedFileNames=files.map(f=>f.name);
+  worker?.terminate(); worker=new Worker('./src/workers/import.worker.bundle.js?v=7.1.0-20260809-2212'); importStartedAt=performance.now(); importedFileNames=files.map(f=>f.name);
   setBusy(true); hideError(); els.importLanding.hidden=false; els.appViews.hidden=true; els.topActions.hidden=true;
   els.currentFile.textContent='准备读取…'; els.progressFill.style.width='0%'; els.progressText.textContent='0% · 大文件在独立线程运行';
   worker.onmessage=({data})=>{
@@ -1064,9 +1070,18 @@ function renderQualityCenter(){
 function renderLearningCenter(){
   const host=document.getElementById('learningList'),meta=document.getElementById('learningMeta');
   if(!host||!meta)return;
-  const rows=learnedRuleRows();
-  meta.textContent=`本次识别 ${rows.length} 条商品/SKU 映射 · 人工修正优先于自动规则`;
-  host.innerHTML=rows.slice(0,500).map(r=>`<div class="learning-row"><div><strong>${escapeHtml(r.sku||r.name||'—')}</strong><small>${escapeHtml(r.name||'')}</small></div><span>${escapeHtml(r.category)}</span><span>${escapeHtml(r.profile)}</span><span>${numberFormat.format(r.count)} 件</span></div>`).join('')||'<div class="empty">导入订单后显示学习结果。</div>';
+  const rules=window.WRITE_KB?.list?.()||[];
+  const stats=window.WRITE_KB?.stats?.()||{total:0,productRules:0,priceRules:0};
+  meta.textContent=`长期知识库 ${stats.total} 条 · 商品规则 ${stats.productRules} · 价格规则 ${stats.priceRules}`;
+  window.WRITE_KB?.renderStatus?.();
+  host.innerHTML=rules.slice(0,500).map(rule=>{
+    const product=rule.type==='PRODUCT_CATEGORY';
+    const title=product?(rule.payload?.sku||rule.payload?.productName||rule.lookupKey):(rule.payload?.targetType||rule.lookupKey);
+    const subtitle=product?(rule.payload?.productName||rule.lookupKey):`${rule.payload?.country||''} · ${Number(rule.payload?.unitPrice||0).toLocaleString('fr-FR',{maximumFractionDigits:4})}`;
+    const value=product?(rule.payload?.category||'—'):'FACT PRICE';
+    const source=rule.confirmed?'人工确认':rule.confidenceLevel==='AUTO_INFERRED'?'自动学习':rule.source;
+    return `<div class="learning-row"><div><strong>${escapeHtml(title||'—')}</strong><small>${escapeHtml(subtitle||'')}</small></div><span>${escapeHtml(value)}</span><span>${escapeHtml(source)}</span><span>${rule.syncState==='SYNCED'?'云端':'待同步'}</span></div>`;
+  }).join('')||'<div class="empty">还没有长期学习规则。导入订单或人工确认后会自动积累。</div>';
 }
 
 
@@ -1179,7 +1194,7 @@ function renderOrders(){
 }
 
 
-// v7.0.12 — mandatory FACT delivery: generate a FACT when the source workbook has none.
+// v7.1.0 — mandatory FACT delivery: generate a FACT when the source workbook has none.
 function currencyForWorkbook(workbookName=''){
   const n=String(workbookName||'').toUpperCase();
   if(/\bUSD\b|\$US|US\$/.test(n))return 'USD';
@@ -1336,14 +1351,14 @@ async function rebuildArchiveReplacingEntry(archive,path,newBytes){
   const centralSize=central.reduce((a,b)=>a+b.length,0),centralOffset=offset;parts.push(...central,new Uint8Array([...u32(ZIP_EOCD),...u16(0),...u16(0),...u16(entries.length),...u16(entries.length),...u32(centralSize),...u32(centralOffset),...u16(0)]));return new Blob(parts,{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
 }
 async function buildGeneratedPencilFactWorkbook(workbookName){
-  const resp=await fetch(`./assets/FACT_TEMPLATE_CN_CANONICAL_V1.xlsx?v=7.0.12`,{cache:'no-store'});
+  const resp=await fetch(`./assets/FACT_TEMPLATE_CN_CANONICAL_V1.xlsx?v=7.1.0`,{cache:'no-store'});
   if(!resp.ok)throw new Error(`无法读取 CN 标准 FACT 模板（HTTP ${resp.status}）`);
 
   const templateBlob=await resp.blob();
   if(!templateBlob?.size)throw new Error('CN 标准 FACT 模板文件为空');
   const archive=await PreserveZipArchive.open(templateBlob);
 
-  // V7.0.12: release-time verified canonical path. This removes runtime XML-discovery as a point of failure.
+  // V7.1.0: release-time verified canonical path. This removes runtime XML-discovery as a point of failure.
   const canonicalPath='xl/worksheets/sheet1.xml';
   let factPath=archive.get(canonicalPath)?canonicalPath:'';
 
@@ -1383,7 +1398,7 @@ async function buildGeneratedFactWorkbook(workbookName){
     return buildGeneratedPencilFactWorkbook(workbookName);
   }
   const data=generatedFactRowsForWorkbook(workbookName);
-  const resp=await fetch(`./assets/FACT_TEMPLATE_LEARNED_V1.xlsx?v=7.0.12`,{cache:'no-store'});if(!resp.ok)throw new Error('无法读取内置 FACT 学习模板');
+  const resp=await fetch(`./assets/FACT_TEMPLATE_LEARNED_V1.xlsx?v=7.1.0`,{cache:'no-store'});if(!resp.ok)throw new Error('无法读取内置 FACT 学习模板');
   const templateBlob=await resp.blob(),archive=await PreserveZipArchive.open(templateBlob),sheetPath='xl/worksheets/sheet1.xml';
   const xml=await archive.text(sheetPath,16*1024*1024),patched=patchLearnedTemplateSheetXml(xml,data,workbookName);
   return rebuildArchiveReplacingEntry(archive,sheetPath,enc.encode(patched));
@@ -1772,7 +1787,24 @@ async function exportAccounting(){
 
 function reimportFlow(){
   if(!classified){els.fileInput.click();return}
-  openConfirm({title:'重新导入数据？',text:'当前统计结果会被清空，然后打开文件选择器重新导入。原始文件不会被修改。',confirmText:'清空并重新导入',action:()=>{resetState(); setTimeout(()=>els.fileInput.click(),80)}});
+  openConfirm({title:'重新导入数据？',text:'当前统计结果会被清空，然后打开文件选择器重新导入。原始文件不会被修改。',confirmText:'清空并重新导入',action:()=>{
+document.getElementById('knowledgeSyncNow')?.addEventListener('click',()=>window.WRITE_KB?.sync?.({force:true}));
+document.getElementById('knowledgeExportBackup')?.addEventListener('click',()=>window.WRITE_KB?.exportBackup?.());
+document.getElementById('knowledgeImportBackup')?.addEventListener('click',()=>document.getElementById('knowledgeBackupFile')?.click());
+document.getElementById('knowledgeBackupFile')?.addEventListener('change',async event=>{
+  const file=event.target.files?.[0];if(!file)return;
+  try{
+    const count=await window.WRITE_KB.importBackup(file);
+    alert(`已恢复 ${count} 条规则`);
+    renderLearningCenter();
+  }catch(err){showError(`规则恢复失败：${err?.message||err}`)}
+  event.target.value='';
+});
+window.addEventListener('write-kb-ready',()=>renderLearningCenter());
+window.addEventListener('write-kb-updated',()=>renderLearningCenter());
+window.WRITE_KB?.init?.();
+
+resetState(); setTimeout(()=>els.fileInput.click(),80)}});
 }
 function clearFlow(){
   if(!classified)return;
@@ -1831,12 +1863,12 @@ if(themeMedia.addEventListener)themeMedia.addEventListener('change',onSystemThem
 applyTheme(getThemePreference(),{persist:false});
 
 
-// v7.0.12 release notes controller — show once per release per browser
-const WRITE_RELEASE_META = window.WRITE_RELEASE_META || {current:{version:document.body.dataset.release||'7.0.12',time:'',title:'WRITE Settlement Manager',sections:[]},history:[]};
+// v7.1.0 release notes controller — show once per release per browser
+const WRITE_RELEASE_META = window.WRITE_RELEASE_META || {current:{version:document.body.dataset.release||'7.1.0',time:'',title:'WRITE Settlement Manager',sections:[]},history:[]};
 const WRITE_RELEASE = {
-  version: WRITE_RELEASE_META.current?.version || document.body.dataset.release || '7.0.12',
+  version: WRITE_RELEASE_META.current?.version || document.body.dataset.release || '7.1.0',
   date: WRITE_RELEASE_META.current?.time || '',
-  title: `WRITE Settlement Manager v${WRITE_RELEASE_META.current?.version || document.body.dataset.release || '7.0.12'}`,
+  title: `WRITE Settlement Manager v${WRITE_RELEASE_META.current?.version || document.body.dataset.release || '7.1.0'}`,
   sections: WRITE_RELEASE_META.current?.sections || []
 };
 function showReleaseNotesIfNeeded(){
@@ -1871,7 +1903,7 @@ document.documentElement.dataset.writeReady='true';
 
 
 
-// v7.0.12 — version history from unified release metadata
+// v7.1.0 — version history from unified release metadata
 const WRITE_HISTORY = Array.isArray(WRITE_RELEASE_META.history) ? WRITE_RELEASE_META.history : [];
 function renderReleaseHistory(){
   const host=document.getElementById('releaseHistory');

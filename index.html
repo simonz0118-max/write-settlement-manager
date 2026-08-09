@@ -18,15 +18,15 @@
   }catch(e){document.documentElement.dataset.theme='light';document.documentElement.dataset.themePreference='auto';}
 })();
 </script>
-<link href="./src/styles.css?v=7.0.12" rel="stylesheet"/>
+<link href="./src/styles.css?v=7.1.0" rel="stylesheet"/>
 <style>[hidden]{display:none!important}</style>
 </head>
-<body data-release="7.0.12">
+<body data-release="7.1.0">
 <div class="app-shell">
 <aside class="sidebar">
 <div class="brand">
 <img class="brand-logo brand-logo-c" src="./assets/panda-logo-c-image2.png" alt="WRITE 熊猫简笔画 Logo"/>
-<div class="brand-copy"><strong>WRITE</strong><span>Settlement Manager</span><small>v7.0.12</small></div>
+<div class="brand-copy"><strong>WRITE</strong><span>Settlement Manager</span><small>v7.1.0</small></div>
 </div>
 <nav class="side-nav" id="sideNav">
 <button class="nav-item active" data-view="dashboard"><span>⌂</span>首页</button>
@@ -176,8 +176,32 @@
   <section class="panel"><div class="panel-head"><div><h2>工作簿模型</h2><p>每个工作簿独立统计、独立 FACT、独立币种判断。</p></div></div><div class="model-head"><span>工作簿</span><span>Profile</span><span>FACT</span><span>币种</span><span>订单</span></div><div id="workbookModelList"></div></section>
 </section>
 <section class="view" data-view-panel="learning">
-  <div class="page-head"><div><span class="eyebrow">RULE LEARNING</span><h1>规则学习</h1><p>查看当前商品/SKU → 分类 → FACT Profile 的识别结果。</p></div></div>
-  <section class="panel"><div class="panel-head"><div><h2>本次学习映射</h2><p id="learningMeta">导入订单后显示。</p></div></div><div class="learning-head"><span>SKU / 商品</span><span>分类</span><span>Profile</span><span>数量</span></div><div id="learningList"></div></section>
+  <div class="page-head">
+    <div><span class="eyebrow">KNOWLEDGE BASE</span><h1>规则学习</h1><p>本地即时学习 + Cloudflare 云端同步。离线可用，联网自动合并。</p></div>
+    <div class="knowledge-cloud-state"><i id="knowledgeCloudDot" data-state="local"></i><span>Local-first</span></div>
+  </div>
+  <section class="quality-summary knowledge-status" id="knowledgeStatus">
+    <div><b>0</b><span>长期规则</span></div><div><b>0</b><span>待同步</span></div><div><b>初始化</b><span>同步状态</span></div><div><b>—</b><span>最后同步</span></div>
+  </section>
+  <section class="panel knowledge-toolbar-panel">
+    <div class="panel-head">
+      <div><h2>知识库控制</h2><p>规则先保存到本机 IndexedDB；云端不可用不会影响结算。</p></div>
+      <div class="knowledge-actions">
+        <button type="button" id="knowledgeSyncNow">↻ 立即同步</button>
+        <button type="button" id="knowledgeExportBackup">⇩ 导出备份</button>
+        <button type="button" id="knowledgeImportBackup">⇧ 恢复备份</button>
+        <input id="knowledgeBackupFile" type="file" accept=".json,application/json" hidden>
+      </div>
+    </div>
+    <div class="knowledge-policy">
+      <span><b>人工确认</b> 最高优先</span><span>SKU 精确</span><span>套餐确认</span><span>商品名</span><span>自动推断</span><span>估算</span>
+    </div>
+  </section>
+  <section class="panel">
+    <div class="panel-head"><div><h2>长期学习规则</h2><p id="learningMeta">正在加载本地知识库…</p></div></div>
+    <div class="learning-head"><span>规则 / 商品</span><span>分类</span><span>来源</span><span>同步</span></div>
+    <div id="learningList"></div>
+  </section>
 </section>
 
 <section class="view" data-view-panel="imports"><div class="page-head"><div><span class="eyebrow">IMPORT LOG</span><h1>导入记录</h1><p>每个 Sheet 的识别与处理原因。</p></div></div><section class="panel"><div id="sheetList"></div></section></section>
@@ -185,7 +209,7 @@
 <section class="view" data-view-panel="history">
   <div class="page-head history-page-head">
     <div><span class="eyebrow">VERSION HISTORY</span><h1>历史更新</h1><p>从首个可追溯正式版本到当前版本的发布时间与主要变更。</p></div>
-    <div class="history-current"><span>当前版本</span><strong id="historyCurrentVersion">v7.0.12</strong></div>
+    <div class="history-current"><span>当前版本</span><strong id="historyCurrentVersion">v7.1.0</strong></div>
   </div>
   <section class="panel history-panel">
     <div class="history-toolbar"><div><b>WRITE Settlement Manager</b><p>自 v6.5.7 起，发布时间精确记录到分钟；早期无法可靠还原分钟的版本标记为“时间未记录”。</p></div><span id="historyCount">20 个版本</span></div>
@@ -197,8 +221,9 @@
 </main>
 </section>
 </div>
-<script src="./src/release-meta.js?v=7.0.12"></script>
-<script defer="" src="./src/app.bundle.js?v=7.0.12"></script>
+<script src="./src/release-meta.js?v=7.1.0"></script>
+<script src="./src/knowledge-base.js?v=7.1.0"></script>
+<script defer="" src="./src/app.bundle.js?v=7.1.0"></script>
 <script>
 window.__WRITE_APP_READY__ = false;
 setTimeout(function(){
@@ -206,7 +231,7 @@ setTimeout(function(){
     var box=document.createElement('div');
     box.id='bootFailure';
     box.style.cssText='position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:99999;background:#f2f2f3;color:#303136;border:1px solid #d4d6da;border-radius:12px;padding:12px 16px;font:600 14px -apple-system,BlinkMacSystemFont,sans-serif;box-shadow:0 8px 30px rgba(0,0,0,.12)';
-    box.textContent='WRITE v7.0.0 脚本未启动，请刷新页面或检查部署文件。';
+    box.textContent='WRITE v7.1.0 脚本未启动，请刷新页面或检查部署文件。';
     document.body.appendChild(box);
   }
 },1800);

@@ -467,3 +467,18 @@ html[data-theme="dark"] .model-head,html[data-theme="dark"] .learning-head{backg
 .export-file-download.primary{background:var(--text);color:var(--bg);border-color:var(--text)}
 .export-center-log{padding:0 18px 16px;display:grid;gap:6px}.export-log-row{font-size:10px;line-height:1.45;color:var(--muted)}.export-log-row.error{color:#ff7b7b}.export-log-row.success{color:var(--text)}
 @media(max-width:700px){.export-center{right:10px;bottom:10px;width:calc(100vw - 20px);max-height:78vh}.export-file-row{grid-template-columns:1fr}.export-file-download{width:100%}}
+
+
+/* V7.1 Local-first Knowledge Base */
+.knowledge-cloud-state{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--muted)}
+.knowledge-cloud-state i{width:9px;height:9px;border-radius:50%;background:#888}
+.knowledge-cloud-state i[data-state="online"]{background:#35a56f}
+.knowledge-cloud-state i[data-state="syncing"]{background:#d2a33a;animation:kbPulse 1s infinite}
+.knowledge-cloud-state i[data-state="offline"]{background:#777}
+@keyframes kbPulse{50%{opacity:.35}}
+.knowledge-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.knowledge-actions button{min-height:36px;padding:0 13px;border:1px solid var(--line);border-radius:9px;background:var(--control);color:var(--text);font:inherit;font-size:11px;cursor:pointer}
+.knowledge-policy{display:flex;gap:8px;flex-wrap:wrap;padding:0 18px 16px}
+.knowledge-policy span{padding:6px 9px;border:1px solid var(--line);border-radius:999px;font-size:10px;color:var(--muted)}
+.knowledge-status>div b{font-size:18px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media(max-width:760px){.knowledge-actions{justify-content:flex-start}.knowledge-toolbar-panel .panel-head{align-items:flex-start;gap:12px}}

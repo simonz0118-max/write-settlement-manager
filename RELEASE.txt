@@ -1,9 +1,9 @@
-WRITE Settlement Manager V7.0.12
-Release time: 2026-08-09 20:20 Europe/Paris
+WRITE Settlement Manager V7.1.0
+Release time: 2026-08-09 22:12 Europe/Paris
 
-- 重复表头不再成为订单/商品
-- 页尾说明行不再成为订单
-- 字段标签不进入 FACT 学习
-- 有 SKU 无名称仍可自动分类
-- 真正未知商品显示 Sheet + 行号
-- 保留 CN FACT 动态自动学习与完整导出
+- IndexedDB 本地长期学习
+- Cloudflare D1 多设备同步
+- 离线可用 / 联网自动同步
+- 旧规则自动迁移
+- JSON 备份 / 恢复
+- D1 未配置不影响本地功能
