@@ -162,7 +162,44 @@ const styles=`<?xml version="1.0" encoding="UTF-8"?><styleSheet xmlns="http://sc
 </cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`;
 
 function buildXlsx(sheets){const entries=[],workbookSheets=sheets.map((s,i)=>`<sheet name="${esc(s.name.slice(0,31))}" sheetId="${i+1}" r:id="rId${i+1}"/>`).join('');entries.push({name:'[Content_Types].xml',data:`<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>${sheets.map((_,i)=>`<Override PartName="/xl/worksheets/sheet${i+1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join('')}</Types>`});entries.push({name:'_rels/.rels',data:'<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>'});entries.push({name:'xl/workbook.xml',data:`<?xml version="1.0" encoding="UTF-8"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><workbookPr/><bookViews><workbookView xWindow="0" yWindow="0" windowWidth="22000" windowHeight="14000"/></bookViews><sheets>${workbookSheets}</sheets></workbook>`});entries.push({name:'xl/_rels/workbook.xml.rels',data:`<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${sheets.map((_,i)=>`<Relationship Id="rId${i+1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${i+1}.xml"/>`).join('')}<Relationship Id="rId${sheets.length+1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`});entries.push({name:'xl/styles.xml',data:styles});sheets.forEach((s,i)=>entries.push({name:`xl/worksheets/sheet${i+1}.xml`,data:sheetXml(s)}));return zipStore(entries)}
-function downloadBlob(blob,filename){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=filename;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000)}
+let currentExportObjectUrl='';
+function clearExportDownloadLink(){
+  document.getElementById('exportReadyBar')?.remove();
+  if(currentExportObjectUrl){
+    try{URL.revokeObjectURL(currentExportObjectUrl)}catch(e){}
+    currentExportObjectUrl='';
+  }
+}
+function showExportDownloadLink(blob,filename){
+  clearExportDownloadLink();
+  currentExportObjectUrl=URL.createObjectURL(blob);
+  const bar=document.createElement('div');
+  bar.id='exportReadyBar';
+  bar.className='export-ready-bar';
+  const sizeMb=(blob.size/1024/1024).toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2});
+  bar.innerHTML=`
+    <div class="export-ready-copy">
+      <strong>✓ 结算包已生成</strong>
+      <span>${escapeHtml(filename)} · ${sizeMb} MB</span>
+    </div>
+    <a class="export-ready-download" href="${currentExportObjectUrl}" download="${escapeHtml(filename)}">下载结算包</a>
+    <button class="export-ready-close" type="button" aria-label="关闭">×</button>`;
+  document.body.appendChild(bar);
+  bar.querySelector('.export-ready-close')?.addEventListener('click',clearExportDownloadLink);
+  return currentExportObjectUrl;
+}
+function downloadBlob(blob,filename){
+  if(!(blob instanceof Blob)||!blob.size)throw new Error('下载文件为空。');
+  const url=showExportDownloadLink(blob,filename);
+  try{
+    const a=document.createElement('a');
+    a.href=url;a.download=filename;a.style.display='none';
+    document.body.appendChild(a);a.click();a.remove();
+  }catch(err){
+    console.warn('自动下载被浏览器阻止，请使用页面上的“下载结算包”按钮。',err);
+  }
+  return url;
+}
 
 
 // v6.5.12 FACT template preservation + backfill engine.
@@ -247,7 +284,7 @@ function findFactSheetPath(workbookXml,relsXml){
           path=rels.get(rid);
     if(path && /FACT/i.test(name))candidates.push({name,path});
   }
-  // V7.0.4: CN is the canonical WRITE FACT when multiple FACT sheets exist.
+  // V7.0.5: CN is the canonical WRITE FACT when multiple FACT sheets exist.
   const cn=candidates.find(x=>/CN/i.test(x.name));
   return cn?.path || candidates[0]?.path || '';
 }
@@ -666,8 +703,9 @@ window.addEventListener('unhandledrejection',event=>{
 });
 
 function startImport(fileList){
+  clearExportDownloadLink();
   const files=[...fileList].filter(f=>/\.(xlsx|zip)$/i.test(f.name)); if(!files.length||busy)return;
-  worker?.terminate(); worker=new Worker('./src/workers/import.worker.bundle.js?v=7.0.4-20260809-1825'); importStartedAt=performance.now(); importedFileNames=files.map(f=>f.name);
+  worker?.terminate(); worker=new Worker('./src/workers/import.worker.bundle.js?v=7.0.5-20260809-1900'); importStartedAt=performance.now(); importedFileNames=files.map(f=>f.name);
   setBusy(true); hideError(); els.importLanding.hidden=false; els.appViews.hidden=true; els.topActions.hidden=true;
   els.currentFile.textContent='准备读取…'; els.progressFill.style.width='0%'; els.progressText.textContent='0% · 大文件在独立线程运行';
   worker.onmessage=({data})=>{
@@ -774,6 +812,17 @@ function renderLearningCenter(){
   host.innerHTML=rows.slice(0,500).map(r=>`<div class="learning-row"><div><strong>${escapeHtml(r.sku||r.name||'—')}</strong><small>${escapeHtml(r.name||'')}</small></div><span>${escapeHtml(r.category)}</span><span>${escapeHtml(r.profile)}</span><span>${numberFormat.format(r.count)} 件</span></div>`).join('')||'<div class="empty">导入订单后显示学习结果。</div>';
 }
 
+
+function importOrderStats(){
+  const unique=classified?.orders?.length||orders.length||0;
+  const duplicates=Number(duplicateCount)||0;
+  return {raw:unique+duplicates,duplicates,unique};
+}
+function expectedFactDeliverableCount(){
+  const files=new Set((orders||[]).map(o=>o.sourceFile).filter(Boolean));
+  return files.size;
+}
+
 function renderResults(){
   if(!classified)return;
   const imported=sheets.filter(s=>s.status==='imported'), facts=sheets.filter(s=>s.status==='ignored_fact');
@@ -782,8 +831,9 @@ function renderResults(){
   const itemQty=classified.lineItems.reduce((a,b)=>a+(Number(b.quantity)||1),0), giftQty=classified.lineItems.filter(x=>x.isFree).reduce((a,b)=>a+(Number(b.quantity)||1),0);
   const rawRows=imported.reduce((a,s)=>a+(Number(s.orderCount)||0),0), uniqueBooks=new Set(sheets.map(s=>s.sourceFile)).size, inflated=sheets.reduce((a,s)=>a+(Number(s.inflatedBytes)||0),0);
 
-  els.metricOrders.textContent=numberFormat.format(orders.length); els.metricAmount.textContent=singleCurrency?(currencySummary[0].currency==='EUR'?moneyFormat.format(amount):`${decimal2Format.format(amount)} ${currencySummary[0].currency}`):'多币种'; els.metricSheets.textContent=numberFormat.format(imported.length);
-  els.metricFacts.textContent=numberFormat.format(facts.length); els.metricDuplicates.textContent=`${numberFormat.format(duplicateCount)} 个重复订单已去重`; els.metricReview.textContent=numberFormat.format(review); els.metricGift.textContent=numberFormat.format(itemQty);
+  const orderStats=importOrderStats(),factOutput=expectedFactDeliverableCount();
+  els.metricOrders.textContent=numberFormat.format(orderStats.unique); els.metricAmount.textContent=singleCurrency?(currencySummary[0].currency==='EUR'?moneyFormat.format(amount):`${decimal2Format.format(amount)} ${currencySummary[0].currency}`):'多币种'; els.metricSheets.textContent=numberFormat.format(imported.length);
+  els.metricFacts.textContent=numberFormat.format(factOutput); els.metricDuplicates.textContent=`原始 ${numberFormat.format(orderStats.raw)} · 重复 ${numberFormat.format(orderStats.duplicates)} · 唯一 ${numberFormat.format(orderStats.unique)}`; els.metricReview.textContent=numberFormat.format(review); els.metricGift.textContent=numberFormat.format(itemQty);
   els.navReviewCount.textContent=numberFormat.format(review); els.navReviewCount.hidden=review===0; els.quickReviewCount.textContent=numberFormat.format(review);
   els.systemStatus.textContent='就绪'; els.lastImportText.textContent=`上次导入 · ${nowText()}`; document.querySelector('.system-card')?.classList.add('ready'); els.sidebarResetButton.disabled=false;
 
@@ -794,7 +844,8 @@ function renderResults(){
   els.categorySelect.innerHTML='<option value="ALL">全部会计分类</option>'+cats.map(c=>`<option>${escapeHtml(c)}</option>`).join('');
 
   const fileLabel=importedFileNames.length===1?importedFileNames[0]:`${importedFileNames.length} 个上传文件`;
-  const summaryData=[['文件',fileLabel],['Excel 工作簿',`${uniqueBooks} 个`],['订单 Sheet',`${imported.length} 个`],['FACT 成本 Sheet',`${facts.length} 个`],['原始订单行',`${numberFormat.format(rawRows)} 行`],['重复订单',`${numberFormat.format(duplicateCount)} 个`],['解析数据量',formatBytes(inflated)],['处理耗时',`${durationFormat.format(importDuration)} 秒`]];
+  const orderStatsSummary=importOrderStats(),factOutputSummary=expectedFactDeliverableCount();
+  const summaryData=[['文件',fileLabel],['Excel 工作簿',`${uniqueBooks} 个`],['订单 Sheet',`${imported.length} 个`],['原始 FACT Sheet',`${facts.length} 个`],['FACT 输出',`${factOutputSummary} 个${facts.length===0&&factOutputSummary>0?' · 自动生成':''}`],['原始订单行',`${numberFormat.format(orderStatsSummary.raw)} 行`],['重复订单',`${numberFormat.format(orderStatsSummary.duplicates)} 个`],['唯一订单',`${numberFormat.format(orderStatsSummary.unique)} 个`],['解析数据量',formatBytes(inflated)],['处理耗时',`${durationFormat.format(importDuration)} 秒`]];
   els.importSummary.innerHTML=summaryData.map(([k,v])=>`<div><dt>${escapeHtml(k)}</dt><dd>${escapeHtml(v)}</dd></div>`).join('');
 
   els.importLanding.hidden=true; els.appViews.hidden=false; els.topActions.hidden=false; hideError(); setView('dashboard');
@@ -871,7 +922,7 @@ function renderOrders(){
 }
 
 
-// v7.0.4 — mandatory FACT delivery: generate a FACT when the source workbook has none.
+// v7.0.5 — mandatory FACT delivery: generate a FACT when the source workbook has none.
 function currencyForWorkbook(workbookName=''){
   const n=String(workbookName||'').toUpperCase();
   if(/\bUSD\b|\$US|US\$/.test(n))return 'USD';
@@ -1039,7 +1090,7 @@ async function rebuildArchiveReplacingEntry(archive,path,newBytes){
   const centralSize=central.reduce((a,b)=>a+b.length,0),centralOffset=offset;parts.push(...central,new Uint8Array([...u32(ZIP_EOCD),...u16(0),...u16(0),...u16(entries.length),...u16(entries.length),...u32(centralSize),...u32(centralOffset),...u16(0)]));return new Blob(parts,{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
 }
 async function buildGeneratedPencilFactWorkbook(workbookName){
-  const resp=await fetch(`./assets/FACT_TEMPLATE_CN_CANONICAL_V1.xlsx?v=7.0.4`,{cache:'no-store'});
+  const resp=await fetch(`./assets/FACT_TEMPLATE_CN_CANONICAL_V1.xlsx?v=7.0.5`,{cache:'no-store'});
   if(!resp.ok)throw new Error('无法读取 CN 标准 FACT 模板');
   const templateBlob=await resp.blob(),
         archive=await PreserveZipArchive.open(templateBlob),
@@ -1064,7 +1115,7 @@ async function buildGeneratedFactWorkbook(workbookName){
     return buildGeneratedPencilFactWorkbook(workbookName);
   }
   const data=generatedFactRowsForWorkbook(workbookName);
-  const resp=await fetch(`./assets/FACT_TEMPLATE_LEARNED_V1.xlsx?v=7.0.4`,{cache:'no-store'});if(!resp.ok)throw new Error('无法读取内置 FACT 学习模板');
+  const resp=await fetch(`./assets/FACT_TEMPLATE_LEARNED_V1.xlsx?v=7.0.5`,{cache:'no-store'});if(!resp.ok)throw new Error('无法读取内置 FACT 学习模板');
   const templateBlob=await resp.blob(),archive=await PreserveZipArchive.open(templateBlob),sheetPath='xl/worksheets/sheet1.xml';
   const xml=await archive.text(sheetPath,16*1024*1024),patched=patchLearnedTemplateSheetXml(xml,data,workbookName);
   return rebuildArchiveReplacingEntry(archive,sheetPath,enc.encode(patched));
@@ -1301,7 +1352,7 @@ async function exportAccounting(){
   await new Promise(resolve=>requestAnimationFrame(()=>setTimeout(resolve,0)));
 
   try{
-    // V7.0.4: the accounting workbook build is intentionally INSIDE try/catch.
+    // V7.0.5: the accounting workbook build is intentionally INSIDE try/catch.
     // Previously an exception here caused a silent no-response click.
     const report=buildAccountingReport();
     if(!report?.blob)throw new Error('专业会计报表生成失败：未返回有效 Excel 文件。');
@@ -1352,7 +1403,10 @@ async function exportAccounting(){
     const packageBlob=await zipStoreBlobs([{name:report.fileName,data:report.blob},...deliverables]);
     if(!packageBlob || !packageBlob.size)throw new Error('ZIP 打包失败：生成的结算包为空。');
 
-    downloadBlob(packageBlob,`WRITE_结算交付包_${currentOrderRangeLabel()}_${localDateStamp()}.zip`);
+    const exportName=`WRITE_结算交付包_${currentOrderRangeLabel()}_${localDateStamp()}.zip`;
+    downloadBlob(packageBlob,exportName);
+    const sizeMb=(packageBlob.size/1024/1024).toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2});
+    els.systemStatus.textContent=`结算包已生成 · ${sizeMb} MB`;
   }catch(err){
     console.error('WRITE export failed',err);
     const message=err?.message||String(err)||'未知导出错误';
@@ -1423,12 +1477,12 @@ if(themeMedia.addEventListener)themeMedia.addEventListener('change',onSystemThem
 applyTheme(getThemePreference(),{persist:false});
 
 
-// v7.0.4 release notes controller — show once per release per browser
-const WRITE_RELEASE_META = window.WRITE_RELEASE_META || {current:{version:document.body.dataset.release||'7.0.4',time:'',title:'WRITE Settlement Manager',sections:[]},history:[]};
+// v7.0.5 release notes controller — show once per release per browser
+const WRITE_RELEASE_META = window.WRITE_RELEASE_META || {current:{version:document.body.dataset.release||'7.0.5',time:'',title:'WRITE Settlement Manager',sections:[]},history:[]};
 const WRITE_RELEASE = {
-  version: WRITE_RELEASE_META.current?.version || document.body.dataset.release || '7.0.4',
+  version: WRITE_RELEASE_META.current?.version || document.body.dataset.release || '7.0.5',
   date: WRITE_RELEASE_META.current?.time || '',
-  title: `WRITE Settlement Manager v${WRITE_RELEASE_META.current?.version || document.body.dataset.release || '7.0.4'}`,
+  title: `WRITE Settlement Manager v${WRITE_RELEASE_META.current?.version || document.body.dataset.release || '7.0.5'}`,
   sections: WRITE_RELEASE_META.current?.sections || []
 };
 function showReleaseNotesIfNeeded(){
@@ -1463,7 +1517,7 @@ document.documentElement.dataset.writeReady='true';
 
 
 
-// v7.0.4 — version history from unified release metadata
+// v7.0.5 — version history from unified release metadata
 const WRITE_HISTORY = Array.isArray(WRITE_RELEASE_META.history) ? WRITE_RELEASE_META.history : [];
 function renderReleaseHistory(){
   const host=document.getElementById('releaseHistory');
