@@ -1,3 +1,9 @@
-WRITE Settlement Manager V7.1.5
-Release: 2026-08-09 23:59
-Cloudflare发布基础设施稳定版
+WRITE Settlement Manager V7.1.6
+Release: 2026-08-10 00:10
+
+Cloudflare Pages 根配置稳定修复：
+- no --config
+- no wrangler.toml
+- root wrangler.jsonc only
+- D1 database_id auto-resolution
+- online release/API verification

@@ -1,12 +1,16 @@
-WRITE Settlement Manager V7.1.5
+WRITE Settlement Manager V7.1.6
 
-双击：一键更新到GitHub并部署Cloudflare.command
+直接双击：
+一键更新到GitHub并部署Cloudflare.command
 
-最终成功必须同时出现：
-- GitHub main 已更新
+本版专门修复：
+Pages does not support custom paths for the Wrangler configuration file
+
+V7.1.6 不再传递 --config。
+项目根目录只保留 wrangler.jsonc，Wrangler 自动读取。
+
+最终成功必须出现：
 - Wrangler exit code: 0
-- 线上版本确认：v7.1.5
+- 线上版本确认：v7.1.6
 - Cloudflare D1 云同步 API 正常
-- WRITE V7.1.5 全部发布检查通过
-
-任何一步失败都会显示真实错误。
+- WRITE V7.1.6 全部发布检查通过

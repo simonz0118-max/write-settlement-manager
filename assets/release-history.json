@@ -1,39 +1,55 @@
 {
   "current": {
-    "version": "7.1.5",
-    "time": "2026-08-09 23:59",
-    "title": "Cloudflare发布稳定性修复",
+    "version": "7.1.6",
+    "time": "2026-08-10 00:10",
+    "title": "Pages根配置稳定发布",
     "sections": [
       {
-        "label": "诊断",
+        "label": "Cloudflare修复",
         "items": [
-          "修复部署失败时Shell立即退出导致Wrangler错误不可见；现在完整打印stderr与exit code。",
-          "优先通过wrangler pages download config获取Cloudflare Pages当前真实配置。"
+          "依据Cloudflare Pages规则移除`--config`参数；Pages部署只从项目根目录自动读取Wrangler配置。",
+          "清理V7.1.5误生成并提交的`wrangler.toml`，避免与`wrangler.jsonc`双配置冲突。",
+          "停止使用experimental的`wrangler pages download config`。"
         ]
       },
       {
-        "label": "D1",
+        "label": "D1配置",
         "items": [
-          "在真实Pages配置上注入并校验WRITE_RULES_DB。"
+          "每次发布直接查询现有D1 database_id并生成唯一根`wrangler.jsonc`，绑定WRITE_RULES_DB。",
+          "发布前显式扫描脚本，任何`--config`残留都会中止发布。"
         ]
       },
       {
-        "label": "发布流程",
+        "label": "验证",
         "items": [
-          "继续强制clone→pull→覆盖新版→自检→GitHub→Pages的安全顺序。",
-          "Git commit/push、D1、Pages每一步都显示真实错误，不再静默。",
-          "最终成功要求唯一deployment=v7.1.5且/api/rules/sync返回ok:true。"
+          "Wrangler部署错误仍完整显示stderr与exit code。",
+          "最终继续强制验证deployment=v7.1.6以及/api/rules/sync返回ok:true。"
         ]
       },
       {
         "label": "业务保护",
         "items": [
-          "本版不修改订单、会计、FACT和规则分类业务逻辑。"
+          "订单、会计、FACT、分类、规则学习业务代码未修改。"
         ]
       }
     ]
   },
   "history": [
+    {
+      "version": "7.1.6",
+      "time": "2026-08-10 00:10",
+      "title": "修复Pages不支持--config并统一根Wrangler配置",
+      "items": [
+        "依据Cloudflare Pages规则移除`--config`参数；Pages部署只从项目根目录自动读取Wrangler配置。",
+        "清理V7.1.5误生成并提交的`wrangler.toml`，避免与`wrangler.jsonc`双配置冲突。",
+        "停止使用experimental的`wrangler pages download config`。",
+        "每次发布直接查询现有D1 database_id并生成唯一根`wrangler.jsonc`，绑定WRITE_RULES_DB。",
+        "发布前显式扫描脚本，任何`--config`残留都会中止发布。",
+        "Wrangler部署错误仍完整显示stderr与exit code。",
+        "最终继续强制验证deployment=v7.1.6以及/api/rules/sync返回ok:true。",
+        "订单、会计、FACT、分类、规则学习业务代码未修改。"
+      ]
+    },
     {
       "version": "7.1.5",
       "time": "2026-08-09 23:59",

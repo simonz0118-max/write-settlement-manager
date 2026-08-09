@@ -1,3 +1,12 @@
+## v7.1.6 — 2026-08-10 00:10 (Europe/Paris)
+- 移除 Pages 不支持的 `--config` 自定义配置路径。
+- 删除 `wrangler.toml`，统一唯一根配置 `wrangler.jsonc`。
+- 停止调用 experimental `wrangler pages download config`。
+- 发布时从 Cloudflare D1 列表生成真实 `WRITE_RULES_DB` 根配置。
+- 发布前扫描并禁止任何 `--config` 残留。
+- 保留完整 Wrangler stderr/exit code、线上版本与同步 API 强验证。
+- 不修改结算业务逻辑。
+
 ## v7.1.5 — 2026-08-09 23:59 (Europe/Paris)
 - Cloudflare Pages 部署失败时完整打印 Wrangler stderr 与 exit code。
 - 优先下载真实 Pages Wrangler 配置，再注入 WRITE_RULES_DB。
