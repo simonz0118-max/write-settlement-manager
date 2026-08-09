@@ -1,8 +1,8 @@
 # WRITE Settlement Manager
-> Current release: **V7.1.6** — 中文正式升级包、UTF-8 文件名校验、GitHub/Cloudflare 稳定发布。
-> V7.1.6 已用 FACT-10063 / FACT-10102 / FACT-10441&10442 / FACT-10066 真实工作簿完成 Import Worker 回归测试。
+> Current release: **V7.1.7** — 中文正式升级包、UTF-8 文件名校验、GitHub/Cloudflare 稳定发布。
+> V7.1.7 已用 FACT-10063 / FACT-10102 / FACT-10441&10442 / FACT-10066 真实工作簿完成 Import Worker 回归测试。
 
-## Current release — v7.1.6
+## Current release — v7.1.7
 
 ## v7.1.6 — 2026-08-09 00:14 (Europe/Paris)
 
@@ -11,7 +11,7 @@
 - 导出交付包、专业会计表和回填 FACT 文件名自动包含本批订单号范围。
 
 
-### V7.1.6 highlights
+### V7.1.7 highlights
 - Built-in version history page in the left navigation, available before order import.
 - Release timeline shows update time and concise notes for every traceable formal release.
 - All visible decimals use the French/European comma decimal separator.

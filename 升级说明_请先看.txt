@@ -1,16 +1,20 @@
-WRITE Settlement Manager V7.1.6
+WRITE Settlement Manager V7.1.7 升级说明
 
-直接双击：
-一键更新到GitHub并部署Cloudflare.command
+使用：
+1. 解压 ZIP。
+2. 双击“一键更新到GitHub并部署Cloudflare.command”。
+3. 只有最终同时看到：
+   - GitHub main 已更新
+   - 唯一 Cloudflare Pages Deployment URL
+   - 线上版本 v7.1.7
+   - /api/rules/sync 返回 ok:true
+   才算升级成功。
 
-本版专门修复：
-Pages does not support custom paths for the Wrangler configuration file
+V7.1.7 只修复 V7.1.6 在 [6/8] 的发布器误判：
+旧版全文搜索自身脚本中的 --config，导致说明文字本身触发失败。
+新版只检查真正传给 Wrangler Pages deploy 的参数数组。
 
-V7.1.6 不再传递 --config。
-项目根目录只保留 wrangler.jsonc，Wrangler 自动读取。
-
-最终成功必须出现：
-- Wrangler exit code: 0
-- 线上版本确认：v7.1.6
-- Cloudflare D1 云同步 API 正常
-- WRITE V7.1.6 全部发布检查通过
+不会修改：
+订单统计、CN FACT 模板逻辑、FACT 自动生成/学习、数量守恒、
+会计结算报表、未知商品过滤、规则学习、IndexedDB、D1、
+离线能力、黑白模式及既有历史。

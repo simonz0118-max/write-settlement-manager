@@ -484,7 +484,7 @@ html[data-theme="dark"] .model-head,html[data-theme="dark"] .learning-head{backg
 @media(max-width:760px){.knowledge-actions{justify-content:flex-start}.knowledge-toolbar-panel .panel-head{align-items:flex-start;gap:12px}}
 
 
-/* V7.1.6 — Rules Learning aligned layout */
+/* V7.1.7 — Rules Learning aligned layout */
 [data-view-panel="learning"] .page-head{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;margin-bottom:18px}
 [data-view-panel="learning"] .quality-summary.knowledge-status{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:14px}
 [data-view-panel="learning"] .quality-summary.knowledge-status>div{min-height:82px;padding:16px 18px;display:flex;flex-direction:column;justify-content:center}

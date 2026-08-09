@@ -1,3 +1,10 @@
+## v7.1.7 — 2026-08-09 23:30 (Europe/Paris)
+- 修复 V7.1.6 发布脚本在 Cloudflare Pages 配置预检阶段的误判。
+- 删除对发布脚本全文搜索 `--config` 的逻辑；改为只检查真正传给 Wrangler Pages deploy 的参数数组。
+- 注释、说明文字、CHANGELOG 中出现 `--config` 不再触发失败；真实部署参数出现 `--config` / `--config=...` 仍会中止。
+- 发布流程固定：clone → pull → 覆盖新版 → 唯一根 wrangler.jsonc → 自检 → GitHub → Pages → 唯一 deployment → 版本/API 强验证。
+- 不修改订单、CN FACT、数量守恒、会计报表、未知商品过滤、规则学习及 IndexedDB/D1 业务逻辑。
+
 ## v7.1.6 — 2026-08-10 00:10 (Europe/Paris)
 - 移除 Pages 不支持的 `--config` 自定义配置路径。
 - 删除 `wrangler.toml`，统一唯一根配置 `wrangler.jsonc`。

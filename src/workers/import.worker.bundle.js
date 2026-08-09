@@ -1,4 +1,4 @@
-/* WRITE Import Worker v7.1.6 build 20260809-1825 */
+/* WRITE Import Worker v7.1.7 build 20260809-1825 */
 /* WRITE Settlement Manager v5.3.3 - standalone import worker */
 const EOCD_SIG = 0x06054b50;
 const CEN_SIG = 0x02014b50;

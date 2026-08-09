@@ -1,9 +1,12 @@
-WRITE Settlement Manager V7.1.6
-Release: 2026-08-10 00:10
+WRITE Settlement Manager V7.1.7
+Release: 2026-08-09 23:30
 
-Cloudflare Pages 根配置稳定修复：
-- no --config
-- no wrangler.toml
-- root wrangler.jsonc only
-- D1 database_id auto-resolution
-- online release/API verification
+V7.1.7 只修发布器：
+- 不再全文扫描脚本中的 --config
+- 只检查真实 Wrangler Pages deploy 参数
+- 唯一根 wrangler.jsonc
+- WRITE_RULES_DB / write-settlement-rules 自动绑定
+- 唯一 deployment URL 强校验
+- data-release=v7.1.7 强校验
+- /api/rules/sync ok:true 强校验
+- 业务核心零逻辑修改
