@@ -965,47 +965,52 @@ window.addEventListener('unhandledrejection',event=>{
   }
 });
 
-function startImport(fileList){
+
+async function startImport(fileList){
   clearExportDownloadLink();
   const files=[...fileList].filter(f=>/\.(xlsx|zip)$/i.test(f.name)); if(!files.length||busy)return;
-  worker?.terminate(); worker=new Worker('./src/workers/import.worker.bundle.js?v=7.1.8-20260810-0010'); importStartedAt=performance.now(); importedFileNames=files.map(f=>f.name);
+  await window.WRITE_KB?.init?.().catch(()=>{});
+  const schemaRules=window.WRITE_SCHEMA?.getRules?.()||[];
+  worker?.terminate(); worker=new Worker('./src/workers/import.worker.bundle.js?v=7.1.10-20260810-0045'); importStartedAt=performance.now(); importedFileNames=files.map(f=>f.name);
   setBusy(true); hideError(); els.importLanding.hidden=false; els.appViews.hidden=true; els.topActions.hidden=true;
-  els.currentFile.textContent='准备读取…'; els.progressFill.style.width='0%'; els.progressText.textContent='0% · 大文件在独立线程运行';
-  worker.onmessage=({data})=>{
-    if(data.type==='file-start') els.currentFile.textContent=data.fileName;
+  els.currentFile.textContent='准备读取…'; els.progressFill.style.width='0%'; els.progressText.textContent='0% · 自适应识别订单结构';
+  worker.onmessage=async ({data})=>{
+    if(data.type==='file-start')els.currentFile.textContent=data.fileName;
     if(data.type==='progress'){
       const pct=Math.max(0,Math.min(100,Math.round((data.progress||0)*100)));
-      els.progressFill.style.width=`${pct}%`; els.progressText.textContent=`${pct}% · ${data.phase==='extract'?'正在从 ZIP 提取工作簿':'正在流式读取工作表'}`;
-      if(data.detail) els.currentFile.textContent=data.detail;
+      els.progressFill.style.width=`${pct}%`;els.progressText.textContent=`${pct}% · ${data.phase==='extract'?'正在从 ZIP 提取工作簿':'正在识别工作表结构'}`;
+      if(data.detail)els.currentFile.textContent=data.detail;
     }
     if(data.type==='complete'){
-      orders=data.orders||[]; sheets=data.sheets||[]; sourceWorkbooks=data.workbooks||[]; duplicateCount=data.duplicates||0; crossWorkbookDuplicates=data.crossWorkbookDuplicates||[];
+      const schemaCandidates=data.schemaCandidates||[],schemaReviews=data.schemaReviews||[];
+      await window.WRITE_SCHEMA?.autoLearn?.(schemaCandidates);
+      if(schemaReviews.length){
+        setBusy(false);
+        els.progressText.textContent='需要确认陌生表格字段 · 确认一次后永久学习';
+        els.currentFile.textContent=`${schemaReviews.length} 个新订单结构待确认`;
+        worker?.terminate();worker=null;
+        window.WRITE_SCHEMA?.promptReview?.(schemaReviews,()=>startImport(files));
+        return;
+      }
+      orders=data.orders||[];sheets=data.sheets||[];sourceWorkbooks=data.workbooks||[];duplicateCount=data.duplicates||0;crossWorkbookDuplicates=data.crossWorkbookDuplicates||[];
       importDuration=(performance.now()-importStartedAt)/1000;
-      const importedOrderSheets=sheets.filter(x=>x.status==='imported' && Number(x.orderCount)>0);
+      const importedOrderSheets=sheets.filter(x=>x.status==='imported'&&Number(x.orderCount)>0);
       const factSheets=sheets.filter(x=>x.status==='ignored_fact');
       if(!orders.length){
-        classified=null;
-        els.progressFill.style.width='100%';
-        els.progressText.textContent='100% · 未检测到订单数据';
-        els.currentFile.textContent='解析完成';
-        setBusy(false); renderResults();
-        if(factSheets.length && !importedOrderSheets.length){
-          showError(`只检测到 ${factSheets.length} 个 FACT 工作表，没有订单 Sheet。FACT 只包含成本/分类模板，不能单独进行订单结算。请导入包含订单 Sheet 的 Excel 或 ZIP。`);
-        }else{
-          showError('没有检测到有效订单。请检查订单 Sheet 是否包含订单号、金额、商品名称和国家等字段。');
-        }
-        worker?.terminate(); worker=null; return;
+        classified=null;els.progressFill.style.width='100%';els.progressText.textContent='100% · 未检测到订单数据';els.currentFile.textContent='解析完成';
+        setBusy(false);renderResults();
+        if(factSheets.length&&!importedOrderSheets.length)showError(`只检测到 ${factSheets.length} 个 FACT 工作表，没有订单 Sheet。`);
+        else showError('没有检测到可安全输出的订单数据。低置信结构会要求确认，不会静默猜测。');
+        worker?.terminate();worker=null;return;
       }
       classified=classifyOrders(orders);
-      els.progressFill.style.width='100%'; els.progressText.textContent='100% · 导入并分类完成'; els.currentFile.textContent='解析完成'; hideError(); setBusy(false); renderResults();
-      worker?.terminate(); worker=null;
+      els.progressFill.style.width='100%';els.progressText.textContent='100% · 结构识别、导入与分类完成';els.currentFile.textContent='解析完成';hideError();setBusy(false);renderResults();
+      worker?.terminate();worker=null;
     }
-    if(data.type==='error'){
-      setBusy(false); showError(data.message||'未知导入错误'); worker?.terminate(); worker=null;
-    }
+    if(data.type==='error'){setBusy(false);showError(data.message||'未知导入错误');worker?.terminate();worker=null}
   };
   worker.onerror=e=>{setBusy(false);showError(e.message||'导入线程异常');worker?.terminate();worker=null};
-  worker.postMessage({files});
+  worker.postMessage({files,schemaRules});
 }
 
 
@@ -1071,14 +1076,14 @@ function renderLearningCenter(){
   const host=document.getElementById('learningList'),meta=document.getElementById('learningMeta');
   if(!host||!meta)return;
   const rules=window.WRITE_KB?.list?.()||[];
-  const stats=window.WRITE_KB?.stats?.()||{total:0,productRules:0,priceRules:0};
-  meta.textContent=`长期知识库 ${stats.total} 条 · 商品规则 ${stats.productRules} · 价格规则 ${stats.priceRules}`;
+  const stats=window.WRITE_KB?.stats?.()||{total:0,productRules:0,priceRules:0,schemaRules:0};
+  meta.textContent=`长期知识库 ${stats.total} 条 · 商品规则 ${stats.productRules} · 价格规则 ${stats.priceRules} · 表格结构 ${stats.schemaRules||0}`;
   window.WRITE_KB?.renderStatus?.();
   host.innerHTML=rules.slice(0,500).map(rule=>{
-    const product=rule.type==='PRODUCT_CATEGORY';
-    const title=product?(rule.payload?.sku||rule.payload?.productName||rule.lookupKey):(rule.payload?.targetType||rule.lookupKey);
-    const subtitle=product?(rule.payload?.productName||rule.lookupKey):`${rule.payload?.country||''} · ${Number(rule.payload?.unitPrice||0).toLocaleString('fr-FR',{maximumFractionDigits:4})}`;
-    const value=product?(rule.payload?.category||'—'):'FACT PRICE';
+    const product=rule.type==='PRODUCT_CATEGORY',schema=rule.type==='ORDER_SCHEMA';
+    const title=schema?(rule.payload?.sheetName||'订单表结构'):product?(rule.payload?.sku||rule.payload?.productName||rule.lookupKey):(rule.payload?.targetType||rule.lookupKey);
+    const subtitle=schema?`${Object.keys(rule.payload?.mapping||{}).length} 个字段 · ${rule.confirmed?'人工确认':'自动识别'}`:product?(rule.payload?.productName||rule.lookupKey):`${rule.payload?.country||''} · ${Number(rule.payload?.unitPrice||0).toLocaleString('fr-FR',{maximumFractionDigits:4})}`;
+    const value=schema?'ORDER SCHEMA':product?(rule.payload?.category||'—'):'FACT PRICE';
     const source=rule.confirmed?'人工确认':rule.confidenceLevel==='AUTO_INFERRED'?'自动学习':rule.source;
     return `<div class="learning-row"><div><strong>${escapeHtml(title||'—')}</strong><small>${escapeHtml(subtitle||'')}</small></div><span>${escapeHtml(value)}</span><span>${escapeHtml(source)}</span><span>${rule.syncState==='SYNCED'?'云端':'待同步'}</span></div>`;
   }).join('')||'<div class="empty">还没有长期学习规则。导入订单或人工确认后会自动积累。</div>';
@@ -1194,7 +1199,7 @@ function renderOrders(){
 }
 
 
-// v7.1.8 — mandatory FACT delivery: generate a FACT when the source workbook has none.
+// v7.1.10 — mandatory FACT delivery: generate a FACT when the source workbook has none.
 function currencyForWorkbook(workbookName=''){
   const n=String(workbookName||'').toUpperCase();
   if(/\bUSD\b|\$US|US\$/.test(n))return 'USD';
@@ -1351,14 +1356,14 @@ async function rebuildArchiveReplacingEntry(archive,path,newBytes){
   const centralSize=central.reduce((a,b)=>a+b.length,0),centralOffset=offset;parts.push(...central,new Uint8Array([...u32(ZIP_EOCD),...u16(0),...u16(0),...u16(entries.length),...u16(entries.length),...u32(centralSize),...u32(centralOffset),...u16(0)]));return new Blob(parts,{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
 }
 async function buildGeneratedPencilFactWorkbook(workbookName){
-  const resp=await fetch(`./assets/FACT_TEMPLATE_CN_CANONICAL_V1.xlsx?v=7.1.8`,{cache:'no-store'});
+  const resp=await fetch(`./assets/FACT_TEMPLATE_CN_CANONICAL_V1.xlsx?v=7.1.10`,{cache:'no-store'});
   if(!resp.ok)throw new Error(`无法读取 CN 标准 FACT 模板（HTTP ${resp.status}）`);
 
   const templateBlob=await resp.blob();
   if(!templateBlob?.size)throw new Error('CN 标准 FACT 模板文件为空');
   const archive=await PreserveZipArchive.open(templateBlob);
 
-  // V7.1.8: release-time verified canonical path. This removes runtime XML-discovery as a point of failure.
+  // V7.1.10: release-time verified canonical path. This removes runtime XML-discovery as a point of failure.
   const canonicalPath='xl/worksheets/sheet1.xml';
   let factPath=archive.get(canonicalPath)?canonicalPath:'';
 
@@ -1398,7 +1403,7 @@ async function buildGeneratedFactWorkbook(workbookName){
     return buildGeneratedPencilFactWorkbook(workbookName);
   }
   const data=generatedFactRowsForWorkbook(workbookName);
-  const resp=await fetch(`./assets/FACT_TEMPLATE_LEARNED_V1.xlsx?v=7.1.8`,{cache:'no-store'});if(!resp.ok)throw new Error('无法读取内置 FACT 学习模板');
+  const resp=await fetch(`./assets/FACT_TEMPLATE_LEARNED_V1.xlsx?v=7.1.10`,{cache:'no-store'});if(!resp.ok)throw new Error('无法读取内置 FACT 学习模板');
   const templateBlob=await resp.blob(),archive=await PreserveZipArchive.open(templateBlob),sheetPath='xl/worksheets/sheet1.xml';
   const xml=await archive.text(sheetPath,16*1024*1024),patched=patchLearnedTemplateSheetXml(xml,data,workbookName);
   return rebuildArchiveReplacingEntry(archive,sheetPath,enc.encode(patched));
@@ -1863,12 +1868,12 @@ if(themeMedia.addEventListener)themeMedia.addEventListener('change',onSystemThem
 applyTheme(getThemePreference(),{persist:false});
 
 
-// v7.1.8 release notes controller — show once per release per browser
-const WRITE_RELEASE_META = window.WRITE_RELEASE_META || {current:{version:document.body.dataset.release||'7.1.8',time:'',title:'WRITE Settlement Manager',sections:[]},history:[]};
+// v7.1.10 release notes controller — show once per release per browser
+const WRITE_RELEASE_META = window.WRITE_RELEASE_META || {current:{version:document.body.dataset.release||'7.1.10',time:'',title:'WRITE Settlement Manager',sections:[]},history:[]};
 const WRITE_RELEASE = {
-  version: WRITE_RELEASE_META.current?.version || document.body.dataset.release || '7.1.8',
+  version: WRITE_RELEASE_META.current?.version || document.body.dataset.release || '7.1.10',
   date: WRITE_RELEASE_META.current?.time || '',
-  title: `WRITE Settlement Manager v${WRITE_RELEASE_META.current?.version || document.body.dataset.release || '7.1.8'}`,
+  title: `WRITE Settlement Manager v${WRITE_RELEASE_META.current?.version || document.body.dataset.release || '7.1.10'}`,
   sections: WRITE_RELEASE_META.current?.sections || []
 };
 function showReleaseNotesIfNeeded(){
@@ -1903,7 +1908,7 @@ document.documentElement.dataset.writeReady='true';
 
 
 
-// v7.1.8 — version history from unified release metadata
+// v7.1.10 — version history from unified release metadata
 const WRITE_HISTORY = Array.isArray(WRITE_RELEASE_META.history) ? WRITE_RELEASE_META.history : [];
 function renderReleaseHistory(){
   const host=document.getElementById('releaseHistory');

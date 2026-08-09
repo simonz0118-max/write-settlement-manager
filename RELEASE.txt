@@ -1,12 +1,11 @@
-WRITE Settlement Manager V7.1.8
-Release: 2026-08-09 23:38
+WRITE Settlement Manager V7.1.10
+Release: 2026-08-10 00:55
 
-Pages Functions API 路由修复：
-- explicit root _routes.json
-- include /api/*
-- predeploy pages functions build
-- compiled route verification for /api/rules/sync
-- HTTP 200 + JSON ok:true online verification
-- unique root wrangler.jsonc
-- WRITE_RULES_DB / write-settlement-rules
-- business logic unchanged
+Adaptive Order Schema Learning
+- automatic unfamiliar table recognition
+- one-time field mapping when confidence is insufficient
+- ORDER_SCHEMA in IndexedDB + Cloudflare D1
+- learned schema reuse and cloud sync
+- required-field safety gate
+- product quantity derivation
+- existing accounting / FACT / conservation logic preserved

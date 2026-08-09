@@ -1,3 +1,11 @@
+## v7.1.10 — 2026-08-10 00:55 (Europe/Paris)
+- 新增陌生订单表自适应结构识别：表头语义 + 列数据特征联合推断。
+- 新增 ORDER_SCHEMA 长期学习规则，复用 IndexedDB + Cloudflare D1 自动同步。
+- 高置信结构全自动；低置信结构要求一次字段映射确认，确认后永久学习。
+- 核心字段不明确时阻止错误统计/FACT/会计报表输出。
+- 产品总数缺失时支持从 SKU×数量或产品行自动推导。
+- 保留订单统计、CN FACT、数量守恒、会计报表、未知商品过滤、商品/价格学习及主题逻辑。
+
 ## v7.1.8 — 2026-08-09 23:38 (Europe/Paris)
 - 修复 V7.1.7 Cloudflare Pages 部署成功但 `/api/rules/sync` 在线返回 404。
 - 新增根 `_routes.json`：`include=["/api/*"]`，明确只让 API 路径进入 Pages Functions。

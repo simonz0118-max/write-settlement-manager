@@ -1,4 +1,4 @@
-/* WRITE Import Worker v7.1.8 build 20260809-1825 */
+/* WRITE Import Worker v7.1.10 build 20260809-1825 */
 /* WRITE Settlement Manager v5.3.3 - standalone import worker */
 const EOCD_SIG = 0x06054b50;
 const CEN_SIG = 0x02014b50;
@@ -143,29 +143,34 @@ class ZipArchive {
 
 
 
+
 const FIELD_ALIASES = {
-  orderId:['订单号','订单编号','order id','order','order number','order no','commande','n° commande','numero commande','numéro commande'],
-  orderAmount:['订单金额','金额','总金额','amount','total','order total','montant','montant total','total commande'],
-  currency:['币种','货币','currency','devise','currency code'],
-  productCount:['产品总数','商品总数','数量','qty','quantity','quantité','quantite','items','item count'],
-  skuLines:['多品名','sku','skus','variant sku','reference','référence','reference produit'],
-  productNames:['产品名称','商品名称','商品','product name','product','products','produit','nom produit','article'],
-  country:['收货人国家','国家','country','shipping country','destination country','pays','pays livraison'],
-  buyerName:['买家姓名','客户姓名','buyer','buyer name','customer','customer name','client','nom client'],
-  trackingNo:['运单号','物流单号','tracking','tracking no','tracking number','numéro suivi','numero suivi'],
-  orderNote:['订单备注','order note','note commande'],
-  pickingNote:['拣货备注','picking note'],
+  orderId:['订单号','订单编号','订单id','order id','order','order number','order no','order #','commande','n° commande','numero commande','numéro commande','id commande','bestellnummer','pedido','numero pedido'],
+  orderAmount:['订单金额','订单总额','实付金额','金额','总金额','amount','total','order total','paid amount','total price','gross total','montant','montant total','total commande','prix total','umsatz','importe total'],
+  currency:['币种','货币','currency','devise','currency code','money'],
+  productCount:['产品总数','商品总数','商品数量','件数','数量','qty','quantity','quantité','quantite','items','item count','units','unités'],
+  skuLines:['多品名','sku','skus','variant sku','variant','reference','référence','reference produit','product sku','item sku','merchant sku'],
+  productNames:['产品名称','商品名称','商品','品名','货品名称','product name','product','products','item','item name','title','produit','nom produit','article','designation','désignation'],
+  country:['收货人国家','国家','目的国家','country','shipping country','destination country','delivery country','pays','pays livraison','pays de livraison','land'],
+  buyerName:['买家姓名','客户姓名','收件人','buyer','buyer name','customer','customer name','client','nom client','recipient','recipient name','shipping name'],
+  trackingNo:['运单号','物流单号','追踪号','tracking','tracking no','tracking number','tracking code','numéro suivi','numero suivi','parcel number'],
+  orderNote:['订单备注','order note','note commande','note'],
+  pickingNote:['拣货备注','picking note','warehouse note'],
   customerServiceNote:['客服备注','customer service note','cs note'],
-  address:['地址1+地址2','地址','address','shipping address','adresse'],
-  orderTime:['下单时间','订单时间','order time','created at','date commande'],
-  paidTime:['付款时间','支付时间','paid time','paid at','date paiement'],
-  storeAccount:['店铺账号','店铺','store','store account','shop','boutique'],
-  shippedTime:['发货时间','shipped time','shipped at','date expédition','date expedition']
+  address:['地址1+地址2','地址','收货地址','address','shipping address','delivery address','adresse','adresse livraison'],
+  orderTime:['下单时间','订单时间','order time','created at','created','date commande','order date'],
+  paidTime:['付款时间','支付时间','paid time','paid at','date paiement','payment date'],
+  storeAccount:['店铺账号','店铺','store','store account','shop','boutique','sales channel'],
+  shippedTime:['发货时间','shipped time','shipped at','date expédition','date expedition','shipping date']
 };
 const CORE_FIELDS=['orderId','orderAmount','productNames','country'];
+const OPTIONAL_FIELDS=['productCount','skuLines','buyerName','trackingNo','currency','address','orderTime','paidTime','storeAccount','shippedTime'];
+let LEARNED_SCHEMAS=[];
+
 const normalizeHeaderText=(v='')=>String(v??'').trim().toLowerCase()
   .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
-  .replace(/[：:()（）[\]{}_\-\/\\]+/g,' ')
+  .replace(/[^\p{L}\p{N}#]+/gu,' ')
+  .replace(/[–—_-]+/g,' ')
   .replace(/\s+/g,' ').trim();
 const ALIAS_TO_KEY=new Map();
 for(const [key,aliases] of Object.entries(FIELD_ALIASES)){
@@ -174,10 +179,13 @@ for(const [key,aliases] of Object.entries(FIELD_ALIASES)){
 function keyForHeader(v=''){
   const n=normalizeHeaderText(v);
   if(ALIAS_TO_KEY.has(n))return ALIAS_TO_KEY.get(n);
-  // Conservative partial fallbacks only for distinctive labels.
-  if(/\bsku\b/.test(n))return 'skuLines';
-  if(/tracking|suivi/.test(n))return 'trackingNo';
+  if(/\bsku\b|variant sku|reference produit|product reference|item reference/.test(n))return 'skuLines';
+  if(/tracking|suivi|parcel/.test(n))return 'trackingNo';
   if(/currency|devise|币种|货币/.test(n))return 'currency';
+  if(/order.*(id|number|no)|commande.*(id|numero)|订单.*(号|编号)/.test(n))return 'orderId';
+  if(/(order|commande).*(amount|total|montant)|订单.*(金额|总额)|total.*price/.test(n))return 'orderAmount';
+  if(/(product|item|produit|article).*(name|title|nom)|产品.*名称|商品.*名称|品名/.test(n))return 'productNames';
+  if(/shipping.*country|delivery.*country|pays.*livraison|收货.*国家|目的.*国家/.test(n))return 'country';
   return null;
 }
 function scoreOrderHeader(row=[]){
@@ -188,6 +196,158 @@ function isOrderHeader(row=[]){
   const keys=new Set(row.map(keyForHeader).filter(Boolean));
   return CORE_FIELDS.every(k=>keys.has(k)) && keys.size>=5;
 }
+function schemaFingerprint(headers=[]){
+  return headers.map(normalizeHeaderText).join('|');
+}
+function median(nums=[]){
+  const a=nums.filter(Number.isFinite).sort((x,y)=>x-y);
+  if(!a.length)return 0;
+  const m=Math.floor(a.length/2);
+  return a.length%2?a[m]:(a[m-1]+a[m])/2;
+}
+function ratio(arr,fn){
+  const a=arr.filter(v=>String(v??'').trim()!=='');
+  if(!a.length)return 0;
+  return a.filter(fn).length/a.length;
+}
+const COUNTRY_WORDS=new Set(['france','belgium','belgique','switzerland','suisse','germany','allemagne','italy','italie','spain','espagne','portugal','netherlands','pays bas','luxembourg','austria','autriche','ireland','irlande','united kingdom','uk','canada','usa','united states','reunion island','réunion island','reunion','monaco','denmark','sweden','norway','finland','poland','romania','greece','croatia','czech republic']);
+function contentScores(values=[]){
+  const vals=values.map(v=>String(v??'').trim()).filter(Boolean);
+  const nums=vals.map(v=>normalizeNumber(v));
+  const numeric=ratio(vals,v=>Number.isFinite(normalizeNumber(v)));
+  const integers=ratio(vals,v=>{const n=normalizeNumber(v);return Number.isFinite(n)&&Math.abs(n-Math.round(n))<1e-9});
+  const lens=vals.map(v=>v.length);
+  const medLen=median(lens);
+  const lineBreak=ratio(vals,v=>/\n/.test(v));
+  const skuish=ratio(vals,v=>/(?:^|\n|;|\s)\w{4,}[^\n]*\*\s*\d+/.test(v)||/^\d{8,}$/.test(v));
+  const orderish=ratio(vals,v=>/^[A-Z0-9]{2,}[-_][A-Z0-9-]{2,}$/i.test(v)||/^\d{6,}$/.test(v));
+  const trackingish=ratio(vals,v=>/^[A-Z]{1,4}\d{8,}[A-Z]{0,3}$/i.test(v)||/^\d[A-Z0-9]{10,}$/.test(v));
+  const countryish=ratio(vals,v=>{
+    const n=normalizeHeaderText(v);
+    return COUNTRY_WORDS.has(n)||(/^[A-ZÀ-ÖØ-Þ][A-ZÀ-ÖØ-Þ .'-]{2,24}$/.test(v)&&v.length<28);
+  });
+  const nameish=ratio(vals,v=>/^[\p{L} .'-]{3,50}$/u.test(v)&&v.split(/\s+/).length<=7);
+  const textish=1-numeric;
+  const numericVals=nums.filter(Number.isFinite);
+  const medNum=median(numericVals);
+  const unique=vals.length?new Set(vals).size/vals.length:0;
+  return {
+    orderId:Math.min(1,orderish*.72+unique*.18+(numeric<.3?.10:0)),
+    orderAmount:Math.min(1,numeric*.65+(medNum>2?.15:0)+(integers<.85?.12:0)+(unique>.3?.08:0)),
+    productCount:Math.min(1,numeric*.45+integers*.35+(medNum>0&&medNum<=30?.20:0)),
+    skuLines:Math.min(1,skuish*.78+lineBreak*.12+(medLen>6?.10:0)),
+    productNames:Math.min(1,textish*.35+(medLen>12?.27:0)+lineBreak*.18+unique*.20),
+    country:Math.min(1,countryish*.80+(unique<.35?.12:0)+(medLen<25?.08:0)),
+    buyerName:Math.min(1,nameish*.64+textish*.16+(medLen>=4&&medLen<=40?.12:0)+unique*.08),
+    trackingNo:Math.min(1,trackingish*.85+unique*.15)
+  };
+}
+function headerDataLikeRatio(headers=[]){
+  const vals=headers.map(v=>String(v??'').trim()).filter(Boolean);
+  if(!vals.length)return 1;
+  const like=vals.filter(v=>{
+    const nv=normalizeNumber(v);
+    const n=normalizeHeaderText(v);
+    return Number.isFinite(nv)
+      || /^[A-Z0-9]{2,}[-_][A-Z0-9-]{2,}$/i.test(v)
+      || /(?:^|\s)\w{4,}[^\n]*\*\s*\d+/.test(v)
+      || /^[A-Z]{1,4}\d{8,}[A-Z]{0,3}$/i.test(v)
+      || COUNTRY_WORDS.has(n);
+  }).length;
+  return like/vals.length;
+}
+function learnedMappingFor(headers=[]){
+  const fp=schemaFingerprint(headers);
+  for(const raw of LEARNED_SCHEMAS||[]){
+    const r=raw?.payload?raw.payload:raw;
+    const ruleFp=String(raw?.fingerprint||raw?.lookupKey||r?.fingerprint||'');
+    if(ruleFp===fp && r?.mapping)return {mapping:r.mapping,confidence:1,mode:'learned'};
+  }
+  const normalized=headers.map(normalizeHeaderText);
+  for(const raw of LEARNED_SCHEMAS||[]){
+    const r=raw?.payload?raw.payload:raw;
+    const by=r?.mappingByHeader||{};
+    const overlap=normalized.filter(x=>by[x]).length;
+    if(overlap>=4){
+      const mapping={};
+      normalized.forEach((h,i)=>{if(by[h])mapping[i]=by[h]});
+      if(CORE_FIELDS.every(k=>Object.values(mapping).includes(k)))return {mapping,confidence:.98,mode:'learned'};
+    }
+  }
+  return null;
+}
+function inferSchema(rows=[]){
+  let best=null;
+  const maxHeader=Math.min(rows.length,50);
+  for(let hi=0;hi<maxHeader;hi++){
+    const header=rows[hi].values.map(v=>String(v??'').trim());
+    const nonempty=header.filter(Boolean).length;
+    if(nonempty<3)continue;
+    const learned=learnedMappingFor(header);
+    if(learned){
+      const candidate={headerIndex:hi,headerRow:rows[hi].rowNum,headers:header,normalizedHeaders:header.map(normalizeHeaderText),fingerprint:schemaFingerprint(header),...learned};
+      if(!best||candidate.confidence>best.confidence)best=candidate;
+      continue;
+    }
+    const samples=rows.slice(hi+1,Math.min(rows.length,hi+26));
+    if(samples.length<2)continue;
+    const mapping={},fieldConfidence={},used=new Set();
+    header.forEach((h,col)=>{
+      const key=keyForHeader(h);
+      if(key&&!used.has(col)){
+        mapping[col]=key;fieldConfidence[key]=1;used.add(col);
+      }
+    });
+    const scoresByCol=header.map((_,col)=>contentScores(samples.map(r=>r.values[col])));
+    const wanted=['orderId','orderAmount','country','skuLines','trackingNo','productCount','productNames','buyerName','currency','address','orderTime','paidTime','storeAccount','shippedTime'];
+    for(const key of wanted){
+      if(Object.values(mapping).includes(key))continue;
+      let bestCol=-1,bestScore=0;
+      scoresByCol.forEach((scores,col)=>{
+        if(used.has(col))return;
+        const score=Number(scores[key]||0);
+        if(score>bestScore){bestScore=score;bestCol=col}
+      });
+      const threshold=key==='orderId'?.70:key==='orderAmount'?.66:key==='productNames'?.64:key==='country'?.62:.72;
+      if(bestCol>=0&&bestScore>=threshold){
+        mapping[bestCol]=key;fieldConfidence[key]=bestScore;used.add(bestCol);
+      }
+    }
+    const values=Object.values(mapping);
+    const required=CORE_FIELDS.map(k=>fieldConfidence[k]||0);
+    const direct=header.map(keyForHeader).filter(Boolean).length;
+    const complete=CORE_FIELDS.every(k=>values.includes(k));
+    const coreAvg=required.reduce((a,b)=>a+b,0)/CORE_FIELDS.length;
+    let confidence=coreAvg+(Math.min(6,direct)/6)*.08;
+    const headerData=headerDataLikeRatio(header);
+    confidence-=headerData*.45;
+    if(headerData>.45)confidence-=.20;
+    if(!complete)confidence-=.24;
+    if(!values.includes('productCount'))confidence-=.015;
+    confidence=Math.max(0,Math.min(1,confidence));
+    const candidate={
+      headerIndex:hi,headerRow:rows[hi].rowNum,headers:header,normalizedHeaders:header.map(normalizeHeaderText),
+      fingerprint:schemaFingerprint(header),mapping,fieldConfidence,confidence,
+      mode:confidence>=.92&&complete?'auto':confidence>=.60?'review':'reject'
+    };
+    if(!best||candidate.confidence>best.confidence)best=candidate;
+  }
+  return best;
+}
+function deriveCount(order){
+  const explicit=normalizeNumber(order.productCount);
+  if(Number.isFinite(explicit)&&explicit>0)return explicit;
+  const sku=String(order.skuLines||'').trim();
+  if(sku){
+    const qty=[...sku.matchAll(/\*\s*(\d+(?:[.,]\d+)?)/g)].map(m=>Number(String(m[1]).replace(',','.'))).filter(Number.isFinite);
+    if(qty.length)return qty.reduce((a,b)=>a+b,0);
+    const lines=sku.split(/\n+/).filter(Boolean);if(lines.length)return lines.length;
+  }
+  const names=String(order.productNames||'').split(/\n+/).filter(x=>x.trim());
+  return names.length||1;
+}
+
+
 function inferCurrency(sourceFile='',value=''){
   const explicit=String(value||'').trim().toUpperCase();
   const aliases={EURO:'EUR','€':'EUR','$':'USD','US$':'USD','£':'GBP','¥':'JPY','RMB':'CNY'};
@@ -342,80 +502,81 @@ function isPlausibleOrderData(order,rawValues=[]){
   return true;
 }
 
+
 async function parseSheetStream(archive, entry, sharedStrings, sourceFile, sheetName, progressCb) {
-  const stream = await archive.stream(entry);
-  const reader = stream.getReader();
-  let buffer = '';
-  let inflated = 0;
-  let header = null;
-  let headerRow = -1;
-  let keyByColumn = null;
-  const orders = [];
-  let nonEmptyRows = 0;
-
-  function consume() {
-    while (true) {
-      const start = buffer.indexOf('<row');
-      if (start < 0) {
-        if (buffer.length > 4096) buffer = buffer.slice(-4096);
-        return;
-      }
-      const end = buffer.indexOf('</row>', start);
-      if (end < 0) {
-        if (start > 0) buffer = buffer.slice(start);
-        return;
-      }
-      const rowXml = buffer.slice(start, end + 6);
-      buffer = buffer.slice(end + 6);
-      const row = parseRelevantRow(rowXml, sharedStrings);
-      const hasData = row.values.some((v) => String(v ?? '').trim());
-      if (hasData) nonEmptyRows++;
-
-      if (!header && row.rowNum <= 30 && isOrderHeader(row.values)) {
-        header = row.values.map((v) => String(v ?? '').trim());
-        headerRow = row.rowNum;
-        keyByColumn = header.map((h) => keyForHeader(h));
+  const stream=await archive.stream(entry),reader=stream.getReader();
+  let buffer='',inflated=0,nonEmptyRows=0,schema=null,processedBuffered=false;
+  const preRows=[],orders=[];
+  function buildOrder(row){
+    const order={sourceFile,sourceSheet:sheetName,sourceRow:row.rowNum};
+    Object.entries(schema.mapping||{}).forEach(([col,key])=>{if(key)order[key]=String(row.values[Number(col)]??'').trim()});
+    if(!order.orderId)return;
+    if(!isPlausibleOrderData(order,row.values))return;
+    order.orderAmount=normalizeNumber(order.orderAmount);
+    order.productCount=deriveCount(order);
+    order.currency=inferCurrency(sourceFile,order.currency);
+    orders.push(order);
+  }
+  function activateSchema(force=false){
+    if(schema)return true;
+    if(preRows.length<8&&!force)return false;
+    const c=inferSchema(preRows);
+    if(!c)return false;
+    schema=c;
+    if(c.mode==='reject'){schema=null;return false}
+    if(c.mode==='review')return false;
+    for(const row of preRows){
+      if(row.rowNum>c.headerRow)buildOrder(row);
+    }
+    processedBuffered=true;
+    return true;
+  }
+  function consume(){
+    while(true){
+      const start=buffer.indexOf('<row');if(start<0){if(buffer.length>4096)buffer=buffer.slice(-4096);return}
+      const end=buffer.indexOf('</row>',start);if(end<0){if(start>0)buffer=buffer.slice(start);return}
+      const rowXml=buffer.slice(start,end+6);buffer=buffer.slice(end+6);
+      const row=parseRelevantRow(rowXml,sharedStrings);
+      const hasData=row.values.some(v=>String(v??'').trim());if(hasData)nonEmptyRows++;
+      if(!schema){
+        if(preRows.length<80)preRows.push(row);
+        if(preRows.length>=30)activateSchema(false);
         continue;
       }
-      if (!header || row.rowNum <= headerRow) continue;
-      const first = String(row.values[0] ?? '').trim();
-      if (!first) continue;
-      const order = { sourceFile, sourceSheet: sheetName, sourceRow: row.rowNum };
-      keyByColumn.forEach((key, col) => { if (key) order[key] = String(row.values[col] ?? '').trim(); });
-      if (!order.orderId) continue;
-      if (!isPlausibleOrderData(order,row.values)) continue;
-      order.orderAmount = normalizeNumber(order.orderAmount);
-      order.productCount = normalizeNumber(order.productCount);
-      order.currency = inferCurrency(sourceFile, order.currency);
-      orders.push(order);
+      if(schema.mode==='review')continue;
+      if(processedBuffered && row.rowNum<=preRows[preRows.length-1]?.rowNum)continue;
+      if(row.rowNum>schema.headerRow)buildOrder(row);
     }
   }
-
-  let lastProgressBytes = 0;
-  let lastProgressAt = 0;
-  while (true) {
-    const { value, done } = await reader.read();
-    if (done) break;
-    inflated += value.byteLength;
-    buffer += textDecoder.decode(value, { stream: true });
-    consume();
-    const now = Date.now();
-    if (inflated - lastProgressBytes >= 4 * 1024 * 1024 || now - lastProgressAt >= 120) {
-      progressCb?.(inflated, entry.uncompressedSize || inflated);
-      lastProgressBytes = inflated;
-      lastProgressAt = now;
+  let lastProgressBytes=0,lastProgressAt=0;
+  while(true){
+    const {value,done}=await reader.read();if(done)break;
+    inflated+=value.byteLength;buffer+=textDecoder.decode(value,{stream:true});consume();
+    const now=Date.now();
+    if(inflated-lastProgressBytes>=4*1024*1024||now-lastProgressAt>=120){
+      progressCb?.(inflated,entry.uncompressedSize||inflated);lastProgressBytes=inflated;lastProgressAt=now;
     }
   }
-  progressCb?.(inflated, entry.uncompressedSize || inflated);
-  buffer += textDecoder.decode();
-  consume();
-
-  if (!header) {
-    return { sourceFile, sheetName, status: 'ignored_non_order', orderCount: 0, orders: [], inflatedBytes: inflated,
-      reason: nonEmptyRows ? '未检测到 WRITE 真实订单表头' : '空工作表' };
+  buffer+=textDecoder.decode();consume();progressCb?.(inflated,entry.uncompressedSize||inflated);
+  if(!schema){
+    const c=inferSchema(preRows);
+    schema=c;
+    if(c?.mode==='auto'||c?.mode==='learned'){
+      for(const row of preRows){if(row.rowNum>c.headerRow)buildOrder(row)}
+    }
   }
-  return { sourceFile, sheetName, status: 'imported', orderCount: orders.length, orders, inflatedBytes: inflated,
-    reason: `识别到真实订单表头，导入 ${orders.length.toLocaleString('fr-FR')} 行` };
+  if(!schema){
+    return {sourceFile,sheetName,status:'ignored_non_order',orderCount:0,orders:[],inflatedBytes:inflated,
+      reason:nonEmptyRows?'未检测到可信订单结构':'空工作表'};
+  }
+  const schemaCandidate={sourceFile,sheetName,headerRow:schema.headerRow,headers:schema.headers,normalizedHeaders:schema.normalizedHeaders,
+    fingerprint:schema.fingerprint,mapping:schema.mapping,confidence:schema.confidence,mode:schema.mode};
+  if(schema.mode==='review'){
+    return {sourceFile,sheetName,status:'needs_schema_review',orderCount:0,orders:[],inflatedBytes:inflated,schemaCandidate,
+      reason:`检测到陌生订单结构，置信度 ${Math.round(schema.confidence*100)}%，需要一次字段确认`};
+  }
+  return {sourceFile,sheetName,status:'imported',orderCount:orders.length,orders,inflatedBytes:inflated,schemaCandidate,
+    reason:`${schema.mode==='learned'?'已学习结构':'自适应识别'} · 导入 ${orders.length.toLocaleString('fr-FR')} 行 · 置信度 ${Math.round(schema.confidence*100)}%`};
 }
 
 
@@ -558,6 +719,7 @@ async function parseInput(file, progressCb) {
 
 self.onmessage = async ({ data }) => {
   const files = data.files || [];
+  LEARNED_SCHEMAS=Array.isArray(data.schemaRules)?data.schemaRules:[];
   try {
     const all = [];
     const workbooks = [];
@@ -592,7 +754,9 @@ self.onmessage = async ({ data }) => {
       .filter(([,refs])=>new Set(refs.map(r=>r.sourceFile)).size>1)
       .map(([orderId,refs])=>({orderId,refs}));
     const sheets = all.map(({ orders: _orders, ...rest }) => rest);
-    self.postMessage({ type: 'complete', progress: 1, orders, sheets, duplicates, crossWorkbookDuplicates, workbooks });
+    const schemaCandidates=all.map(s=>s.schemaCandidate).filter(Boolean);
+    const schemaReviews=all.filter(s=>s.status==='needs_schema_review').map(s=>s.schemaCandidate).filter(Boolean);
+    self.postMessage({ type: 'complete', progress: 1, orders, sheets, duplicates, crossWorkbookDuplicates, workbooks, schemaCandidates, schemaReviews });
   } catch (error) {
     self.postMessage({ type: 'error', message: error?.message || String(error), stack: error?.stack || '' });
   }

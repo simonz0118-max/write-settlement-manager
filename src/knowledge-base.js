@@ -168,6 +168,34 @@ async function learnPrice(countryName,targetType,unitPrice,source='AUTO_INFERRED
     source
   });
 }
+
+function schemaRules(){
+  return [...cache.values()].filter(r=>r.type==='ORDER_SCHEMA'&&!r.deleted)
+    .sort((a,b)=>String(b.updatedAt).localeCompare(String(a.updatedAt)));
+}
+function schemaFor(fingerprint=''){
+  return find('ORDER_SCHEMA',String(fingerprint||''))||null;
+}
+async function learnSchema(schema={},manual=true){
+  const fingerprint=String(schema.fingerprint||'').trim();
+  if(!fingerprint)return null;
+  return upsert({
+    type:'ORDER_SCHEMA',
+    lookupKey:fingerprint,
+    payload:{
+      headers:Array.isArray(schema.headers)?schema.headers:[],
+      mapping:schema.mapping&&typeof schema.mapping==='object'?schema.mapping:{},
+      mappingByHeader:schema.mappingByHeader&&typeof schema.mappingByHeader==='object'?schema.mappingByHeader:{},
+      sheetName:String(schema.sheetName||''),
+      sourceFile:String(schema.sourceFile||''),
+      confidence:Number(schema.confidence)||0
+    },
+    confidenceLevel:manual?'MANUAL_CONFIRMED':'AUTO_INFERRED',
+    confirmed:!!manual,
+    source:manual?'MANUAL_SCHEMA':'AUTO_SCHEMA'
+  });
+}
+
 async function migrateLegacy(){
   if((await allRules()).length)return;
   const now=new Date().toISOString();
@@ -264,6 +292,7 @@ function stats(){
     pending:pending.size,
     productRules:rules.filter(r=>r.type==='PRODUCT_CATEGORY').length,
     priceRules:rules.filter(r=>r.type==='FACT_PRICE').length,
+    schemaRules:rules.filter(r=>r.type==='ORDER_SCHEMA').length,
     syncing,ready,
     online:navigator.onLine,
     cloud:getSyncMeta().cloudStatus==='connected',
@@ -305,7 +334,7 @@ setInterval(()=>{if(navigator.onLine)sync().catch(()=>{})},5*60*1000);
 
 
 window.WRITE_KB={
-  init,sync,stats,list,productCategory,factPrice,learnProduct,learnPrice,exportBackup,importBackup,renderStatus,
+  init,sync,stats,list,productCategory,factPrice,learnProduct,learnPrice,learnSchema,schemaRules,schemaFor,exportBackup,importBackup,renderStatus,
   priority:PRIORITY
 };
 })();
