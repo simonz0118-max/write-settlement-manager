@@ -447,3 +447,23 @@ html[data-theme="dark"] .model-head,html[data-theme="dark"] .learning-head{backg
 @media(max-width:640px){
   .export-status-toast{right:12px;bottom:108px;width:calc(100vw - 24px)}
 }
+
+/* V7.0.7 — explicit export center; no automatic browser download dependency */
+.export-center{
+  position:fixed;right:24px;bottom:24px;z-index:10050;
+  width:min(620px,calc(100vw - 48px));max-height:min(72vh,720px);overflow:auto;
+  border:1px solid var(--line);border-radius:16px;background:var(--panel);color:var(--text);
+  box-shadow:0 24px 70px rgba(0,0,0,.34);padding:0;
+}
+.export-center-head{display:flex;align-items:center;justify-content:space-between;padding:16px 18px;border-bottom:1px solid var(--line)}
+.export-center-head small{display:block;color:var(--muted);font-size:9px;letter-spacing:.16em;margin-bottom:4px}.export-center-head h3{margin:0;font-size:16px}
+.export-center-close{width:34px;height:34px;border:0;background:transparent;color:var(--muted);font-size:22px;cursor:pointer}
+.export-center-stage{margin:14px 18px 0;padding:11px 12px;border-radius:10px;background:var(--control);font-size:12px;line-height:1.45}
+.export-center-stage.error{border:1px solid rgba(255,90,90,.45)}.export-center-stage.success{border:1px solid rgba(120,220,150,.35)}
+.export-center-files{display:grid;gap:10px;padding:14px 18px}
+.export-file-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:14px;align-items:center;padding:12px;border:1px solid var(--line);border-radius:11px}
+.export-file-copy{min-width:0;display:grid;gap:4px}.export-file-copy strong{font-size:12px}.export-file-copy small{font-size:10px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.export-file-download{display:inline-flex;align-items:center;justify-content:center;min-width:86px;min-height:38px;padding:0 14px;border-radius:9px;text-decoration:none;font-size:12px;font-weight:700;border:1px solid var(--line);color:var(--text);background:var(--control)}
+.export-file-download.primary{background:var(--text);color:var(--bg);border-color:var(--text)}
+.export-center-log{padding:0 18px 16px;display:grid;gap:6px}.export-log-row{font-size:10px;line-height:1.45;color:var(--muted)}.export-log-row.error{color:#ff7b7b}.export-log-row.success{color:var(--text)}
+@media(max-width:700px){.export-center{right:10px;bottom:10px;width:calc(100vw - 20px);max-height:78vh}.export-file-row{grid-template-columns:1fr}.export-file-download{width:100%}}
