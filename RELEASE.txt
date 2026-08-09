@@ -1,8 +1,10 @@
-WRITE Settlement Manager V6.5.14
-Release time: 2026-08-09 13:28 Europe/Paris
+WRITE Settlement Manager V6.6.0
+Release time: 2026-08-09 16:31 Europe/Paris
 
-本版重点：
-- KPI 大数字强制单行显示
-- 大金额自动缩小字号，不再换行
-- 桌面 / iPad / iPhone 响应式显示继续优化
-- 全部版本日志入口同步
+本版核心：
+- 有 FACT：原格式重新回填
+- 无 FACT：自动生成并填写 FACT
+- 每个订单工作簿必须对应 FACT 交付件
+- 无成本来源不编造成本，明确标记待补
+- 会计报表与 FACT 同步进入统一 ZIP
+- 全部更新日志入口同步

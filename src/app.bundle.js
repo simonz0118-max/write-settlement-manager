@@ -554,8 +554,97 @@ function renderOrders(){
   els.tableNote.hidden=filtered.length<=700; els.tableNote.textContent=filtered.length>700?`为保持页面流畅，当前预览前 700 条；全部 ${numberFormat.format(filtered.length)} 条已完成分类。`:'';
 }
 
+
+// v6.6.0 — mandatory FACT delivery: generate a FACT when the source workbook has none.
+function currencyForWorkbook(workbookName=''){
+  const n=String(workbookName||'').toUpperCase();
+  if(/\bUSD\b|\$US|US\$/.test(n))return 'USD';
+  if(/\bGBP\b|£/.test(n))return 'GBP';
+  if(/\bCHF\b/.test(n))return 'CHF';
+  if(/\bCAD\b|C\$/.test(n))return 'CAD';
+  if(/\bAUD\b|A\$/.test(n))return 'AUD';
+  if(/\bJPY\b|¥/.test(n))return 'JPY';
+  if(/\bCNY\b|\bRMB\b|人民币/.test(n))return 'CNY';
+  return 'EUR';
+}
+function workbooksWithFact(){
+  return new Set(sheets.filter(s=>s.status==='ignored_fact').map(s=>s.sourceFile));
+}
+function generatedFactRowsForWorkbook(workbookName){
+  const rows=[], map=new Map(), currency=currencyForWorkbook(workbookName);
+  const sourceLines=(classified?.lineItems||[]).filter(x=>String(x.sourceFile||'')===String(workbookName||''));
+  for(const x of sourceLines){
+    const product=String(x.productName||'').trim() || x.categoryLabel || '未命名商品';
+    const sku=String(x.sku||'').trim();
+    const country=String(x.country||'UNKNOWN').trim() || 'UNKNOWN';
+    const key=[country,product,sku].join('\u0001');
+    const cur=map.get(key)||{country,product,sku,quantity:0,currency,orders:new Set()};
+    cur.quantity += Number(x.quantity)||1;
+    cur.orders.add(String(x.orderId||''));
+    map.set(key,cur);
+  }
+  let no=1;
+  for(const x of [...map.values()].sort((a,b)=>a.country.localeCompare(b.country,'en')||a.product.localeCompare(b.product,'fr')||a.sku.localeCompare(b.sku,'en'))){
+    rows.push({
+      no:no++,
+      country:x.country,
+      description:x.product,
+      sku:x.sku,
+      quantity:x.quantity,
+      cogs:0,
+      shipping:0,
+      unitTotal:0,
+      amount:0,
+      currency:x.currency,
+      costStatus:'待补成本（源工作簿无 FACT）',
+      sourceFile:workbookName,
+      sourceSheet:'AUTO_FACT',
+      generated:true,
+      orderCount:x.orders.size
+    });
+  }
+  return rows;
+}
+function allGeneratedFactRows(){
+  const hasFact=workbooksWithFact();
+  return (sourceWorkbooks||[])
+    .filter(w=>!hasFact.has(w.name))
+    .flatMap(w=>generatedFactRowsForWorkbook(w.name));
+}
+function buildGeneratedFactWorkbook(workbookName){
+  const data=generatedFactRowsForWorkbook(workbookName);
+  const currency=currencyForWorkbook(workbookName);
+  const rows=[
+    ['WRITE Settlement Manager — 自动生成 FACT','','','','','','','','','',''],
+    [`源文件：${basename(workbookName)}｜订单范围：${currentOrderRangeLabel()}｜币种：${currency}`,'','','','','','','','','',''],
+    ['说明：原工作簿没有 FACT。本表已自动填写商品、SKU、国家/地区和数量；COGs / Shipping 无可靠来源时保持 0，并明确标记“待补成本”，请勿将 0 视为真实成本。','','','','','','','','','',''],
+    [],
+    ['No','Country / Region','Description','SKU','Quantity','COGs / unit','Shipping / unit','COGs + Shipping / unit','Amount','Currency','Cost Status']
+  ];
+  for(const r of data){
+    rows.push([r.no,r.country,r.description,r.sku,r.quantity,r.cogs,r.shipping,r.unitTotal,r.amount,r.currency,r.costStatus]);
+  }
+  const qty=data.reduce((a,r)=>a+(Number(r.quantity)||0),0);
+  const amount=data.reduce((a,r)=>a+(Number(r.amount)||0),0);
+  rows.push(['','TOTAL / 合计','','',qty,'','','',amount,currency,data.length?'成本待补':'无商品行']);
+  return buildXlsx([{
+    name:'FACT',
+    rows,
+    widths:[9,20,54,34,14,16,18,24,18,12,30],
+    titleRow:1,subtitleRow:2,headerRows:[5],totalRows:[rows.length],
+    freezeRow:5,freezeCol:4,autoFilterRow:5,
+    integerColumns:[1,5],
+    centerColumns:[1,2,4,5,10,11],
+    wrapColumns:[3,4,11],
+    bandedRows:true,
+    merges:['A1:K1','A2:K2','A3:K3']
+  }]);
+}
+
 function buildFactExportData(){
-  const factRows=sheets.flatMap(s=>(s.factRows||[]).map(r=>({...r,sourceFile:r.sourceFile||s.sourceFile,sourceSheet:r.sourceSheet||s.sheetName})));
+  const importedFactRows=sheets.flatMap(s=>(s.factRows||[]).map(r=>({...r,sourceFile:r.sourceFile||s.sourceFile,sourceSheet:r.sourceSheet||s.sheetName})));
+  const generatedFactRows=allGeneratedFactRows();
+  const factRows=[...importedFactRows,...generatedFactRows];
   const active=factRows.filter(r=>(Number(r.quantity)||0)>0 || (Number(r.amount)||0)!==0);
 
   const normalizeDesc=(v)=>String(v||'未命名分类').replace(/\s+/g,' ').replace(/eternel\s*X/ig,'eternelX').trim();
@@ -672,7 +761,7 @@ function buildAccountingReport(){
     [],
     ['指标','数值','会计口径','状态'],
     ['销售订单总额',totalAmount,'去重后订单金额合计','已核算'],
-    ['FACT 成本总额',factData.totalAmount,'FACT 页面 Amount (€) 合计',factData.active?'已解析':'无 FACT 数据'],
+    ['FACT 成本总额',factData.totalAmount,'FACT / 自动生成 FACT 的 Amount 合计',factData.factRows.length?(factData.active?'已解析':'已生成 · 成本待补'):'无 FACT 数据'],
     ['估算毛利',grossProfit,'销售订单总额 - FACT 成本总额','估算值'],
     ['估算毛利率',grossMargin,'估算毛利 ÷ 销售订单总额','估算值'],
     ['去重后订单数',classified.orders.length,'最终纳入结算的唯一订单','已核算'],
@@ -744,19 +833,28 @@ function buildAccountingReport(){
 async function exportAccounting(){
   if(!classified)return;
   const report=buildAccountingReport();
-  const factBooks=sourceWorkbooks.filter(w=>sheets.some(s=>s.sourceFile===w.name&&s.status==='ignored_fact'));
-  if(!factBooks.length){downloadBlob(report.blob,report.fileName);return;}
+  const hasFact=workbooksWithFact();
   try{
-    const updated=[];
-    for(const wb of factBooks){
-      const patched=await rebuildFactWorkbook(wb.blob,wb.name);
-      updated.push({name:`FACT_已回填_${currentOrderRangeLabel()}_${basename(wb.name)}`,data:patched});
+    const deliverables=[];
+    for(const wb of (sourceWorkbooks||[])){
+      if(hasFact.has(wb.name)){
+        const patched=await rebuildFactWorkbook(wb.blob,wb.name);
+        deliverables.push({name:`FACT_已回填_${currentOrderRangeLabel()}_${basename(wb.name)}`,data:patched});
+      }else{
+        const generated=buildGeneratedFactWorkbook(wb.name);
+        deliverables.push({name:`FACT_自动生成_${currentOrderRangeLabel()}_${basename(wb.name).replace(/\.xlsx$/i,'')}.xlsx`,data:generated});
+      }
     }
-    const packageBlob=await zipStoreBlobs([{name:report.fileName,data:report.blob},...updated]);
+    // Even if a parser ever fails to retain workbook blobs, export at least one generated FACT from analyzed orders.
+    if(!deliverables.length){
+      const fallbackName=(importedFileNames?.[0]||'订单数据.xlsx').replace(/\.zip$/i,'.xlsx');
+      deliverables.push({name:`FACT_自动生成_${currentOrderRangeLabel()}_${basename(fallbackName).replace(/\.xlsx$/i,'')}.xlsx`,data:buildGeneratedFactWorkbook(fallbackName)});
+    }
+    const packageBlob=await zipStoreBlobs([{name:report.fileName,data:report.blob},...deliverables]);
     downloadBlob(packageBlob,`WRITE_结算交付包_${currentOrderRangeLabel()}_${localDateStamp()}.zip`);
   }catch(err){
     console.error(err);
-    showError(`FACT 回填导出失败：${err?.message||err}`);
+    showError(`FACT 交付导出失败：${err?.message||err}`);
   }
 }
 function reimportFlow(){
@@ -820,12 +918,12 @@ if(themeMedia.addEventListener)themeMedia.addEventListener('change',onSystemThem
 applyTheme(getThemePreference(),{persist:false});
 
 
-// v6.5.14 release notes controller — show once per release per browser
-const WRITE_RELEASE_META = window.WRITE_RELEASE_META || {current:{version:document.body.dataset.release||'6.5.14',time:'',title:'WRITE Settlement Manager',sections:[]},history:[]};
+// v6.6.0 release notes controller — show once per release per browser
+const WRITE_RELEASE_META = window.WRITE_RELEASE_META || {current:{version:document.body.dataset.release||'6.6.0',time:'',title:'WRITE Settlement Manager',sections:[]},history:[]};
 const WRITE_RELEASE = {
-  version: WRITE_RELEASE_META.current?.version || document.body.dataset.release || '6.5.14',
+  version: WRITE_RELEASE_META.current?.version || document.body.dataset.release || '6.6.0',
   date: WRITE_RELEASE_META.current?.time || '',
-  title: `WRITE Settlement Manager v${WRITE_RELEASE_META.current?.version || document.body.dataset.release || '6.5.14'}`,
+  title: `WRITE Settlement Manager v${WRITE_RELEASE_META.current?.version || document.body.dataset.release || '6.6.0'}`,
   sections: WRITE_RELEASE_META.current?.sections || []
 };
 function showReleaseNotesIfNeeded(){
@@ -860,7 +958,7 @@ document.documentElement.dataset.writeReady='true';
 
 
 
-// v6.5.14 — version history from unified release metadata
+// v6.6.0 — version history from unified release metadata
 const WRITE_HISTORY = Array.isArray(WRITE_RELEASE_META.history) ? WRITE_RELEASE_META.history : [];
 function renderReleaseHistory(){
   const host=document.getElementById('releaseHistory');
