@@ -1,3 +1,11 @@
+## v7.1.1 — 2026-08-09 22:35 (Europe/Paris)
+- 新增 D1 全自动配置脚本。
+- 自动查找/创建 `write-settlement-rules` D1。
+- 自动绑定 `WRITE_RULES_DB`、初始化 schema、验证 `write_rules`。
+- 自动 GitHub push + Pages D1 配置部署。
+- 新增 visibility 恢复同步和每5分钟安全同步。
+- 普通升级脚本自动保留 D1 Wrangler 配置。
+
 ## v7.1.0 — 2026-08-09 22:12 (Europe/Paris)
 - IndexedDB 成为规则长期本地主库；localStorage 保留兼容镜像。
 - 自动迁移旧商品分类规则和 FACT 国家价格学习规则。

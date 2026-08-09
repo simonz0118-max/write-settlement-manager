@@ -289,6 +289,12 @@ function renderStatus(){
 window.addEventListener('online',()=>sync().catch(()=>{}));
 window.addEventListener('offline',renderStatus);
 
+window.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState==='visible'&&navigator.onLine)sync().catch(()=>{});
+});
+setInterval(()=>{if(navigator.onLine)sync().catch(()=>{})},5*60*1000);
+
+
 window.WRITE_KB={
   init,sync,stats,list,productCategory,factPrice,learnProduct,learnPrice,exportBackup,importBackup,renderStatus,
   priority:PRIORITY

@@ -1,0 +1,12 @@
+# V7.1.1 D1 Auto Setup
+- D1 list/create flow: PASS
+- database ID injection: PASS
+- WRITE_RULES_DB binding config: PASS
+- remote schema execution: PASS
+- table verification: PASS
+- Pages config deployment: PASS
+- online write sync: retained
+- reconnect sync: retained
+- visibility sync: PASS
+- 5-minute safety sync: PASS
+- future deploy binding preservation: PASS

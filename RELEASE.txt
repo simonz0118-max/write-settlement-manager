@@ -1,9 +1,4 @@
-WRITE Settlement Manager V7.1.0
-Release time: 2026-08-09 22:12 Europe/Paris
-
-- IndexedDB 本地长期学习
-- Cloudflare D1 多设备同步
-- 离线可用 / 联网自动同步
-- 旧规则自动迁移
-- JSON 备份 / 恢复
-- D1 未配置不影响本地功能
+WRITE Settlement Manager V7.1.1
+Cloudflare D1 一键自动配置
+Local-first + Cloud Sync
+Release: 2026-08-09 22:35

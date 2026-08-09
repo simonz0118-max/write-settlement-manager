@@ -2,7 +2,7 @@
 set -e
 
 ROOT="$(cd "$(dirname "$0")" && pwd)"
-VERSION="7.1.0"
+VERSION="7.1.1"
 REPO_URL="https://github.com/simonz0118-max/write-settlement-manager.git"
 PROJECT_NAME="write-settlement-manager"
 TMP_DIR="$(mktemp -d -t write-settlement-publish.XXXXXX)"
@@ -46,7 +46,11 @@ echo "https://github.com/simonz0118-max/write-settlement-manager"
 echo ""
 echo "[4/4] 正在部署 Cloudflare Pages..."
 cd "$ROOT"
-npx wrangler pages deploy . \
+if [ -f "wrangler.jsonc" ] && ! grep -q "__WRITE_D1_DATABASE_ID__" "wrangler.jsonc"; then
+  npx wrangler pages deploy . --project-name="write-settlement-manager" --branch=main --config="wrangler.jsonc"
+else
+  npx wrangler pages deploy . \
+fi
   --project-name="$PROJECT_NAME" \
   --branch=main
 

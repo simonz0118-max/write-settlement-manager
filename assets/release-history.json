@@ -1,39 +1,48 @@
 {
   "current": {
-    "version": "7.1.0",
-    "time": "2026-08-09 22:12",
-    "title": "长期规则知识库",
+    "version": "7.1.1",
+    "time": "2026-08-09 22:35",
+    "title": "D1 全自动配置与长期同步",
     "sections": [
       {
-        "label": "本地学习",
+        "label": "自动配置",
         "items": [
-          "规则学习升级为 IndexedDB 本地长期知识库，离线仍可学习、分类和生成 FACT。",
-          "首次启动自动迁移现有 localStorage 商品分类规则和国家×商品价格规则。"
+          "新增中文一键脚本：自动检查 Wrangler、查找或创建 D1 并取得 database_id。",
+          "自动生成 wrangler.jsonc，绑定 WRITE_RULES_DB，无需手动 Dashboard 添加 Binding。",
+          "自动执行远程 D1 Schema 并验证 write_rules 表。",
+          "自动更新 GitHub 并使用 D1 Binding 重新部署 Cloudflare Pages。"
         ]
       },
       {
-        "label": "云同步",
+        "label": "自动同步",
         "items": [
-          "新增 Cloudflare D1 增量同步，多设备联网后自动合并规则。",
-          "冲突优先级：人工确认 > SKU 精确 > 套餐确认 > 商品名 > 自动推断 > 估算。"
+          "联网时新规则即时同步；断线恢复、页面重新激活以及每5分钟自动检查同步。",
+          "D1 不可用继续使用 IndexedDB Local-first，不影响结算。"
         ]
       },
       {
-        "label": "规则中心",
+        "label": "长期维护",
         "items": [
-          "规则中心新增长期规则数、待同步、云状态、立即同步、JSON 备份和恢复。",
-          "D1 未配置或断网时自动保持 Local-only，不影响任何结算功能。"
-        ]
-      },
-      {
-        "label": "部署",
-        "items": [
-          "附带 Pages Function `/api/rules/sync`、D1 schema 和中文配置说明。"
+          "以后普通一键升级自动沿用有效 wrangler.jsonc，不会丢失 D1 Binding。"
         ]
       }
     ]
   },
   "history": [
+    {
+      "version": "7.1.1",
+      "time": "2026-08-09 22:35",
+      "title": "Cloudflare D1 一键自动配置与持续同步",
+      "items": [
+        "新增中文一键脚本：自动检查 Wrangler、查找或创建 D1 并取得 database_id。",
+        "自动生成 wrangler.jsonc，绑定 WRITE_RULES_DB，无需手动 Dashboard 添加 Binding。",
+        "自动执行远程 D1 Schema 并验证 write_rules 表。",
+        "自动更新 GitHub 并使用 D1 Binding 重新部署 Cloudflare Pages。",
+        "联网时新规则即时同步；断线恢复、页面重新激活以及每5分钟自动检查同步。",
+        "D1 不可用继续使用 IndexedDB Local-first，不影响结算。",
+        "以后普通一键升级自动沿用有效 wrangler.jsonc，不会丢失 D1 Binding。"
+      ]
+    },
     {
       "version": "7.1.0",
       "time": "2026-08-09 22:12",
