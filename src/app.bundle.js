@@ -555,7 +555,7 @@ function renderOrders(){
 }
 
 
-// v6.6.0 — mandatory FACT delivery: generate a FACT when the source workbook has none.
+// v6.6.1 — mandatory FACT delivery: generate a FACT when the source workbook has none.
 function currencyForWorkbook(workbookName=''){
   const n=String(workbookName||'').toUpperCase();
   if(/\bUSD\b|\$US|US\$/.test(n))return 'USD';
@@ -569,6 +569,15 @@ function currencyForWorkbook(workbookName=''){
 }
 function workbooksWithFact(){
   return new Set(sheets.filter(s=>s.status==='ignored_fact').map(s=>s.sourceFile));
+}
+function learnedCostRateForDescription(description=''){
+  const key=norm(description).toLowerCase().replace(/\s+/g,' ');
+  if(!key)return null;
+  const candidates=sheets.flatMap(s=>(s.factRows||[])).filter(r=>norm(r.description).toLowerCase().replace(/\s+/g,' ')===key);
+  if(!candidates.length)return null;
+  const r=candidates[0];
+  const num=v=>Number.isFinite(Number(v))?Number(v):null;
+  return {cogs:num(r.cogs),shipping:num(r.shipping),unitTotal:num(r.unitTotal)};
 }
 function generatedFactRowsForWorkbook(workbookName){
   const rows=[], map=new Map(), currency=currencyForWorkbook(workbookName);
@@ -585,18 +594,22 @@ function generatedFactRowsForWorkbook(workbookName){
   }
   let no=1;
   for(const x of [...map.values()].sort((a,b)=>a.country.localeCompare(b.country,'en')||a.product.localeCompare(b.product,'fr')||a.sku.localeCompare(b.sku,'en'))){
+    const learned=learnedCostRateForDescription(x.product);
+    const cogs=learned?.cogs??null,shipping=learned?.shipping??null,unitTotal=learned?.unitTotal??null;
+    const calcUnit=Number.isFinite(Number(unitTotal))?Number(unitTotal):((Number.isFinite(Number(cogs))?Number(cogs):0)+(Number.isFinite(Number(shipping))?Number(shipping):0));
+    const hasCost=Number.isFinite(Number(unitTotal))||Number.isFinite(Number(cogs))||Number.isFinite(Number(shipping));
     rows.push({
       no:no++,
       country:x.country,
       description:x.product,
       sku:x.sku,
       quantity:x.quantity,
-      cogs:0,
-      shipping:0,
-      unitTotal:0,
-      amount:0,
+      cogs,
+      shipping,
+      unitTotal,
+      amount:hasCost?Math.round((x.quantity*calcUnit+Number.EPSILON)*100)/100:0,
       currency:x.currency,
-      costStatus:'待补成本（源工作簿无 FACT）',
+      costStatus:hasCost?'已使用学习成本':'待补成本（源工作簿无 FACT）',
       sourceFile:workbookName,
       sourceSheet:'AUTO_FACT',
       generated:true,
@@ -611,36 +624,68 @@ function allGeneratedFactRows(){
     .filter(w=>!hasFact.has(w.name))
     .flatMap(w=>generatedFactRowsForWorkbook(w.name));
 }
-function buildGeneratedFactWorkbook(workbookName){
-  const data=generatedFactRowsForWorkbook(workbookName);
-  const currency=currencyForWorkbook(workbookName);
-  const rows=[
-    ['WRITE Settlement Manager — 自动生成 FACT','','','','','','','','','',''],
-    [`源文件：${basename(workbookName)}｜订单范围：${currentOrderRangeLabel()}｜币种：${currency}`,'','','','','','','','','',''],
-    ['说明：原工作簿没有 FACT。本表已自动填写商品、SKU、国家/地区和数量；COGs / Shipping 无可靠来源时保持 0，并明确标记“待补成本”，请勿将 0 视为真实成本。','','','','','','','','','',''],
-    [],
-    ['No','Country / Region','Description','SKU','Quantity','COGs / unit','Shipping / unit','COGs + Shipping / unit','Amount','Currency','Cost Status']
-  ];
-  for(const r of data){
-    rows.push([r.no,r.country,r.description,r.sku,r.quantity,r.cogs,r.shipping,r.unitTotal,r.amount,r.currency,r.costStatus]);
-  }
-  const qty=data.reduce((a,r)=>a+(Number(r.quantity)||0),0);
-  const amount=data.reduce((a,r)=>a+(Number(r.amount)||0),0);
-  rows.push(['','TOTAL / 合计','','',qty,'','','',amount,currency,data.length?'成本待补':'无商品行']);
-  return buildXlsx([{
-    name:'FACT',
-    rows,
-    widths:[9,20,54,34,14,16,18,24,18,12,30],
-    titleRow:1,subtitleRow:2,headerRows:[5],totalRows:[rows.length],
-    freezeRow:5,freezeCol:4,autoFilterRow:5,
-    integerColumns:[1,5],
-    centerColumns:[1,2,4,5,10,11],
-    wrapColumns:[3,4,11],
-    bandedRows:true,
-    merges:['A1:K1','A2:K2','A3:K3']
-  }]);
+function xmlTextCell(ref,style,text){return `<c r="${ref}" s="${style}" t="inlineStr"><is><t xml:space="preserve">${esc(text??'')}</t></is></c>`}
+function xmlNumberCell(ref,style,value){return value===null||value===undefined||value===''?`<c r="${ref}" s="${style}"/>`:`<c r="${ref}" s="${style}"><v>${Number(value)}</v></c>`}
+function xmlFormulaCell(ref,style,formula){return `<c r="${ref}" s="${style}"><f>${esc(formula)}</f></c>`}
+function generatedTemplateDataRow(r,rowNo,index){
+  const desc=[r.description||'未命名商品',r.sku?`SKU: ${r.sku}`:'',r.country?`Country: ${r.country}`:''].filter(Boolean).join('\n');
+  const c=Number.isFinite(Number(r.cogs))?Number(r.cogs):null, s=Number.isFinite(Number(r.shipping))?Number(r.shipping):null, u=Number.isFinite(Number(r.unitTotal))?Number(r.unitTotal):null;
+  let g='',h='';
+  if(u!==null){g=xmlNumberCell(`G${rowNo}`,31,u);h=xmlFormulaCell(`H${rowNo}`,31,`D${rowNo}*G${rowNo}`)}
+  else if(c!==null&&s!==null){g=xmlFormulaCell(`G${rowNo}`,31,`E${rowNo}+F${rowNo}`);h=xmlFormulaCell(`H${rowNo}`,31,`D${rowNo}*G${rowNo}`)}
+  else if(c!==null){g=`<c r="G${rowNo}" s="31"/>`;h=xmlFormulaCell(`H${rowNo}`,31,`D${rowNo}*E${rowNo}`)}
+  else if(s!==null){g=`<c r="G${rowNo}" s="31"/>`;h=xmlFormulaCell(`H${rowNo}`,31,`D${rowNo}*F${rowNo}`)}
+  else {g=`<c r="G${rowNo}" s="31"/>`;h=`<c r="H${rowNo}" s="31"/>`}
+  return `<row r="${rowNo}" s="1" customFormat="1" ht="32" customHeight="1" spans="1:8"><c r="A${rowNo}" s="27"/>${xmlNumberCell(`B${rowNo}`,30,index)}${xmlTextCell(`C${rowNo}`,31,desc)}${xmlNumberCell(`D${rowNo}`,32,r.quantity)}${xmlNumberCell(`E${rowNo}`,31,c)}${xmlNumberCell(`F${rowNo}`,69,s)}${g}${h}</row>`;
 }
-
+function shiftTemplateRowXml(rowXml,oldRow,newRow,totalOld,totalNew){
+  let out=rowXml.replace(new RegExp(`r="${oldRow}"`,'g'),`r="${newRow}"`);
+  out=out.replace(new RegExp(`([A-Z]{1,3})${oldRow}(?=[^0-9]|$)`,'g'),(_,c)=>`${c}${newRow}`);
+  out=out.replace(new RegExp(`([A-Z]{1,3})${totalOld}(?=[^0-9]|$)`,'g'),(_,c)=>`${c}${totalNew}`);
+  if(oldRow===20)out=out.replace(`ref="B${newRow}"`,`ref="B${newRow}"`);
+  return out;
+}
+function shiftTemplateMergeRef(ref,threshold,delta){
+  return ref.replace(/([A-Z]{1,3})(\d+)/g,(m,c,r)=>`${c}${Number(r)>=threshold?Number(r)+delta:Number(r)}`);
+}
+function patchLearnedTemplateSheetXml(xml,data,workbookName){
+  const originalCount=4,count=Math.max(1,data.length),delta=count-originalCount,totalRow=12+count,oldTotal=16;
+  const rowRe=/<row\b[^>]*\br="(\d+)"[^>]*>[\s\S]*?<\/row>/g;
+  const rows=[];let m;while((m=rowRe.exec(xml)))rows.push({n:Number(m[1]),xml:m[0]});
+  const before=rows.filter(x=>x.n<12).map(x=>x.xml).join('');
+  const after=rows.filter(x=>x.n>=17).map(x=>shiftTemplateRowXml(x.xml,x.n,x.n+delta,oldTotal,totalRow)).join('');
+  const dataRows=(data.length?data:[{description:'暂无可统计商品',sku:'',country:'',quantity:0,cogs:null,shipping:null,unitTotal:null}]).map((r,i)=>generatedTemplateDataRow(r,12+i,i+1)).join('');
+  const totalXml=`<row r="${totalRow}" ht="32.25" customHeight="1" spans="1:8"><c r="A${totalRow}" s="12"/><c r="B${totalRow}" s="33"/><c r="C${totalRow}" s="33"/><c r="D${totalRow}" s="34"/><c r="E${totalRow}" s="33"/><c r="F${totalRow}" s="70"/><c r="G${totalRow}" s="70"/><c r="H${totalRow}" s="70"><f>SUM(H12:H${totalRow-1})</f></c></row>`;
+  const sheetData=xml.match(/<sheetData>[\s\S]*?<\/sheetData>/)?.[0];if(!sheetData)throw new Error('学习 FACT 模板缺少 sheetData');
+  let out=xml.replace(sheetData,`<sheetData>${before}${dataRows}${totalXml}${after}</sheetData>`);
+  out=out.replace(/<dimension ref="A1:K\d+"\/>/,`<dimension ref="A1:K${35+delta}"/>`);
+  out=out.replace(/<mergeCells count="(\d+)">([\s\S]*?)<\/mergeCells>/,(whole,countText,body)=>{
+    const shifted=body.replace(/ref="([A-Z]+\d+:[A-Z]+\d+)"/g,(mm,ref)=>`ref="${shiftTemplateMergeRef(ref,17,delta)}"`);
+    return `<mergeCells count="${countText}">${shifted}</mergeCells>`;
+  });
+  const currency=currencyForWorkbook(workbookName);
+  const labels=['No','Description','Quantity',`COGs (${currency})`,` Shipping (${currency})`,`COGs + Shipping (${currency})`,`Amount (${currency})`];
+  ['B','C','D','E','F','G','H'].forEach((col,i)=>{
+    const re=new RegExp(`<c[^>]*\\br="${col}10"[^>]*>[\\s\\S]*?<\\/c>`);out=out.replace(re,xmlTextCell(`${col}10`,col==='D'?26:25,labels[i]));
+  });
+  const date=new Intl.DateTimeFormat('fr-FR',{day:'2-digit',month:'2-digit',year:'2-digit'}).format(new Date());
+  out=out.replace(/<c[^>]*\br="E3"[^>]*>[\s\S]*?<\/c>/,xmlTextCell('E3',62,`FACT - AUTO\n\n${date}`));
+  const paymentRow=19+delta;
+  out=out.replace(new RegExp(`<c[^>]*\\br="B${paymentRow}"[^>]*>[\\s\\S]*?<\\/c>`),xmlTextCell(`B${paymentRow}`,42,`Pour le règlement, merci de faire un virement en ${currency}`));
+  return out;
+}
+async function rebuildArchiveReplacingEntry(archive,path,newBytes){
+  const parts=[],central=[],entries=[];let offset=0;
+  for(const orig of archive.entries){const nameBytes=enc.encode(orig.name);let e,data;if(orig.name===path){e={...orig,flags:(orig.flags||0)&0x800,method:0,crc:crc32(newBytes),compressedSize:newBytes.length,uncompressedSize:newBytes.length};data=newBytes}else{e={...orig,flags:(orig.flags||0)&0x800};data=await archive.compressedBlob(orig)}const local=zipLocalHeader(e,nameBytes);parts.push(local,data);central.push(zipCentralHeader(e,nameBytes,offset));offset+=local.length+e.compressedSize;entries.push(e)}
+  const centralSize=central.reduce((a,b)=>a+b.length,0),centralOffset=offset;parts.push(...central,new Uint8Array([...u32(ZIP_EOCD),...u16(0),...u16(0),...u16(entries.length),...u16(entries.length),...u32(centralSize),...u32(centralOffset),...u16(0)]));return new Blob(parts,{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+}
+async function buildGeneratedFactWorkbook(workbookName){
+  const data=generatedFactRowsForWorkbook(workbookName);
+  const resp=await fetch(`./assets/FACT_TEMPLATE_LEARNED_V1.xlsx?v=6.6.1`,{cache:'no-store'});if(!resp.ok)throw new Error('无法读取内置 FACT 学习模板');
+  const templateBlob=await resp.blob(),archive=await PreserveZipArchive.open(templateBlob),sheetPath='xl/worksheets/sheet1.xml';
+  const xml=await archive.text(sheetPath,16*1024*1024),patched=patchLearnedTemplateSheetXml(xml,data,workbookName);
+  return rebuildArchiveReplacingEntry(archive,sheetPath,enc.encode(patched));
+}
 function buildFactExportData(){
   const importedFactRows=sheets.flatMap(s=>(s.factRows||[]).map(r=>({...r,sourceFile:r.sourceFile||s.sourceFile,sourceSheet:r.sourceSheet||s.sheetName})));
   const generatedFactRows=allGeneratedFactRows();
@@ -841,14 +886,14 @@ async function exportAccounting(){
         const patched=await rebuildFactWorkbook(wb.blob,wb.name);
         deliverables.push({name:`FACT_已回填_${currentOrderRangeLabel()}_${basename(wb.name)}`,data:patched});
       }else{
-        const generated=buildGeneratedFactWorkbook(wb.name);
+        const generated=await buildGeneratedFactWorkbook(wb.name);
         deliverables.push({name:`FACT_自动生成_${currentOrderRangeLabel()}_${basename(wb.name).replace(/\.xlsx$/i,'')}.xlsx`,data:generated});
       }
     }
     // Even if a parser ever fails to retain workbook blobs, export at least one generated FACT from analyzed orders.
     if(!deliverables.length){
       const fallbackName=(importedFileNames?.[0]||'订单数据.xlsx').replace(/\.zip$/i,'.xlsx');
-      deliverables.push({name:`FACT_自动生成_${currentOrderRangeLabel()}_${basename(fallbackName).replace(/\.xlsx$/i,'')}.xlsx`,data:buildGeneratedFactWorkbook(fallbackName)});
+      deliverables.push({name:`FACT_自动生成_${currentOrderRangeLabel()}_${basename(fallbackName).replace(/\.xlsx$/i,'')}.xlsx`,data:await buildGeneratedFactWorkbook(fallbackName)});
     }
     const packageBlob=await zipStoreBlobs([{name:report.fileName,data:report.blob},...deliverables]);
     downloadBlob(packageBlob,`WRITE_结算交付包_${currentOrderRangeLabel()}_${localDateStamp()}.zip`);
@@ -918,12 +963,12 @@ if(themeMedia.addEventListener)themeMedia.addEventListener('change',onSystemThem
 applyTheme(getThemePreference(),{persist:false});
 
 
-// v6.6.0 release notes controller — show once per release per browser
-const WRITE_RELEASE_META = window.WRITE_RELEASE_META || {current:{version:document.body.dataset.release||'6.6.0',time:'',title:'WRITE Settlement Manager',sections:[]},history:[]};
+// v6.6.1 release notes controller — show once per release per browser
+const WRITE_RELEASE_META = window.WRITE_RELEASE_META || {current:{version:document.body.dataset.release||'6.6.1',time:'',title:'WRITE Settlement Manager',sections:[]},history:[]};
 const WRITE_RELEASE = {
-  version: WRITE_RELEASE_META.current?.version || document.body.dataset.release || '6.6.0',
+  version: WRITE_RELEASE_META.current?.version || document.body.dataset.release || '6.6.1',
   date: WRITE_RELEASE_META.current?.time || '',
-  title: `WRITE Settlement Manager v${WRITE_RELEASE_META.current?.version || document.body.dataset.release || '6.6.0'}`,
+  title: `WRITE Settlement Manager v${WRITE_RELEASE_META.current?.version || document.body.dataset.release || '6.6.1'}`,
   sections: WRITE_RELEASE_META.current?.sections || []
 };
 function showReleaseNotesIfNeeded(){
@@ -958,7 +1003,7 @@ document.documentElement.dataset.writeReady='true';
 
 
 
-// v6.6.0 — version history from unified release metadata
+// v6.6.1 — version history from unified release metadata
 const WRITE_HISTORY = Array.isArray(WRITE_RELEASE_META.history) ? WRITE_RELEASE_META.history : [];
 function renderReleaseHistory(){
   const host=document.getElementById('releaseHistory');

@@ -1,10 +1,11 @@
-WRITE Settlement Manager V6.6.0
-Release time: 2026-08-09 16:31 Europe/Paris
+WRITE Settlement Manager V6.6.1
+Release time: 2026-08-09 16:41 Europe/Paris
 
 本版核心：
-- 有 FACT：原格式重新回填
-- 无 FACT：自动生成并填写 FACT
-- 每个订单工作簿必须对应 FACT 交付件
-- 无成本来源不编造成本，明确标记待补
-- 会计报表与 FACT 同步进入统一 ZIP
+- 无 FACT 直接克隆真实学习 FACT 模板
+- 格式、LOGO、付款信息、合并单元格完全沿用模板
+- 数据行动态扩展
+- 成本计算公式沿用模板逻辑
+- 无可靠成本保持空白，不伪造 0 成本
+- 多币种表头自动适配
 - 全部更新日志入口同步
