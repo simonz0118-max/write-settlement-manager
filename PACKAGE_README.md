@@ -1,5 +1,5 @@
-# WRITE Settlement Manager V6.6.1
-> 当前正式版本：**V6.6.1** — 版本日志统一数据源与全链路同步修复。
+# WRITE Settlement Manager V6.6.2
+> 当前正式版本：**V6.6.2** — 版本日志统一数据源与全链路同步修复。
 
 ## 根目录
 - `index.html` — WebApp 入口

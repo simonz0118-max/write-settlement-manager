@@ -1,3 +1,12 @@
+## v6.6.2 — 2026-08-09 16:58 (Europe/Paris)
+- 修复无 FACT 自动生成时没有真实 FACT 分类、成本价格全部为 0 的问题。
+- 新增 FACT Profile 识别：WRITE 铅笔订单自动选择真实铅笔 FACT 学习模板。
+- 自动 FACT 直接复用已有 FACT 回填引擎：国家 → Stylo eternel X 数量档位 → 笔芯 / 彩色笔芯 → 雕刻 → 礼盒。
+- 内置真实历史铅笔 FACT 模板 `FACT_TEMPLATE_PENCIL_V1.xlsx`，保留原格式与 COGs / Shipping 国家价格矩阵。
+- 自动生成 FACT 与已有 FACT 回填的 Quantity、COGs、Shipping、COGs+Shipping、Amount 计算方式统一。
+- 会计报表的自动 FACT 汇总同步使用分类后行及学习价格。
+- 首次更新弹窗、历史更新、README、RELEASE 与中文发布脚本同步至 V6.6.2。
+
 ## v6.6.1 — 2026-08-09 16:41 (Europe/Paris)
 - 无 FACT 自动创建改为“真实学习模板克隆”，内置 `assets/FACT_TEMPLATE_LEARNED_V1.xlsx`。
 - 自动生成 FACT 保留学习模板的 LOGO、字体、边框、列宽、行高、合并单元格、付款信息和页面结构。
