@@ -1,4 +1,5 @@
 /* WRITE Settlement Manager v5.3.3 - standalone import worker */
+const REQUIRED_HEADERS = ['订单号', '订单金额', '产品总数', '产品名称', '收货人国家'];
 const EOCD_SIG = 0x06054b50;
 const CEN_SIG = 0x02014b50;
 const LOC_SIG = 0x04034b50;

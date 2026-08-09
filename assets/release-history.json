@@ -1,33 +1,30 @@
 {
   "current": {
-    "version": "7.0.2",
-    "time": "2026-08-09 17:25",
-    "title": "CN 标准模板 + 零遗漏审计",
+    "version": "7.0.2.1",
+    "time": "2026-08-09 18:05",
+    "title": "恢复订单导入",
     "sections": [
       {
-        "label": "模板统一",
+        "label": "紧急修复",
         "items": [
-          "WRITE 铅笔 FACT 一律使用 CN 标准模板。",
-          "自动生成文件只保留 FACT-CN，不再附带模板里的旧订单 Sheet。"
-        ]
-      },
-      {
-        "label": "零遗漏机制",
-        "items": [
-          "所有收费商品必须映射到 FACT 行，否则禁止导出。",
-          "订单端数量与 FACT 端数量必须守恒，否则禁止导出。"
-        ]
-      },
-      {
-        "label": "分类补全",
-        "items": [
-          "Carnet、Gomme、4/6/12 mines 及对应 UPSELL 全部进入 CN FACT 映射。",
-          "免费赠品不再混入收费 FACT 成本。"
+          "定位并修复 import.worker.bundle.js 中 REQUIRED_HEADERS 被引用但未打包声明的问题。",
+          "REQUIRED_HEADERS 直接与 src/lib/orderSchema.js 的中文标准表头保持一致。",
+          "不修改 V7.0.2 的 CN FACT 模板、Carnet/Gomme/Mines 分类、数量守恒及零遗漏审计。"
         ]
       }
     ]
   },
   "history": [
+    {
+      "version": "7.0.2.1",
+      "time": "2026-08-09 18:05",
+      "title": "紧急修复：恢复订单导入",
+      "items": [
+        "定位并修复 import.worker.bundle.js 中 REQUIRED_HEADERS 被引用但未打包声明的问题。",
+        "REQUIRED_HEADERS 直接与 src/lib/orderSchema.js 的中文标准表头保持一致。",
+        "不修改 V7.0.2 的 CN FACT 模板、Carnet/Gomme/Mines 分类、数量守恒及零遗漏审计。"
+      ]
+    },
     {
       "version": "7.0.2",
       "time": "2026-08-09 17:25",

@@ -247,7 +247,7 @@ function findFactSheetPath(workbookXml,relsXml){
           path=rels.get(rid);
     if(path && /FACT/i.test(name))candidates.push({name,path});
   }
-  // V7.0.2: CN is the canonical WRITE FACT when multiple FACT sheets exist.
+  // V7.0.2.1: CN is the canonical WRITE FACT when multiple FACT sheets exist.
   const cn=candidates.find(x=>/CN/i.test(x.name));
   return cn?.path || candidates[0]?.path || '';
 }
@@ -846,7 +846,7 @@ function renderOrders(){
 }
 
 
-// v7.0.2 — mandatory FACT delivery: generate a FACT when the source workbook has none.
+// v7.0.2.1 — mandatory FACT delivery: generate a FACT when the source workbook has none.
 function currencyForWorkbook(workbookName=''){
   const n=String(workbookName||'').toUpperCase();
   if(/\bUSD\b|\$US|US\$/.test(n))return 'USD';
@@ -1014,7 +1014,7 @@ async function rebuildArchiveReplacingEntry(archive,path,newBytes){
   const centralSize=central.reduce((a,b)=>a+b.length,0),centralOffset=offset;parts.push(...central,new Uint8Array([...u32(ZIP_EOCD),...u16(0),...u16(0),...u16(entries.length),...u16(entries.length),...u32(centralSize),...u32(centralOffset),...u16(0)]));return new Blob(parts,{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
 }
 async function buildGeneratedPencilFactWorkbook(workbookName){
-  const resp=await fetch(`./assets/FACT_TEMPLATE_CN_CANONICAL_V1.xlsx?v=7.0.2`,{cache:'no-store'});
+  const resp=await fetch(`./assets/FACT_TEMPLATE_CN_CANONICAL_V1.xlsx?v=7.0.2.1`,{cache:'no-store'});
   if(!resp.ok)throw new Error('无法读取 CN 标准 FACT 模板');
   const templateBlob=await resp.blob(),
         archive=await PreserveZipArchive.open(templateBlob),
@@ -1039,7 +1039,7 @@ async function buildGeneratedFactWorkbook(workbookName){
     return buildGeneratedPencilFactWorkbook(workbookName);
   }
   const data=generatedFactRowsForWorkbook(workbookName);
-  const resp=await fetch(`./assets/FACT_TEMPLATE_LEARNED_V1.xlsx?v=7.0.2`,{cache:'no-store'});if(!resp.ok)throw new Error('无法读取内置 FACT 学习模板');
+  const resp=await fetch(`./assets/FACT_TEMPLATE_LEARNED_V1.xlsx?v=7.0.2.1`,{cache:'no-store'});if(!resp.ok)throw new Error('无法读取内置 FACT 学习模板');
   const templateBlob=await resp.blob(),archive=await PreserveZipArchive.open(templateBlob),sheetPath='xl/worksheets/sheet1.xml';
   const xml=await archive.text(sheetPath,16*1024*1024),patched=patchLearnedTemplateSheetXml(xml,data,workbookName);
   return rebuildArchiveReplacingEntry(archive,sheetPath,enc.encode(patched));
@@ -1251,7 +1251,7 @@ async function exportAccounting(){
       const profile=detectGeneratedFactProfile(wb.name);
 
       if(profile==='PENCIL_V1'){
-        // V7.0.2: WRITE pencil FACT always uses canonical CN template,
+        // V7.0.2.1: WRITE pencil FACT always uses canonical CN template,
         // regardless of whether the source workbook contained CN/FR/legacy FACT.
         const generated=await buildGeneratedPencilFactWorkbook(wb.name);
         deliverables.push({
@@ -1353,12 +1353,12 @@ if(themeMedia.addEventListener)themeMedia.addEventListener('change',onSystemThem
 applyTheme(getThemePreference(),{persist:false});
 
 
-// v7.0.2 release notes controller — show once per release per browser
-const WRITE_RELEASE_META = window.WRITE_RELEASE_META || {current:{version:document.body.dataset.release||'7.0.2',time:'',title:'WRITE Settlement Manager',sections:[]},history:[]};
+// v7.0.2.1 release notes controller — show once per release per browser
+const WRITE_RELEASE_META = window.WRITE_RELEASE_META || {current:{version:document.body.dataset.release||'7.0.2.1',time:'',title:'WRITE Settlement Manager',sections:[]},history:[]};
 const WRITE_RELEASE = {
-  version: WRITE_RELEASE_META.current?.version || document.body.dataset.release || '7.0.2',
+  version: WRITE_RELEASE_META.current?.version || document.body.dataset.release || '7.0.2.1',
   date: WRITE_RELEASE_META.current?.time || '',
-  title: `WRITE Settlement Manager v${WRITE_RELEASE_META.current?.version || document.body.dataset.release || '7.0.2'}`,
+  title: `WRITE Settlement Manager v${WRITE_RELEASE_META.current?.version || document.body.dataset.release || '7.0.2.1'}`,
   sections: WRITE_RELEASE_META.current?.sections || []
 };
 function showReleaseNotesIfNeeded(){
@@ -1393,7 +1393,7 @@ document.documentElement.dataset.writeReady='true';
 
 
 
-// v7.0.2 — version history from unified release metadata
+// v7.0.2.1 — version history from unified release metadata
 const WRITE_HISTORY = Array.isArray(WRITE_RELEASE_META.history) ? WRITE_RELEASE_META.history : [];
 function renderReleaseHistory(){
   const host=document.getElementById('releaseHistory');
