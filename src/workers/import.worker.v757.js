@@ -1,4 +1,4 @@
-/* WRITE Settlement Manager v7.5.6 — Source Fidelity Import Worker
+/* WRITE Settlement Manager v7.5.7 — Source Fidelity Import Worker
  * Layered over the production V7.4.1 worker.
  * Contract: preserve every non-empty source cell, never drop an order row only
  * because orderId/amount/category/cost is unknown, and never truncate at column P.
@@ -210,7 +210,7 @@ self.onmessage = async ({ data }) => {
     const sheets=all.map(({orders:_orders,...rest})=>rest);
     const schemaCandidates=all.map(s=>s.schemaCandidate).filter(Boolean);
     self.postMessage({type:'complete',progress:1,orders,sheets,duplicates:0,sameOrderIdExtraRows,sameWorkbookOrderIdGroups,
-      sourceRecordCount:rawOrders.length,crossWorkbookDuplicates,workbooks,schemaCandidates,schemaReviews:[],sourceFidelityVersion:'7.5.6'});
+      sourceRecordCount:rawOrders.length,crossWorkbookDuplicates,workbooks,schemaCandidates,schemaReviews:[],sourceFidelityVersion:'7.5.7'});
   } catch (error) {
     self.postMessage({type:'error',message:error?.message||String(error),stack:error?.stack||''});
   }

@@ -1,3 +1,9 @@
+## v7.5.7 — 2026-08-10 20:41 (Europe/Paris)
+- ONE ORDER = ONE FACT ROW：正式 FACT 禁止跨订单聚合。
+- 160 个有效订单必须产生 160 条独立订单行，每条 Quantity=1。
+- 有效 FACT 行数、Quantity 合计、唯一 sourceOrderKey 三重守恒，不一致则阻止导出。
+- Description 标准化、历史价格和未知价格空白规则保持不变。
+
 ## v7.5.6 — 2026-08-10 20:27 (Europe/Paris)
 - ORDER COUNT IMMUTABLE：正式 FACT Quantity 使用订单/包裹口径，一个有效源订单固定贡献 1。
 - 商品件数、SKU *N、商品拆分/聚合不再允许改变订单数量。

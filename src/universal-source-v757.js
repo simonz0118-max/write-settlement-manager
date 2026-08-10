@@ -2,7 +2,7 @@
 (function(){
 'use strict';
 
-const V756_VERSION='7.5.6';
+const V757_VERSION='7.5.7';
 
 function clean(v=''){return String(v??'').trim()}
 function finite(v){if(v===null||v===undefined||v==='')return null;const n=Number(v);return Number.isFinite(n)?n:null}
@@ -283,43 +283,70 @@ window.orderCountByCountryForWorkbook=function(workbookName){
 // Formal FACT package rows: every counted source order contributes EXACTLY 1.
 // Orders are only merged after a concise standardized Description is chosen.
 window.generatedGenericFactRowsForWorkbook = function(workbookName){
-  const currency=workbookCurrency(workbookName),groups=new Map(),unknownRows=[];
+  const currency=workbookCurrency(workbookName),rows=[];
   const source=(classified?.orders||[]).filter(o=>String(o?.sourceFile||'')===String(workbookName||''));
+
   for(const order of source){
     const country=clean(order?.country)||'GLOBAL',description=packageDescription(order);
     const primary=primaryLineForOrder(order),sku=clean(primary?.sku);
+    const orderKey=String(order?.recordKey||order?.orderId||'');
+    const sourceRow=Number(order?.sourceRow||0)||0;
+
     if(!immutableOrderForFact(order)){
-      unknownRows.push({country,description,sku,quantity:null,quantityKnown:false,cogs:null,shipping:null,unitTotal:null,amount:null,currency,
-        costStatus:'PRICE_BLANK',sourceFile:workbookName,sourceSheet:'ORDER_NOT_COUNTED_V756',generated:true,orderCount:0,
-        sourceOrderKey:String(order?.recordKey||order?.orderId||''),systemKind:'ORDER_QUANTITY_UNKNOWN'});
+      rows.push({
+        country,description,sku,quantity:null,quantityKnown:false,
+        cogs:null,shipping:null,unitTotal:null,amount:null,currency,
+        costStatus:'PRICE_BLANK',sourceFile:workbookName,sourceSheet:'ORDER_NOT_COUNTED_V757',
+        sourceRow,generated:true,orderCount:0,sourceOrderKey:orderKey,
+        systemKind:'ORDER_QUANTITY_UNKNOWN',oneSourceOrderOneFactRow:true
+      });
       continue;
     }
-    const cost=packageCostForOrder(order,workbookName,currency),sig=priceSignature(cost);
-    const key=[country,description,sig].join('\u0001');
-    const cur=groups.get(key)||{country,description,sku,quantity:0,cost,orders:new Set()};
-    cur.quantity+=1;cur.orders.add(String(order?.recordKey||order?.orderId||''));groups.set(key,cur);
+
+    const cost=packageCostForOrder(order,workbookName,currency);
+    const c=finite(cost?.cogs),sh=finite(cost?.shipping),unit=finite(cost?.unitTotal),priced=!!cost;
+    const unitValue=priced?(unit??((c??0)+(sh??0))):null;
+
+    rows.push({
+      country,description,sku,
+      quantity:1,quantityKnown:true,
+      cogs:priced?c:null,
+      shipping:priced?sh:null,
+      unitTotal:priced?unitValue:null,
+      amount:priced?Math.round((unitValue+Number.EPSILON)*100)/100:null,
+      currency,
+      costStatus:priced?'KNOWN':'PRICE_BLANK',
+      sourceFile:workbookName,
+      sourceSheet:'ONE_ORDER_ONE_FACT_ROW_V757',
+      sourceRow,
+      generated:true,
+      orderCount:1,
+      sourceOrderKey:orderKey,
+      sourceOrderId:String(order?.orderId||''),
+      priceSource:priced?(cost.source||'PACKAGE_EXACT'):'',
+      historicalSafe:true,
+      systemKind:'ORDER_PACKAGE',
+      oneSourceOrderOneFactRow:true
+    });
   }
 
-  const rows=[...groups.values()].map(x=>{
-    const c=finite(x.cost?.cogs),s=finite(x.cost?.shipping),u=finite(x.cost?.unitTotal),priced=!!x.cost;
-    return {country:x.country,description:x.description,sku:x.sku,quantity:x.quantity,quantityKnown:true,cogs:priced?c:null,shipping:priced?s:null,unitTotal:priced?u:null,
-      amount:priced?Math.round((x.quantity*(u??((c??0)+(s??0)))+Number.EPSILON)*100)/100:null,currency,
-      costStatus:priced?'KNOWN':'PRICE_BLANK',sourceFile:workbookName,sourceSheet:'ORDER_COUNT_IMMUTABLE_V756',generated:true,
-      orderCount:x.orders.size,priceSource:priced?(x.cost.source||'PACKAGE_EXACT'):'',historicalSafe:true,systemKind:'ORDER_PACKAGE'};
-  });
-
+  const counted=rows.filter(r=>finite(r.quantity)!==null&&finite(r.quantity)>0);
   const expected=window.immutableOrderCountForWorkbook(workbookName);
-  const actual=rows.reduce((a,r)=>a+(finite(r.quantity)??0),0);
-  if(actual!==expected)throw new Error(`ORDER_COUNT_INVARIANT_FAILED: source=${expected}, FACT=${actual}`);
+  const actualQty=counted.reduce((a,r)=>a+(finite(r.quantity)??0),0);
+  const actualRows=counted.length;
+  const uniqueKeys=new Set(counted.map(r=>String(r.sourceOrderKey||''))).size;
 
-  rows.push(...unknownRows);
+  if(actualQty!==expected||actualRows!==expected||uniqueKeys!==expected){
+    throw new Error(`ORDER_ROW_INVARIANT_FAILED: source=${expected}, FACT_rows=${actualRows}, FACT_qty=${actualQty}, unique_orders=${uniqueKeys}`);
+  }
+
   const preferred=['FRANCE','BELGIUM','CANADA','SWITZERLAND','LUXEMBOURG','GERMANY','SPAIN','ITALY','NETHERLANDS','AUSTRIA','PORTUGAL','REUNION ISLAND','GREECE','GLOBAL'];
   const rank=c=>{const i=preferred.indexOf(clean(c).toUpperCase());return i<0?999:i};
   rows.sort((a,b)=>rank(a.country)-rank(b.country)||clean(a.country).localeCompare(clean(b.country),'en')||
-    Number(a.quantity===null)-Number(b.quantity===null)||clean(a.description).localeCompare(clean(b.description),'fr')||clean(a.sku).localeCompare(clean(b.sku),'en'));
+    (Number(a.sourceRow||0)-Number(b.sourceRow||0))||clean(a.sourceOrderKey).localeCompare(clean(b.sourceOrderKey),'en'));
+
   return rows.map((r,i)=>({...r,no:i+1}));
 };
-
 // Completely remove profile routing from all active V7.5 reporting paths.
 window.generatedFactRowsForWorkbook = function(workbookName){return generatedGenericFactRowsForWorkbook(workbookName)};
 window.allGeneratedFactRows = function(){return (sourceWorkbooks||[]).flatMap(w=>generatedGenericFactRowsForWorkbook(w.name))};
@@ -356,7 +383,7 @@ startImport = async function(fileList){
   const files=[...fileList].filter(f=>/\.(xlsx|zip)$/i.test(f.name));if(!files.length||busy)return;
   await window.WRITE_KB?.init?.().catch(()=>{});
   const schemaRules=window.WRITE_SCHEMA?.getRules?.()||[];
-  worker?.terminate();worker=new Worker('./src/workers/import.worker.v756.js?v=7.5.6-001');importStartedAt=performance.now();importedFileNames=files.map(f=>f.name);
+  worker?.terminate();worker=new Worker('./src/workers/import.worker.v757.js?v=7.5.6-001');importStartedAt=performance.now();importedFileNames=files.map(f=>f.name);
   setBusy(true);hideError();els.importLanding.hidden=false;els.appViews.hidden=true;els.topActions.hidden=true;
   els.currentFile.textContent='准备读取全部源字段…';els.progressFill.style.width='0%';els.progressText.textContent='0% · Source Fidelity';
   worker.onmessage=async({data})=>{
@@ -372,7 +399,7 @@ startImport = async function(fileList){
       if(!orders.length){classified=null;els.progressFill.style.width='100%';els.progressText.textContent='100% · 未检测到订单数据';els.currentFile.textContent='解析完成';setBusy(false);showError('没有检测到可统计的订单 Sheet；FACT/说明 Sheet 不会被误当订单。');worker?.terminate();worker=null;return}
       classified=classifyOrders(orders);
       els.progressFill.style.width='100%';els.progressText.textContent='100% · 全部源记录已保留并完成统计';els.currentFile.textContent='解析完成';hideError();setBusy(false);renderResults();
-      window.dispatchEvent(new CustomEvent('write-import-complete',{detail:{sourceRecordCount,records:orders.length,sameOrderIdGroups:sameWorkbookOrderIdGroups.length,sourceFidelityVersion:V756_VERSION}}));
+      window.dispatchEvent(new CustomEvent('write-import-complete',{detail:{sourceRecordCount,records:orders.length,sameOrderIdGroups:sameWorkbookOrderIdGroups.length,sourceFidelityVersion:V757_VERSION}}));
       worker?.terminate();worker=null;
     }
     if(data.type==='error'){setBusy(false);showError(data.message||'未知导入错误');worker?.terminate();worker=null}
@@ -385,17 +412,17 @@ startImport = async function(fileList){
 // Runtime version marker keeps the currently deployed shell honest even before
 // the next full HTML cache-bust package is applied.
 try{
-  document.body.dataset.release=V756_VERSION;
-  const brandVersion=document.querySelector('.brand-copy small');if(brandVersion)brandVersion.textContent=`v${V756_VERSION}`;
-  const historyCurrent=document.getElementById('historyCurrentVersion');if(historyCurrent)historyCurrent.textContent=`v${V756_VERSION}`;
+  document.body.dataset.release=V757_VERSION;
+  const brandVersion=document.querySelector('.brand-copy small');if(brandVersion)brandVersion.textContent=`v${V757_VERSION}`;
+  const historyCurrent=document.getElementById('historyCurrentVersion');if(historyCurrent)historyCurrent.textContent=`v${V757_VERSION}`;
   const historyHost=document.getElementById('releaseHistory');
-  if(historyHost&&!historyHost.querySelector('[data-v756-entry]')){
-    const article=document.createElement('article');article.className='history-item current';article.dataset.v756Entry='1';
-    article.innerHTML='<div class="history-meta"><span class="history-version">v7.5.6</span><time class="history-time">2026-08-10 20:18</time></div><div class="history-body"><h3>Standardized Description · 正式 FACT 描述标准化</h3><ul><li>正式 FACT Description 自动简化，SKU 不再默认显示。</li><li>伪装网统一为 Le Filet de camouflage / 尺寸；颜色、premium/renforcé 等营销信息从正式描述移除。</li><li>160 包裹与 288 件商品守恒逻辑保持不变，未知价格继续留空。</li></ul></div>';
+  if(historyHost&&!historyHost.querySelector('[data-v757-entry]')){
+    const article=document.createElement('article');article.className='history-item current';article.dataset.v757Entry='1';
+    article.innerHTML='<div class="history-meta"><span class="history-version">v7.5.6</span><time class="history-time">2026-08-10 20:18</time></div><div class="history-body"><h3>One Order = One FACT Row · 禁止跨订单聚合</h3><ul><li>160 个有效源订单必须生成 160 条独立 FACT 订单行。</li><li>相同 Description 也不得跨订单合并；每条 Quantity 固定为 1。</li><li>商品件数继续只做后台审计，历史价格与未知价格规则保持不变。</li></ul></div>';
     historyHost.prepend(article);
     const count=document.getElementById('historyCount');if(count){const n=Number((count.textContent.match(/\d+/)||[])[0]||0);count.textContent=`${n+1} 个版本`;}
   }
 }catch(e){console.warn('WRITE v7.5.6 version marker:',e)}
 
-window.WRITE_ORDER_COUNT_IMMUTABLE_V756={version:V756_VERSION,quantityInvariant:true,orderCountImmutable:true,unknownNeverBlocks:true,allColumns:true,historicalPricing:'V741_PARITY',descriptionStandard:'MANUAL_FACT_STYLE_V1'};
+window.WRITE_ONE_ORDER_ONE_ROW_V757={version:V757_VERSION,oneOrderOneFactRow:true,quantityPerValidOrder:1,crossOrderAggregation:false,unknownNeverBlocks:true,descriptionStandard:'MANUAL_FACT_STYLE_V1'};
 })();
