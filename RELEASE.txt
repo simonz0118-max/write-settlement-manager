@@ -1,3 +1,1 @@
-WRITE Settlement Manager V7.2.2
-Batch modal UI and close-interaction hotfix.
-No business-logic changes.
+WRITE Settlement Manager V7.2.3\nGeneric FACT export routing + UNKNOWN direct export + export state-machine fix.\n
