@@ -1401,26 +1401,66 @@ async function buildGeneratedPencilFactWorkbook(workbookName){
   return rebuilt;
 }
 async function buildGeneratedFactWorkbook(workbookName){
-  if(detectGeneratedFactProfile(workbookName)==='PENCIL_V1'){
-    // Mature pencil invoices keep the verified CN FACT route. Its visual layout is the same historical FACT family.
-    return buildGeneratedPencilFactWorkbook(workbookName);
+  // V7.4.1 UNIVERSAL CONTRACT:
+  // every workbook uses source data + canonical FACT template.
+  // classification, historical match, cost availability and product familiarity never block generation.
+  let data=[];
+  try{
+    data=generatedGenericFactRowsForWorkbook(workbookName)||[];
+  }catch(e){
+    console.warn('V7.4.1 generic FACT rows fallback:',e);
   }
-  const data=generatedFactRowsForWorkbook(workbookName);
-  const resp=await fetch('./assets/FACT_TEMPLATE_UNIFIED_V1.xlsx?v=7.3.1',{cache:'no-store'});
+
+  if(!Array.isArray(data)||!data.length){
+    const currency=currencyForWorkbook(workbookName);
+    const map=new Map();
+    for(const x of (classified?.lineItems||[]).filter(x=>String(x.sourceFile||'')===String(workbookName||''))){
+      const product=String(x.productName||x.sku||'Article').trim()||'Article';
+      const sku=String(x.sku||'').trim();
+      const country=String(x.country||'').trim()||'GLOBAL';
+      const key=[country,product,sku].join('\u0001');
+      const cur=map.get(key)||{country,product,sku,quantity:0,orders:new Set()};
+      cur.quantity+=Number(x.quantity)||1;
+      cur.orders.add(String(x.recordKey||x.orderId||''));
+      map.set(key,cur);
+    }
+    data=[...map.values()].map((x,i)=>({
+      no:i+1,
+      country:x.country,
+      description:x.product,
+      sku:x.sku,
+      quantity:x.quantity,
+      cogs:null,
+      shipping:null,
+      unitTotal:null,
+      amount:null,
+      currency,
+      costStatus:'PRICE_BLANK',
+      sourceFile:workbookName,
+      sourceSheet:'AUTO_FACT_V741',
+      generated:true,
+      orderCount:x.orders.size
+    }));
+  }
+
+  const resp=await fetch('./assets/FACT_TEMPLATE_UNIFIED_V1.xlsx?v=7.4.1',{cache:'no-store'});
   if(!resp.ok)throw new Error(`无法读取统一 FACT 标准模板（HTTP ${resp.status}）`);
   const templateBlob=await resp.blob();
   if(!templateBlob?.size)throw new Error('统一 FACT 标准模板为空');
+
   const archive=await PreserveZipArchive.open(templateBlob);
   const sheetPath='xl/worksheets/sheet1.xml';
   if(!archive.get(sheetPath))throw new Error('统一 FACT 标准模板缺少 sheet1.xml');
   const xml=await archive.text(sheetPath,16*1024*1024);
+
   const patcher=window.WRITE_FACT_V731?.patchSheet;
-  if(typeof patcher!=='function')throw new Error('V7.3.1 统一 FACT 格式引擎未加载');
+  if(typeof patcher!=='function')throw new Error('统一 FACT 格式引擎未加载');
   const patched=patcher(xml,data,workbookName);
   const rebuilt=await rebuildArchiveReplacingEntry(archive,sheetPath,enc.encode(patched));
   if(!rebuilt?.size)throw new Error('统一 FACT Excel 生成结果为空');
   return rebuilt;
 }
+
 function buildFactExportData(){
   const importedFactRows=sheets.flatMap(s=>(s.factRows||[]).map(r=>({...r,sourceFile:r.sourceFile||s.sourceFile,sourceSheet:r.sourceSheet||s.sheetName})));
   const generatedFactRows=allGeneratedFactRows();
@@ -1711,9 +1751,9 @@ async function exportAccounting(){
     setExportBusy(true);
     resetExportCenter();
     exportStarted=true;
-    exportCenterLog('✓ V7.2 源记录 / 商品数量守恒检查通过。','success');
+    exportCenterLog('✓ 源订单记录已载入；分类/成本未知不会阻断 FACT。','success');
     if(exportPolicy.allowUnknownCosts){
-      exportCenterLog(`⚠ 本次允许 UNKNOWN 成本直接导出：${exportPolicy.unknownCosts||0} 组未设置成本；不会写成 0，也不会计算虚假毛利。`,'info');
+      exportCenterLog(`⚠ 本次允许 未知价格留空导出：${exportPolicy.unknownCosts||0} 组未设置成本；不会写成 0，也不会计算虚假毛利。`,'info');
     }
     exportCenterStage('1/4 正在生成会计 Excel…');
     report=buildAccountingReport();
@@ -1726,73 +1766,22 @@ async function exportAccounting(){
     const hasFact=workbooksWithFact();
     const deliverables=[];
     for(const wb of (sourceWorkbooks||[])){
-      const profile=detectGeneratedFactProfile(wb.name);
-      if(profile==='PENCIL_V1'){
-        exportCenterStage(`2/4 审计并生成 CN FACT · ${basename(wb.name)}`);
-        exportCenterLog('→ 自动学习缺失的 国家 × 商品 价格与 FACT 落点…','info');
-        const effectiveFactRows=factRowsWithAutoLearning(wb.name,LEARNED_PENCIL_FACT_ROWS);
-        const learnedDynamicRows=effectiveFactRows.filter(r=>r.dynamic);
-        if(learnedDynamicRows.length){
-          exportCenterLog(`✓ 自动学习并新增 ${learnedDynamicRows.length} 个 FACT 组合。`,'success');
-        }else{
-          exportCenterLog('✓ 当前订单无需新增 FACT 组合。','success');
-        }
-        exportCenterLog('→ 开始 CN FACT 完整性审计…','info');
-        let audit;
-        try{
-          audit=factCompletenessAudit(wb.name,effectiveFactRows);
-        }catch(auditErr){
-          throw new Error(`CN FACT 审计代码异常：${auditErr?.message||auditErr}`);
-        }
-        exportCenterLog('✓ CN FACT 审计代码执行完成。','success');
-        const hardAuditIssues=audit.issues.filter(x=>x.type==='UNMAPPED_PRODUCT');
-        if(hardAuditIssues.length){
-          const sample=hardAuditIssues.slice(0,6).map(x=>`无法识别商品：${x.product||x.sku||'未命名商品'} / ${x.country||''}${x.sourceSheet?` / ${x.sourceSheet} 行 ${x.sourceRow||'?'}`:''}`).join('；');
-          throw new Error(`CN FACT 仍有无法自动学习的商品：${sample}`);
-        }
-        exportCenterLog('→ 开始写入 CN FACT 模板…','info');
-        let generated;
-        try{
-          generated=await buildGeneratedPencilFactWorkbook(wb.name);
-        }catch(factErr){
-          throw new Error(`CN FACT 文件生成异常：${factErr?.message||factErr}`);
-        }
-        exportCenterLog('✓ CN FACT 文件写入完成。','success');
-        const filename=`FACT_CN_已统计_${currentOrderRangeLabel()}_${basename(wb.name).replace(/\.xlsx$/i,'')}.xlsx`;
-        if(!generated?.size)throw new Error(`${basename(wb.name)}：CN FACT 生成失败。`);
-        deliverables.push({name:filename,data:generated});
-        addExportFile(generated,filename,'CN FACT','secondary');
-        exportCenterLog(`✓ ${filename} 已生成。`,'success');
-      }else if(hasFact.has(wb.name)){
-        if(profile==='PENCIL_V1'){
-          const factRows=sheets.flatMap(s=>s.sourceFile===wb.name&&s.status==='ignored_fact'?(s.factRows||[]):[]);
-          const audit=factCompletenessAudit(wb.name,factRows);
-          if(!audit.ok){
-            const hard=audit.issues.filter(x=>['UNMAPPED_PRODUCT','NO_FACT_TARGET','NO_PENCIL_BUCKET','QUANTITY_MISMATCH'].includes(x.type));
-            if(hard.length)throw new Error(`${basename(wb.name)}：PENCIL FACT 完整性审计未通过：${hard.slice(0,4).map(x=>x.type).join(' / ')}`);
-          }
-          const patched=await rebuildFactWorkbook(wb.blob,wb.name);
-          const filename=`FACT_已回填_${currentOrderRangeLabel()}_${basename(wb.name)}`;
-          if(!patched?.size)throw new Error(`${basename(wb.name)}：FACT 回填失败。`);
-          deliverables.push({name:filename,data:patched});
-          addExportFile(patched,filename,'已回填 FACT','secondary');
-          exportCenterLog(`✓ ${filename} 已生成。`,'success');
-        }else{
-          const generated=await buildGeneratedFactWorkbook(wb.name);
-          const filename=`FACT_通用生成_${currentOrderRangeLabel()}_${basename(wb.name).replace(/\.xlsx$/i,'')}.xlsx`;
-          if(!generated?.size)throw new Error(`${basename(wb.name)}：通用 FACT 生成失败。`);
-          deliverables.push({name:filename,data:generated});
-          addExportFile(generated,filename,'通用 FACT · 历史成本优先','secondary');
-          exportCenterLog(`✓ ${filename} 已生成；历史可匹配成本保留，UNKNOWN 成本保持空白。`,'success');
-        }
-      }else{
-        const generated=await buildGeneratedFactWorkbook(wb.name);
-        const filename=`FACT_自动生成_${currentOrderRangeLabel()}_${basename(wb.name).replace(/\.xlsx$/i,'')}.xlsx`;
-        if(!generated?.size)throw new Error(`${basename(wb.name)}：自动 FACT 生成失败。`);
-        deliverables.push({name:filename,data:generated});
-        addExportFile(generated,filename,'自动 FACT','secondary');
-        exportCenterLog(`✓ ${filename} 已生成。`,'success');
+      exportCenterStage(`2/4 生成统一 FACT · ${basename(wb.name)}`);
+      exportCenterLog('→ 读取源订单全部可用字段并套用统一 FACT 模板…','info');
+
+      let generated;
+      try{
+        generated=await buildGeneratedFactWorkbook(wb.name);
+      }catch(factErr){
+        throw new Error(`${basename(wb.name)}：统一 FACT 文件生成异常：${factErr?.message||factErr}`);
       }
+
+      if(!generated?.size)throw new Error(`${basename(wb.name)}：统一 FACT 生成结果为空。`);
+
+      const filename=`FACT_已统计_${currentOrderRangeLabel()}_${basename(wb.name).replace(/\.xlsx$/i,'')}.xlsx`;
+      deliverables.push({name:filename,data:generated});
+      addExportFile(generated,filename,'统一 FACT','secondary');
+      exportCenterLog(`✓ ${filename} 已生成。未知价格保持空白，已知数据全部保留。`,'success');
     }
 
     if(!deliverables.length){

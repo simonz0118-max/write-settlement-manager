@@ -1,3 +1,11 @@
+## v7.4.1 — 2026-08-10 15:35 (Europe/Paris)
+- 直接修改生产 app.bundle.js：删除 exportAccounting 的 PENCIL_V1 / CN FACT / UNMAPPED_PRODUCT 导出阻断链。
+- 所有订单文件统一调用 Universal FACT builder，并套用统一历史 FACT 模板。
+- 商品未识别、分类未知、价格未知不能阻止 FACT 导出。
+- 源订单中的国家 / 商品 / SKU / 数量等可用字段必须保留统计。
+- 有可靠价格规则则自动计算，无可靠价格则价格留空。
+- 自动学习仅作为后续增强，不再作为当前导出的前置条件。
+
 ## v7.4.0 — 2026-08-10 15:10 (Europe/Paris)
 - Universal FACT Engine：订单源数据决定统计结果，规则/学习不再作为导出前置条件。
 - 未知商品、未知分类、未知成本不得阻断 FACT；已知字段全部保留。

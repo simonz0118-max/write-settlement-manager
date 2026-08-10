@@ -1,40 +1,51 @@
 {
   "current": {
-    "version": "7.4.0",
-    "time": "2026-08-10 15:10",
-    "title": "Universal FACT Engine · 数据优先全自动导出",
+    "version": "7.4.1",
+    "time": "2026-08-10 15:35",
+    "title": "Universal FACT 强制统一导出链",
     "sections": [
       {
-        "label": "核心原则",
+        "label": "根本修复",
         "items": [
-          "任何订单表格都以源数据为准；分类和学习不能阻止 FACT 导出。",
-          "订单中已有的国家、商品、SKU、数量、金额、币种等信息必须尽可能完整保留。"
+          "生产 app.bundle.js 不再让 PENCIL_V1 进入旧 CN FACT 阻断审计。",
+          "4 mines / 6 mines / 新商品 / 未学习商品都不能再因为 UNMAPPED_PRODUCT 阻止整张 FACT。"
         ]
       },
       {
-        "label": "FACT",
+        "label": "唯一导出逻辑",
         "items": [
-          "所有正式发票套用统一历史 FACT 模板。",
-          "有可靠历史价格/计算规律时自动计算；没有可靠价格时价格留空。"
+          "所有订单工作簿统一调用 Universal FACT builder。",
+          "订单里存在的国家、商品、SKU、数量等字段全部按源数据聚合后输出。"
         ]
       },
       {
-        "label": "未知商品",
+        "label": "价格",
         "items": [
-          "未知商品不再触发“无法识别商品 → 导出失败”。",
-          "先按源订单现有字段输出，再把成功处理结果作为后续学习增强。"
+          "历史规则有可靠价格则自动计算。",
+          "没有可靠价格则价格单元格留空，不写 0，不阻止导出。"
         ]
       },
       {
-        "label": "守恒",
+        "label": "模板",
         "items": [
-          "只有真正的源订单记录丢失可硬阻断导出。",
-          "分类未知、成本未知、数量语义警告都不能让整张 FACT 消失。"
+          "所有正式 FACT 使用统一历史 FACT 标准模板和布局。",
+          "后台学习/分类状态不得写入正式发票。"
         ]
       }
     ]
   },
   "history": [
+    {
+      "version": "7.4.1",
+      "time": "2026-08-10 15:35",
+      "title": "Universal FACT 强制统一导出链",
+      "items": [
+        "移除 exportAccounting 中 PENCIL_V1 / UNMAPPED_PRODUCT 硬阻断。",
+        "所有工作簿统一走 Universal FACT builder。",
+        "源订单已知数据必须输出；未知价格留空。",
+        "学习机制只增强，不再决定能否导出。"
+      ]
+    },
     {
       "version": "7.4.0",
       "time": "2026-08-10 15:10",

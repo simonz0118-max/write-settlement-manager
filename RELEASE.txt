@@ -1,9 +1,13 @@
-WRITE Settlement Manager V7.4.0
-Universal FACT Engine
+WRITE Settlement Manager V7.4.1
+Universal FACT — single export path.
 
-Source data first.
-Classification does not block export.
-Learning does not block export.
-Unknown price remains blank.
-All formal invoices use the canonical historical FACT layout.
-Only true source-record loss may hard-block export.
+ANY order workbook
+-> preserve available source data
+-> aggregate country/product/SKU/quantity
+-> calculate price when a reliable rule exists
+-> leave unknown price blank
+-> render with the canonical FACT template
+-> export
+
+No PENCIL-only export blocker.
+No UNMAPPED_PRODUCT export blocker.
