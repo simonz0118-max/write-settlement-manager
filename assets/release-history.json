@@ -1,40 +1,46 @@
 {
   "current": {
-    "version": "7.4.1",
-    "time": "2026-08-10 15:35",
-    "title": "Universal FACT 强制统一导出链",
+    "version": "7.5.4",
+    "time": "2026-08-10 19:40",
+    "title": "Parcel Conservation · 包裹数与商品聚合彻底分离",
     "sections": [
       {
-        "label": "根本修复",
+        "label": "真实问题修复",
         "items": [
-          "生产 app.bundle.js 不再让 PENCIL_V1 进入旧 CN FACT 阻断审计。",
-          "4 mines / 6 mines / 新商品 / 未学习商品都不能再因为 UNMAPPED_PRODUCT 阻止整张 FACT。"
+          "商品按国家+商品+SKU聚合后，FRANCE 只有 79 个商品分组；这不是包裹数。",
+          "新增独立包裹守恒层，商品聚合不得再改变订单/包裹数量。"
         ]
       },
       {
-        "label": "唯一导出逻辑",
+        "label": "真实批次 1001–1162",
         "items": [
-          "所有订单工作簿统一调用 Universal FACT builder。",
-          "订单里存在的国家、商品、SKU、数量等字段全部按源数据聚合后输出。"
+          "160 个确认包裹：FRANCE 158 + BELGIUM 1 + GREECE 1。",
+          "商品统计仍为 82 个国家+商品+SKU 分组、已知商品数量 288 件，两套统计互不污染。"
         ]
       },
       {
-        "label": "价格",
+        "label": "FACT 输出",
         "items": [
-          "历史规则有可靠价格则自动计算。",
-          "没有可靠价格则价格单元格留空，不写 0，不阻止导出。"
-        ]
-      },
-      {
-        "label": "模板",
-        "items": [
-          "所有正式 FACT 使用统一历史 FACT 标准模板和布局。",
-          "后台学习/分类状态不得写入正式发票。"
+          "每个国家区块增加 Nombre de colis / Parcels 行，明确显示该国家包裹数量。",
+          "包裹价格无可靠规则时保持空白；包裹数量不计入商品件数 TOTAL。"
         ]
       }
     ]
   },
   "history": [
+    {
+      "version": "7.5.4",
+      "time": "2026-08-10 19:40",
+      "title": "Parcel Conservation · 包裹数与商品聚合彻底分离",
+      "items": [
+        "商品按国家+商品+SKU聚合后，FRANCE 只有 79 个商品分组；这不是包裹数。",
+        "新增独立包裹守恒层，商品聚合不得再改变订单/包裹数量。",
+        "160 个确认包裹：FRANCE 158 + BELGIUM 1 + GREECE 1。",
+        "商品统计仍为 82 个国家+商品+SKU 分组、已知商品数量 288 件，两套统计互不污染。",
+        "每个国家区块增加 Nombre de colis / Parcels 行，明确显示该国家包裹数量。",
+        "包裹价格无可靠规则时保持空白；包裹数量不计入商品件数 TOTAL。"
+      ]
+    },
     {
       "version": "7.4.1",
       "time": "2026-08-10 15:35",

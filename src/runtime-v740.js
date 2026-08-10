@@ -130,15 +130,16 @@ function unifiedFactDataRow(r,rowNo,index){
   const product=cleanFormalText(r?.description)||cleanFormalText(r?.sku)||'Article';
   const sku=cleanFormalText(r?.sku);
   const desc=[product,sku?`SKU: ${sku}`:''].filter(Boolean).join('\n');
-  const q=Number.isFinite(Number(r?.quantity))?Number(r.quantity):0;
-  const c=Number.isFinite(Number(r?.cogs))?Number(r.cogs):null;
-  const s=Number.isFinite(Number(r?.shipping))?Number(r.shipping):null;
-  const u=Number.isFinite(Number(r?.unitTotal))?Number(r.unitTotal):null;
+  const q=(r?.quantity===null||r?.quantity===undefined||r?.quantity==='')?null:(Number.isFinite(Number(r.quantity))?Number(r.quantity):null);
+  const priceNum=v=>(v===null||v===undefined||v==='')?null:(Number.isFinite(Number(v))?Number(v):null);
+  const c=priceNum(r?.cogs);
+  const s=priceNum(r?.shipping);
+  const u=priceNum(r?.unitTotal);
   const cells=[
     `<c r="A${rowNo}" s="43"/>`,
     xmlNumberCell(`B${rowNo}`,46,index),
     xmlTextCell(`C${rowNo}`,47,desc),
-    xmlNumberCell(`D${rowNo}`,48,q),
+    q===null?`<c r="D${rowNo}" s="48"/>`:xmlNumberCell(`D${rowNo}`,48,q),
     c===null?`<c r="E${rowNo}" s="47"/>`:xmlNumberCell(`E${rowNo}`,47,c),
     s===null?`<c r="F${rowNo}" s="49"/>`:xmlNumberCell(`F${rowNo}`,49,s)
   ];
@@ -270,7 +271,7 @@ try{
     // Universal rule: classification/learning is never a prerequisite for export.
     // Every workbook uses the canonical FACT template; unknown price stays blank.
     const data=generatedFactRowsForWorkbook(workbookName);
-    const resp=await fetch('./assets/FACT_TEMPLATE_UNIFIED_V1.xlsx?v=7.4.0',{cache:'no-store'});
+    const resp=await fetch('./assets/FACT_TEMPLATE_UNIFIED_V2.xlsx?v=7.5.4-001',{cache:'no-store'});
     if(!resp.ok)throw new Error(`无法读取统一 FACT 标准模板（HTTP ${resp.status}）`);
     const templateBlob=await resp.blob();
     if(!templateBlob?.size)throw new Error('统一 FACT 标准模板为空');

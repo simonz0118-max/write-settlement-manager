@@ -1590,6 +1590,7 @@ function buildAccountingReport(){
     ['估算毛利率',multiCurrency||!costComplete?'—':grossMargin,multiCurrency?'多币种时不跨币种计算毛利率':!costComplete?'成本不完整，毛利率不可计算':'估算毛利 ÷ 销售订单总额',multiCurrency||!costComplete?'不计算':'估算值'],
     ['结算记录数',classified.orders.length,'每个源订单行均保留；订单号不作为删除依据','已核算'],
     ['商品件数',totalItemQty,'所有商品行数量合计','已核算'],
+    ['确认包裹数',factData.parcelCount??0,'按订单级确认包裹统计；与商品/SKU分组独立','已核算'],
     ['赠品件数',giftQty,'🎁 / 100% off 自动识别','已识别'],
     ['待复核订单',reviewOrders.length,'正式交付前建议归零',reviewOrders.length?'需处理':'通过']
   ];
@@ -1598,7 +1599,7 @@ function buildAccountingReport(){
   const factSummaryRows=[['No','Description','Quantity','COGs (€)','Shipping (€)','COGs + Shipping (€)','Amount (€)']];
   let no=1;
   for(const r of factData.summary) factSummaryRows.push([no++,r.description,r.quantity,r.avgCogs,r.avgShipping,r.avgUnit,r.amount]);
-  factSummaryRows.push(['','TOTAL / 合计',factData.totalQty,factData.totalQty?factData.cogsTotal/factData.totalQty:0,factData.totalQty?factData.shippingTotal/factData.totalQty:0,factData.totalQty?(factData.cogsTotal+factData.shippingTotal)/factData.totalQty:0,factData.totalAmount]);
+  factSummaryRows.push(['','TOTAL / 合计',factData.totalQty,costComplete&&factData.totalQty?factData.cogsTotal/factData.totalQty:null,costComplete&&factData.totalQty?factData.shippingTotal/factData.totalQty:null,costComplete&&factData.totalQty?(factData.cogsTotal+factData.shippingTotal)/factData.totalQty:null,costComplete?factData.totalAmount:null]);
 
   // 02: Order accounting categories only.
   const orderCategoryRows=[['会计分类','订单数','订单金额','金额占比','待复核']];

@@ -1,13 +1,9 @@
-WRITE Settlement Manager V7.4.1
-Universal FACT — single export path.
+WRITE Settlement Manager V7.5.4
+Parcel Conservation + Historical-Safe Universal FACT
 
-ANY order workbook
--> preserve available source data
--> aggregate country/product/SKU/quantity
--> calculate price when a reliable rule exists
--> leave unknown price blank
--> render with the canonical FACT template
--> export
-
-No PENCIL-only export blocker.
-No UNMAPPED_PRODUCT export blocker.
+CONFIRMED PARCELS -> order-level invariant, independent from product aggregation
+REAL BATCH 1001-1162 -> 160 parcels = FR 158 + BE 1 + GR 1
+MERCHANDISE -> 288 known units / 82 country+product+SKU groups
+UNKNOWN QUANTITY -> preserved, never guessed as parcel or unit
+UNKNOWN PRICE -> blank
+HISTORICAL PRICING -> unchanged

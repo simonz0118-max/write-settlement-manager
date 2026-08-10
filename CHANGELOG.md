@@ -1,3 +1,10 @@
+## v7.5.4 — 2026-08-10 19:40 (Europe/Paris)
+- 修复商品聚合行数被误当包裹数的问题：79 是 FRANCE 商品/SKU 分组，不是包裹。
+- 新增订单级 Parcel Conservation：1001–1162 真实批次必须守恒为 160 个确认包裹（FR 158 / BE 1 / GR 1）。
+- FACT 每个国家增加 Nombre de colis / Parcels 行；无可靠包裹成本时价格保持空白。
+- 商品数量仍独立守恒为 288，82 个商品/SKU 分组保持不变；包裹数量绝不计入商品件数 TOTAL。
+- 1012 / 1038 两个源数量为 0 的定制记录继续保留为 UNKNOWN_QUANTITY，但不伪造为确认包裹。
+
 ## v7.4.1 — 2026-08-10 15:35 (Europe/Paris)
 - 直接修改生产 app.bundle.js：删除 exportAccounting 的 PENCIL_V1 / CN FACT / UNMAPPED_PRODUCT 导出阻断链。
 - 所有订单文件统一调用 Universal FACT builder，并套用统一历史 FACT 模板。
