@@ -273,7 +273,7 @@ try{
     // Universal rule: classification/learning is never a prerequisite for export.
     // Every workbook uses the canonical FACT template; unknown price stays blank.
     const data=generatedFactRowsForWorkbook(workbookName);
-    const resp=await fetch('./assets/FACT_TEMPLATE_UNIFIED_V2.xlsx?v=7.5.8.1-001',{cache:'no-store'});
+    const resp=await fetch('./assets/FACT_TEMPLATE_UNIFIED_V2.xlsx?v=7.5.9-001',{cache:'no-store'});
     if(!resp.ok)throw new Error(`无法读取统一 FACT 标准模板（HTTP ${resp.status}）`);
     const templateBlob=await resp.blob();
     if(!templateBlob?.size)throw new Error('统一 FACT 标准模板为空');

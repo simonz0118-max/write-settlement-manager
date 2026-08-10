@@ -1,26 +1,50 @@
 {
   "current": {
-    "version": "7.5.8.1",
-    "time": "2026-08-10 20:42",
-    "title": "Worker Path Hotfix",
+    "version": "7.5.9",
+    "time": "2026-08-10 21:05",
+    "title": "Manual FACT Rule Learning · 人工统计规则固化",
     "sections": [
       {
-        "label": "导入线程修复",
+        "label": "人工FACT为准",
         "items": [
-          "修复 V7.5.8 runtime 仍指向已删除 import.worker.v757.js 的问题。",
-          "正式导入固定使用 import.worker.v758.js，并加入文件存在性+路径一致性发布门。"
+          "主商品按国家+订单主商品组合汇总，Quantity=匹配该组合的订单数。",
+          "UPSell从订单中拆出独立汇总，Quantity=实际UPSell件数。",
+          "源订单、源商品数量仍完整保留在后台审计，不因FACT聚合丢失。"
         ]
       },
       {
-        "label": "业务逻辑不变",
+        "label": "Description学习",
         "items": [
-          "160条订单行 + Quantity合计288的双守恒逻辑完全不修改。",
-          "历史价格、Description标准化、未知价格留空均保持 V7.5.8。"
+          "伪装网颜色/premium/renforcé统一简化为核心商品名+尺寸。",
+          "三角网保留三边尺寸；多主商品用多行组合描述。",
+          "SKU不默认进入正式FACT。"
+        ]
+      },
+      {
+        "label": "UPSell学习",
+        "items": [
+          "Colliers、Cordes à cliquets、Kit Suspendu在伪装网订单中按人工规则拆为UPSell。",
+          "无可靠价格继续留空，不因未知商品/价格阻断导出。"
         ]
       }
     ]
   },
   "history": [
+    {
+      "version": "7.5.9",
+      "time": "2026-08-10 21:05",
+      "title": "Manual FACT Rule Learning · 人工统计规则固化",
+      "items": [
+        "主商品按国家+订单主商品组合汇总，Quantity=匹配该组合的订单数。",
+        "UPSell从订单中拆出独立汇总，Quantity=实际UPSell件数。",
+        "源订单、源商品数量仍完整保留在后台审计，不因FACT聚合丢失。",
+        "伪装网颜色/premium/renforcé统一简化为核心商品名+尺寸。",
+        "三角网保留三边尺寸；多主商品用多行组合描述。",
+        "SKU不默认进入正式FACT。",
+        "Colliers、Cordes à cliquets、Kit Suspendu在伪装网订单中按人工规则拆为UPSell。",
+        "无可靠价格继续留空，不因未知商品/价格阻断导出。"
+      ]
+    },
     {
       "version": "7.5.8.1",
       "time": "2026-08-10 20:42",
