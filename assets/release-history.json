@@ -1,33 +1,48 @@
 {
   "current": {
-    "version": "7.5.4",
-    "time": "2026-08-10 19:40",
-    "title": "Parcel Conservation · 包裹数与商品聚合彻底分离",
+    "version": "7.5.5",
+    "time": "2026-08-10 20:18",
+    "title": "Standardized Description · 部署不再隐藏等待",
     "sections": [
       {
-        "label": "真实问题修复",
+        "label": "Description 标准化",
         "items": [
-          "商品按国家+商品+SKU聚合后，FRANCE 只有 79 个商品分组；这不是包裹数。",
-          "新增独立包裹守恒层，商品聚合不得再改变订单/包裹数量。"
+          "正式 FACT Description 不再默认显示 SKU。",
+          "Le Filet de camouflage 的 renforcé / premium / 颜色等冗余描述统一简化为 Le Filet de camouflage / 尺寸。",
+          "其他商品保留核心品名与关键规格、长度、Lot 信息，采取保守简化。"
         ]
       },
       {
-        "label": "真实批次 1001–1162",
+        "label": "部署可靠性",
         "items": [
-          "160 个确认包裹：FRANCE 158 + BELGIUM 1 + GREECE 1。",
-          "商品统计仍为 82 个国家+商品+SKU 分组、已知商品数量 288 件，两套统计互不污染。"
+          "Wrangler 输出不再被命令替换隐藏。",
+          "npx --yes 自动处理 Wrangler 安装/更新确认，避免卡在 7/9 看似无响应。"
         ]
       },
       {
-        "label": "FACT 输出",
+        "label": "核心守恒",
         "items": [
-          "每个国家区块增加 Nombre de colis / Parcels 行，明确显示该国家包裹数量。",
-          "包裹价格无可靠规则时保持空白；包裹数量不计入商品件数 TOTAL。"
+          "160 个确认包裹与 288 件商品数量继续独立守恒。",
+          "V7.4.1 历史定价不变；未知价格仍留空。"
         ]
       }
     ]
   },
   "history": [
+    {
+      "version": "7.5.5",
+      "time": "2026-08-10 20:18",
+      "title": "Standardized Description · 部署不再隐藏等待",
+      "items": [
+        "正式 FACT Description 不再默认显示 SKU。",
+        "Le Filet de camouflage 的 renforcé / premium / 颜色等冗余描述统一简化为 Le Filet de camouflage / 尺寸。",
+        "其他商品保留核心品名与关键规格、长度、Lot 信息，采取保守简化。",
+        "Wrangler 输出不再被命令替换隐藏。",
+        "npx --yes 自动处理 Wrangler 安装/更新确认，避免卡在 7/9 看似无响应。",
+        "160 个确认包裹与 288 件商品数量继续独立守恒。",
+        "V7.4.1 历史定价不变；未知价格仍留空。"
+      ]
+    },
     {
       "version": "7.5.4",
       "time": "2026-08-10 19:40",

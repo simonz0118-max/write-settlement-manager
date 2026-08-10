@@ -1,4 +1,4 @@
-/* WRITE Settlement Manager v7.5.4 — Source Fidelity Import Worker
+/* WRITE Settlement Manager v7.5.5 — Source Fidelity Import Worker
  * Layered over the production V7.4.1 worker.
  * Contract: preserve every non-empty source cell, never drop an order row only
  * because orderId/amount/category/cost is unknown, and never truncate at column P.

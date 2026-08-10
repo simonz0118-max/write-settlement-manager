@@ -1,8 +1,8 @@
-/* WRITE Settlement Manager v7.5.4 — Parcel Conservation + Historical-Safe Source Fidelity */
+/* WRITE Settlement Manager v7.5.5 — Standardized Description + Parcel Conservation */
 (function(){
 'use strict';
 
-const V754_VERSION='7.5.4';
+const V755_VERSION='7.5.5';
 
 function clean(v=''){return String(v??'').trim()}
 function finite(v){if(v===null||v===undefined||v==='')return null;const n=Number(v);return Number.isFinite(n)?n:null}
@@ -16,6 +16,38 @@ function placeholderToken(v=''){
   const x=clean(v).toLowerCase();
   return !x||/^(?:48|n\/?a|na|none|null|unknown|inconnu|待确认|未知|[-—–]+)$/.test(x);
 }
+function standardizeFactDescription(product='',sku=''){
+  let text=clean(product).replace(/\r/g,' ').replace(/\n+/g,' ').replace(/\s+/g,' ').trim();
+  text=text.replace(/\bSKU\s*:\s*\S+/ig,'').replace(/\s+/g,' ').trim();
+  if(!text)text=clean(sku)||'Article';
+
+  // Canonical family learned from the user's manually standardized FACT.
+  // All camouflage-net variants collapse to one accounting family; size remains.
+  if(/filet\s+de\s+camouflage/i.test(text)){
+    const dim=text.match(/\b(\d+(?:[.,]\d+)?)\s*[x×*]\s*(\d+(?:[.,]\d+)?)\b/i);
+    return dim?`Le Filet de camouflage / ${dim[1].replace(',','.')}x${dim[2].replace(',','.')}`:'Le Filet de camouflage';
+  }
+
+  const colorOnly=/^(?:blanc(?:he)?|noir(?:e)?|beige|kaki|khaki|gris(?:e)?(?:\s+fonc[ée]e?)?|vert(?:e)?|bleu(?:e)?|rouge|rose|jaune|orange|marron|brun(?:e)?|violet(?:te)?|argent(?:é)?|dor[ée]?)$/i;
+  const pieces=text.split(/\s+(?:-|–|—)\s+|\s*\/\s*/).map(x=>x.trim()).filter(Boolean);
+  let base=pieces.shift()||text;
+  const extras=pieces.filter(x=>!colorOnly.test(x));
+
+  const dimension=text.match(/\b(\d+(?:[.,]\d+)?)\s*[x×*]\s*(\d+(?:[.,]\d+)?)\b/i);
+  const length=text.match(/\b(\d+(?:[.,]\d+)?)\s*(m|cm|mm)\b/i);
+  const lot=text.match(/\b(?:lot\s+de|pack\s+de)\s*(\d+)\b/i);
+  let spec='';
+  if(dimension)spec=`${dimension[1].replace(',','.')}x${dimension[2].replace(',','.')}`;
+  else if(length)spec=`${length[1].replace(',','.')}${length[2].toLowerCase()}`;
+  else if(lot)spec=`Lot de ${lot[1]}`;
+  else if(extras.length)spec=extras[0];
+
+  base=base.replace(/\s+/g,' ').trim();
+  if(base.length>68)base=base.slice(0,68).replace(/\s+\S*$/,'').trim();
+  return spec&&base.toLowerCase()!==spec.toLowerCase()?`${base} / ${spec}`:base;
+}
+window.standardizeFactDescription=standardizeFactDescription;
+
 function meaningfulRawFallback(order){
   const raw=order?.sourceRawFields||{};
   const skip=/订单|order|commande|金额|amount|montant|国家|country|pays|数量|qty|quantity|客户|buyer|customer|tracking|运单|时间|date|address|地址/i;
@@ -184,7 +216,7 @@ function parcelRowsForWorkbook(workbookName,currency,historicalRows=[]){
     quantityKnown:true,
     cogs:null,shipping:null,unitTotal:null,amount:null,currency,
     costStatus:'PRICE_BLANK',
-    sourceFile:workbookName,sourceSheet:'PARCEL_CONSERVATION_V754',
+    sourceFile:workbookName,sourceSheet:'PARCEL_CONSERVATION_V755',
     generated:true,systemKind:'PARCEL_COUNT',parcelCount:true,
     orderCount:quantity,historicalSafe:false
   }));
@@ -228,9 +260,9 @@ window.generatedGenericFactRowsForWorkbook = function(workbookName){
       const hasUnknown=Number(x.unknownQuantity||0)>0;
       const priced=x.allPriced&&!hasUnknown&&x.quantity>0;
       const cogs=priced?x.cogsAmount/x.quantity:null,shipping=priced?x.shippingAmount/x.quantity:null,unitTotal=priced?x.unitAmount/x.quantity:null;
-      return {country:x.country,description:x.product,sku:x.sku,quantity:hasUnknown?null:x.quantity,quantityKnown:!hasUnknown,cogs,shipping,unitTotal,
+      return {country:x.country,description:standardizeFactDescription(x.product,x.sku),sku:x.sku,quantity:hasUnknown?null:x.quantity,quantityKnown:!hasUnknown,cogs,shipping,unitTotal,
         amount:priced?Math.round((x.unitAmount+Number.EPSILON)*100)/100:null,currency,
-        costStatus:priced?'KNOWN':'PRICE_BLANK',sourceFile:workbookName,sourceSheet:'SOURCE_FIDELITY_V753',generated:true,orderCount:x.orders.size,
+        costStatus:priced?'KNOWN':'PRICE_BLANK',sourceFile:workbookName,sourceSheet:'SOURCE_FIDELITY_V755',generated:true,orderCount:x.orders.size,
         priceSource:priced?[...x.priceSources].join('+'):'',historicalSafe:false};
     });
 
@@ -282,7 +314,7 @@ startImport = async function(fileList){
   const files=[...fileList].filter(f=>/\.(xlsx|zip)$/i.test(f.name));if(!files.length||busy)return;
   await window.WRITE_KB?.init?.().catch(()=>{});
   const schemaRules=window.WRITE_SCHEMA?.getRules?.()||[];
-  worker?.terminate();worker=new Worker('./src/workers/import.worker.v754.js?v=7.5.4-001');importStartedAt=performance.now();importedFileNames=files.map(f=>f.name);
+  worker?.terminate();worker=new Worker('./src/workers/import.worker.v755.js?v=7.5.5-001');importStartedAt=performance.now();importedFileNames=files.map(f=>f.name);
   setBusy(true);hideError();els.importLanding.hidden=false;els.appViews.hidden=true;els.topActions.hidden=true;
   els.currentFile.textContent='准备读取全部源字段…';els.progressFill.style.width='0%';els.progressText.textContent='0% · Source Fidelity';
   worker.onmessage=async({data})=>{
@@ -298,7 +330,7 @@ startImport = async function(fileList){
       if(!orders.length){classified=null;els.progressFill.style.width='100%';els.progressText.textContent='100% · 未检测到订单数据';els.currentFile.textContent='解析完成';setBusy(false);showError('没有检测到可统计的订单 Sheet；FACT/说明 Sheet 不会被误当订单。');worker?.terminate();worker=null;return}
       classified=classifyOrders(orders);
       els.progressFill.style.width='100%';els.progressText.textContent='100% · 全部源记录已保留并完成统计';els.currentFile.textContent='解析完成';hideError();setBusy(false);renderResults();
-      window.dispatchEvent(new CustomEvent('write-import-complete',{detail:{sourceRecordCount,records:orders.length,sameOrderIdGroups:sameWorkbookOrderIdGroups.length,sourceFidelityVersion:V754_VERSION}}));
+      window.dispatchEvent(new CustomEvent('write-import-complete',{detail:{sourceRecordCount,records:orders.length,sameOrderIdGroups:sameWorkbookOrderIdGroups.length,sourceFidelityVersion:V755_VERSION}}));
       worker?.terminate();worker=null;
     }
     if(data.type==='error'){setBusy(false);showError(data.message||'未知导入错误');worker?.terminate();worker=null}
@@ -311,17 +343,17 @@ startImport = async function(fileList){
 // Runtime version marker keeps the currently deployed shell honest even before
 // the next full HTML cache-bust package is applied.
 try{
-  document.body.dataset.release=V754_VERSION;
-  const brandVersion=document.querySelector('.brand-copy small');if(brandVersion)brandVersion.textContent=`v${V754_VERSION}`;
-  const historyCurrent=document.getElementById('historyCurrentVersion');if(historyCurrent)historyCurrent.textContent=`v${V754_VERSION}`;
+  document.body.dataset.release=V755_VERSION;
+  const brandVersion=document.querySelector('.brand-copy small');if(brandVersion)brandVersion.textContent=`v${V755_VERSION}`;
+  const historyCurrent=document.getElementById('historyCurrentVersion');if(historyCurrent)historyCurrent.textContent=`v${V755_VERSION}`;
   const historyHost=document.getElementById('releaseHistory');
-  if(historyHost&&!historyHost.querySelector('[data-v754-entry]')){
-    const article=document.createElement('article');article.className='history-item current';article.dataset.v754Entry='1';
-    article.innerHTML='<div class="history-meta"><span class="history-version">v7.5.4</span><time class="history-time">2026-08-10 19:40</time></div><div class="history-body"><h3>Parcel Conservation · 包裹数与商品聚合分离</h3><ul><li>确认包裹数独立于商品/SKU聚合。</li><li>真实批次 160 包裹 = FR 158 + BE 1 + GR 1。</li><li>商品已知数量保持 288，未知价格继续留空。</li></ul></div>';
+  if(historyHost&&!historyHost.querySelector('[data-v755-entry]')){
+    const article=document.createElement('article');article.className='history-item current';article.dataset.v755Entry='1';
+    article.innerHTML='<div class="history-meta"><span class="history-version">v7.5.5</span><time class="history-time">2026-08-10 20:18</time></div><div class="history-body"><h3>Standardized Description · 正式 FACT 描述标准化</h3><ul><li>正式 FACT Description 自动简化，SKU 不再默认显示。</li><li>伪装网统一为 Le Filet de camouflage / 尺寸；颜色、premium/renforcé 等营销信息从正式描述移除。</li><li>160 包裹与 288 件商品守恒逻辑保持不变，未知价格继续留空。</li></ul></div>';
     historyHost.prepend(article);
     const count=document.getElementById('historyCount');if(count){const n=Number((count.textContent.match(/\d+/)||[])[0]||0);count.textContent=`${n+1} 个版本`;}
   }
-}catch(e){console.warn('WRITE v7.5.4 version marker:',e)}
+}catch(e){console.warn('WRITE v7.5.5 version marker:',e)}
 
-window.WRITE_SOURCE_FIDELITY_V754={version:V754_VERSION,quantityInvariant:true,unknownNeverBlocks:true,allColumns:true,historicalPricing:'V741_PARITY'};
+window.WRITE_SOURCE_FIDELITY_V755={version:V755_VERSION,quantityInvariant:true,parcelInvariant:true,unknownNeverBlocks:true,allColumns:true,historicalPricing:'V741_PARITY',descriptionStandard:'MANUAL_FACT_STYLE_V1'};
 })();

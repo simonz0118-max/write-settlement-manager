@@ -1,9 +1,9 @@
-WRITE Settlement Manager V7.5.4
-Parcel Conservation + Historical-Safe Universal FACT
+WRITE Settlement Manager V7.5.5
+Standardized Description + Visible Wrangler Deploy
 
-CONFIRMED PARCELS -> order-level invariant, independent from product aggregation
-REAL BATCH 1001-1162 -> 160 parcels = FR 158 + BE 1 + GR 1
-MERCHANDISE -> 288 known units / 82 country+product+SKU groups
-UNKNOWN QUANTITY -> preserved, never guessed as parcel or unit
+FORMAL DESCRIPTION -> concise manual-FACT style, SKU hidden by default
+CAMOUFLAGE -> Le Filet de camouflage / SIZE
+PARCELS -> 160 confirmed parcels invariant
+MERCHANDISE -> 288 known units invariant
+HISTORICAL PRICING -> V7.4.1 parity
 UNKNOWN PRICE -> blank
-HISTORICAL PRICING -> unchanged

@@ -127,9 +127,11 @@ function unifiedFactCountryRow(r,rowNo){
   return `<row r="${rowNo}" s="7" customFormat="1" ht="15" customHeight="1" spans="1:11"><c r="A${rowNo}" s="43"/>${xmlTextCell(`B${rowNo}`,44,country)}<c r="C${rowNo}" s="44"/><c r="D${rowNo}" s="45"/><c r="E${rowNo}" s="44"/><c r="F${rowNo}" s="44"/><c r="G${rowNo}" s="44"/><c r="H${rowNo}" s="44"/></row>`;
 }
 function unifiedFactDataRow(r,rowNo,index){
-  const product=cleanFormalText(r?.description)||cleanFormalText(r?.sku)||'Article';
-  const sku=cleanFormalText(r?.sku);
-  const desc=[product,sku?`SKU: ${sku}`:''].filter(Boolean).join('\n');
+  const rawProduct=cleanFormalText(r?.description)||cleanFormalText(r?.sku)||'Article';
+  const product=window.standardizeFactDescription?.(rawProduct,r?.sku)||rawProduct;
+  // Formal FACT follows the user's manual standard: concise accounting description only.
+  // SKU remains an internal grouping/audit key and is not printed into Description by default.
+  const desc=product;
   const q=(r?.quantity===null||r?.quantity===undefined||r?.quantity==='')?null:(Number.isFinite(Number(r.quantity))?Number(r.quantity):null);
   const priceNum=v=>(v===null||v===undefined||v==='')?null:(Number.isFinite(Number(v))?Number(v):null);
   const c=priceNum(r?.cogs);
@@ -271,7 +273,7 @@ try{
     // Universal rule: classification/learning is never a prerequisite for export.
     // Every workbook uses the canonical FACT template; unknown price stays blank.
     const data=generatedFactRowsForWorkbook(workbookName);
-    const resp=await fetch('./assets/FACT_TEMPLATE_UNIFIED_V2.xlsx?v=7.5.4-001',{cache:'no-store'});
+    const resp=await fetch('./assets/FACT_TEMPLATE_UNIFIED_V2.xlsx?v=7.5.5-001',{cache:'no-store'});
     if(!resp.ok)throw new Error(`无法读取统一 FACT 标准模板（HTTP ${resp.status}）`);
     const templateBlob=await resp.blob();
     if(!templateBlob?.size)throw new Error('统一 FACT 标准模板为空');
