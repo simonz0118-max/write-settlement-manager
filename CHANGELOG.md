@@ -1,3 +1,8 @@
+## v7.5.8.1 — 2026-08-10 20:42 (Europe/Paris)
+- 修复 V7.5.8 导入线程异常：runtime 错误指向已删除的 import.worker.v757.js。
+- 导入固定切换到 import.worker.v758.js，并新增 Worker 路径/文件存在性强制发布检查。
+- 160订单行 + 288 Quantity 双守恒逻辑不变。
+
 ## v7.5.8 — 2026-08-10 20:45 (Europe/Paris)
 - 一单一行不变，但 Quantity 恢复为订单真实商品总数。
 - 订单行数与商品 Quantity 双重硬守恒：160 行 + 288 件黄金样本。

@@ -1,34 +1,37 @@
 {
   "current": {
-    "version": "7.5.8",
-    "time": "2026-08-10 20:45",
-    "title": "One Order One Row + True Product Quantity",
+    "version": "7.5.8.1",
+    "time": "2026-08-10 20:42",
+    "title": "Worker Path Hotfix",
     "sections": [
       {
-        "label": "订单行守恒",
+        "label": "导入线程修复",
         "items": [
-          "一个有效源订单固定生成一条独立 FACT 行，禁止跨订单聚合。",
-          "1001-1162 黄金样本必须保持 160 条有效订单行。"
+          "修复 V7.5.8 runtime 仍指向已删除 import.worker.v757.js 的问题。",
+          "正式导入固定使用 import.worker.v758.js，并加入文件存在性+路径一致性发布门。"
         ]
       },
       {
-        "label": "商品数量守恒",
+        "label": "业务逻辑不变",
         "items": [
-          "Quantity 读取该订单真实产品总数，优先使用源表产品总数。",
-          "1001-1162 黄金样本的已知 Quantity 合计必须严格等于 288。"
-        ]
-      },
-      {
-        "label": "价格与描述",
-        "items": [
-          "多商品订单 Description 使用简洁的核心商品组合描述。",
-          "历史整单成本按 Quantity 折算成单位成本，Amount 保持原历史整单金额。",
-          "未知价格留空，不阻断导出。"
+          "160条订单行 + Quantity合计288的双守恒逻辑完全不修改。",
+          "历史价格、Description标准化、未知价格留空均保持 V7.5.8。"
         ]
       }
     ]
   },
   "history": [
+    {
+      "version": "7.5.8.1",
+      "time": "2026-08-10 20:42",
+      "title": "Worker Path Hotfix",
+      "items": [
+        "修复 V7.5.8 runtime 仍指向已删除 import.worker.v757.js 的问题。",
+        "正式导入固定使用 import.worker.v758.js，并加入文件存在性+路径一致性发布门。",
+        "160条订单行 + Quantity合计288的双守恒逻辑完全不修改。",
+        "历史价格、Description标准化、未知价格留空均保持 V7.5.8。"
+      ]
+    },
     {
       "version": "7.5.8",
       "time": "2026-08-10 20:45",

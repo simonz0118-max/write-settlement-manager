@@ -421,7 +421,7 @@ startImport = async function(fileList){
   const files=[...fileList].filter(f=>/\.(xlsx|zip)$/i.test(f.name));if(!files.length||busy)return;
   await window.WRITE_KB?.init?.().catch(()=>{});
   const schemaRules=window.WRITE_SCHEMA?.getRules?.()||[];
-  worker?.terminate();worker=new Worker('./src/workers/import.worker.v757.js?v=7.5.6-001');importStartedAt=performance.now();importedFileNames=files.map(f=>f.name);
+  worker?.terminate();worker=new Worker('./src/workers/import.worker.v758.js?v=7.5.8.1-001');importStartedAt=performance.now();importedFileNames=files.map(f=>f.name);
   setBusy(true);hideError();els.importLanding.hidden=false;els.appViews.hidden=true;els.topActions.hidden=true;
   els.currentFile.textContent='准备读取全部源字段…';els.progressFill.style.width='0%';els.progressText.textContent='0% · Source Fidelity';
   worker.onmessage=async({data})=>{
