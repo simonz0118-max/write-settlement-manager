@@ -1,9 +1,9 @@
-WRITE Settlement Manager V7.5.5
-Standardized Description + Visible Wrangler Deploy
+WRITE Settlement Manager V7.5.6
+Order Count Immutable
 
-FORMAL DESCRIPTION -> concise manual-FACT style, SKU hidden by default
-CAMOUFLAGE -> Le Filet de camouflage / SIZE
-PARCELS -> 160 confirmed parcels invariant
-MERCHANDISE -> 288 known units invariant
-HISTORICAL PRICING -> V7.4.1 parity
+ORDER COUNT -> immutable source fact
+ONE VALID ORDER -> ONE PARCEL -> ONE FACT QUANTITY UNIT
+MERCHANDISE QUANTITY -> audit only
+DESCRIPTION -> standardized
+HISTORICAL PRICING -> package-level compatible total
 UNKNOWN PRICE -> blank

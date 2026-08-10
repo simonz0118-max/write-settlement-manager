@@ -1,34 +1,48 @@
 {
   "current": {
-    "version": "7.5.5",
-    "time": "2026-08-10 20:18",
-    "title": "Standardized Description · 部署不再隐藏等待",
+    "version": "7.5.6",
+    "time": "2026-08-10 20:27",
+    "title": "Order Count Immutable · 订单数量绝对守恒",
     "sections": [
       {
-        "label": "Description 标准化",
+        "label": "不可变订单数",
         "items": [
-          "正式 FACT Description 不再默认显示 SKU。",
-          "Le Filet de camouflage 的 renforcé / premium / 颜色等冗余描述统一简化为 Le Filet de camouflage / 尺寸。",
-          "其他商品保留核心品名与关键规格、长度、Lot 信息，采取保守简化。"
+          "正式 FACT Quantity 改为订单/包裹口径：一个有效源订单只贡献 1。",
+          "商品数量、SKU *N、商品拆分和商品聚合均不得修改订单数量。",
+          "生成后 FACT Quantity 合计与源订单数不一致时立即报错，禁止静默导出。"
         ]
       },
       {
-        "label": "部署可靠性",
+        "label": "标准化 Description",
         "items": [
-          "Wrangler 输出不再被命令替换隐藏。",
-          "npx --yes 自动处理 Wrangler 安装/更新确认，避免卡在 7/9 看似无响应。"
+          "同一简化 Description 在价格口径一致时自动合并。",
+          "SKU 继续作为后台审计字段，不默认打印到正式 FACT。"
         ]
       },
       {
-        "label": "核心守恒",
+        "label": "历史与未知",
         "items": [
-          "160 个确认包裹与 288 件商品数量继续独立守恒。",
-          "V7.4.1 历史定价不变；未知价格仍留空。"
+          "历史学习用于计算每个订单的包裹级成本，总历史金额保持兼容。",
+          "未知价格留空；未知商品/分类/成本不阻断导出。"
         ]
       }
     ]
   },
   "history": [
+    {
+      "version": "7.5.6",
+      "time": "2026-08-10 20:27",
+      "title": "Order Count Immutable · 订单数量绝对守恒",
+      "items": [
+        "正式 FACT Quantity 改为订单/包裹口径：一个有效源订单只贡献 1。",
+        "商品数量、SKU *N、商品拆分和商品聚合均不得修改订单数量。",
+        "生成后 FACT Quantity 合计与源订单数不一致时立即报错，禁止静默导出。",
+        "同一简化 Description 在价格口径一致时自动合并。",
+        "SKU 继续作为后台审计字段，不默认打印到正式 FACT。",
+        "历史学习用于计算每个订单的包裹级成本，总历史金额保持兼容。",
+        "未知价格留空；未知商品/分类/成本不阻断导出。"
+      ]
+    },
     {
       "version": "7.5.5",
       "time": "2026-08-10 20:18",

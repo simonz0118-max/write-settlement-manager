@@ -1,3 +1,9 @@
+## v7.5.6 — 2026-08-10 20:27 (Europe/Paris)
+- ORDER COUNT IMMUTABLE：正式 FACT Quantity 使用订单/包裹口径，一个有效源订单固定贡献 1。
+- 商品件数、SKU *N、商品拆分/聚合不再允许改变订单数量。
+- 同一标准化 Description 自动按包裹合并，合计必须严格等于源订单数量，否则导出失败。
+- 历史规则继续用于订单级成本计算；未知价格留空，不阻断导出。
+
 ## v7.5.5 — 2026-08-10 20:18 (Europe/Paris)
 - 正式 FACT Description 标准化：不再默认打印 SKU。
 - 伪装网统一为 Le Filet de camouflage / 尺寸；去除颜色、renforcé、premium 等正式结算不需要的信息。
