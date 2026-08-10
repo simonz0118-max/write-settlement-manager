@@ -1402,13 +1402,24 @@ async function buildGeneratedPencilFactWorkbook(workbookName){
 }
 async function buildGeneratedFactWorkbook(workbookName){
   if(detectGeneratedFactProfile(workbookName)==='PENCIL_V1'){
+    // Mature pencil invoices keep the verified CN FACT route. Its visual layout is the same historical FACT family.
     return buildGeneratedPencilFactWorkbook(workbookName);
   }
   const data=generatedFactRowsForWorkbook(workbookName);
-  const resp=await fetch(`./assets/FACT_TEMPLATE_LEARNED_V1.xlsx?v=7.2.3`,{cache:'no-store'});if(!resp.ok)throw new Error('无法读取内置 FACT 学习模板');
-  const templateBlob=await resp.blob(),archive=await PreserveZipArchive.open(templateBlob),sheetPath='xl/worksheets/sheet1.xml';
-  const xml=await archive.text(sheetPath,16*1024*1024),patched=patchLearnedTemplateSheetXml(xml,data,workbookName);
-  return rebuildArchiveReplacingEntry(archive,sheetPath,enc.encode(patched));
+  const resp=await fetch('./assets/FACT_TEMPLATE_UNIFIED_V1.xlsx?v=7.3.1',{cache:'no-store'});
+  if(!resp.ok)throw new Error(`无法读取统一 FACT 标准模板（HTTP ${resp.status}）`);
+  const templateBlob=await resp.blob();
+  if(!templateBlob?.size)throw new Error('统一 FACT 标准模板为空');
+  const archive=await PreserveZipArchive.open(templateBlob);
+  const sheetPath='xl/worksheets/sheet1.xml';
+  if(!archive.get(sheetPath))throw new Error('统一 FACT 标准模板缺少 sheet1.xml');
+  const xml=await archive.text(sheetPath,16*1024*1024);
+  const patcher=window.WRITE_FACT_V731?.patchSheet;
+  if(typeof patcher!=='function')throw new Error('V7.3.1 统一 FACT 格式引擎未加载');
+  const patched=patcher(xml,data,workbookName);
+  const rebuilt=await rebuildArchiveReplacingEntry(archive,sheetPath,enc.encode(patched));
+  if(!rebuilt?.size)throw new Error('统一 FACT Excel 生成结果为空');
+  return rebuilt;
 }
 function buildFactExportData(){
   const importedFactRows=sheets.flatMap(s=>(s.factRows||[]).map(r=>({...r,sourceFile:r.sourceFile||s.sourceFile,sourceSheet:r.sourceSheet||s.sheetName})));
@@ -1811,7 +1822,10 @@ async function exportAccounting(){
       if(stackLine)exportCenterLog(`诊断：${stackLine}`,'error');
       if(report?.blob?.size)exportCenterLog('会计 Excel 已生成，可先下载；FACT/ZIP 阶段失败不会再影响会计报表下载。','info');
     }else{
-      closeExportCenter();
+      resetExportCenter();
+      exportCenterStage(`导出未开始：${message}`,'error');
+      exportCenterLog(`✕ ${message}`,'error');
+      if(stackLine)exportCenterLog(`诊断：${stackLine}`,'error');
     }
     if(message!=='已取消导出。')showError(`导出失败：${message}`);
   }finally{

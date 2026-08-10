@@ -1,16 +1,7 @@
-WRITE Settlement Manager V7.3.0
-Historical Rule Engine / Legacy-first Full Automation
+WRITE Settlement Manager V7.3.1
+Unified FACT canonical template + pencil export fix.
 
-Priority:
-1. Mature WRITE / CN FACT rules
-2. Compiled historical FACT rules
-3. Confirmed IndexedDB / D1 rules
-4. Generic automatic fallback with blank price allowed
-
-Formal FACT:
-- Single FACT file
-- Country sections
-- Product / bundle quantity statistics
-- Auto price when a verified historical rule exists
-- Blank price allowed when no reliable rule exists
-- No internal review/status wording
+All formal invoices use the historical WRITE FACT visual language.
+Generic invoices use FACT_TEMPLATE_UNIFIED_V1.xlsx.
+Mature pencil/CN FACT keeps its verified dedicated generator.
+Unknown price may stay blank; country/product/SKU/quantity remain mandatory.
