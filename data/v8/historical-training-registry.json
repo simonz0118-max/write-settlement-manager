@@ -1,0 +1,96 @@
+{
+  "version": "8.1.0",
+  "policy": {
+    "trainableStatuses": [
+      "COMPLETE"
+    ],
+    "nonTrainableStatuses": [
+      "PARTIAL",
+      "REFERENCE_ONLY",
+      "REJECTED"
+    ],
+    "partialNeverCreatesRules": true,
+    "deduplicateByContentHash": true,
+    "manualCorrectionPriority": "HIGHEST"
+  },
+  "documents": [
+    {
+      "id": "manual-10451-1001-1162",
+      "displayName": "FACT-10451 Thomas Hurel Orders 1001-1162",
+      "status": "COMPLETE",
+      "sourceType": "VERIFIED_MANUAL_FACT",
+      "familyHints": [
+        "CAMOUFLAGE_NET",
+        "CAMOUFLAGE_NET_TRIANGLE",
+        "FIXATION_KIT",
+        "CABLE_TIE",
+        "RATCHET_CORD",
+        "FIXATION_ROPE"
+      ],
+      "golden": "docs/tests/MANUAL_FACT_1001_1162_GOLDEN.json",
+      "evidence": "同一工作簿包含订单页与人工FACT；49个会计语义行可由订单规则完全复现。"
+    },
+    {
+      "id": "archive-jelly-10386",
+      "displayName": "FACT 10386 jelly-pure 1195-1466",
+      "status": "COMPLETE",
+      "sourceType": "VERIFIED_MANUAL_FACT",
+      "familyHints": [
+        "COLLAGEN_JELLY"
+      ],
+      "evidence": "历史审计确认有效FACT主配置Quantity闭环覆盖原始订单；预置但未命中的空配置行不视为未完成。"
+    },
+    {
+      "id": "archive-hugo-10392",
+      "displayName": "FACT-10392 Hugo 1841-2361",
+      "status": "COMPLETE",
+      "sourceType": "VERIFIED_MANUAL_FACT",
+      "familyHints": [
+        "GILET_KRYONIFY"
+      ],
+      "evidence": "历史审计确认有效商品订单与FACT闭环；源异常空商品记录保留审计但不作为收费FACT。"
+    },
+    {
+      "id": "archive-ludovic-10404-v3",
+      "displayName": "FACT-10404 Ludovic 2210-2225 (3)",
+      "status": "COMPLETE",
+      "sourceType": "VERIFIED_MANUAL_FACT",
+      "familyHints": [
+        "CHEMISE",
+        "IMPORT_FEE"
+      ],
+      "evidence": "同批次完成版本；用于替代同批未完成(1)。"
+    },
+    {
+      "id": "archive-ludovic-10404-v1",
+      "displayName": "FACT-10404 Ludovic 2210-2225 (1)",
+      "status": "PARTIAL",
+      "sourceType": "HISTORICAL_REFERENCE",
+      "familyHints": [
+        "CHEMISE"
+      ],
+      "evidence": "同批原订单16单，仅部分配置已统计；存在后续完整(3)版本。"
+    },
+    {
+      "id": "pencil-10262",
+      "displayName": "FACT-10262 write-store 26807-27159",
+      "status": "PARTIAL",
+      "sourceType": "HISTORICAL_REFERENCE",
+      "familyHints": [
+        "PENCIL",
+        "PENCIL_REFILL"
+      ],
+      "evidence": "历史审计确认France大量订单未完成主FACT统计，仅部分国家/配置完成。"
+    },
+    {
+      "id": "pencil-10312-sample",
+      "displayName": "FACT-10312 write-store Échantillon",
+      "status": "PARTIAL",
+      "sourceType": "HISTORICAL_REFERENCE",
+      "familyHints": [
+        "PENCIL"
+      ],
+      "evidence": "历史审计确认部分国家已填Quantity，其他已建价格行但Quantity仍为空。"
+    }
+  ]
+}

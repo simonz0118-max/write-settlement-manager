@@ -1,0 +1,93 @@
+{
+  "version": "8.1.0",
+  "rules": [
+    {
+      "id": "v81:camouflage:kit-context-upsell",
+      "ruleType": "ROLE",
+      "sourceType": "VERIFIED_MANUAL_FACT",
+      "scope": "ORDER_CONTEXT",
+      "confidence": 0.99,
+      "humanConfirmed": true,
+      "pattern": {
+        "family": "FIXATION_KIT",
+        "companionFamily": "CAMOUFLAGE_NET"
+      },
+      "action": {
+        "role": "UPSELL",
+        "quantityStrategy": "ACTUAL_UNITS"
+      },
+      "sourceRef": "manual-10451-1001-1162",
+      "version": 1
+    },
+    {
+      "id": "v81:camouflage:ties-context-upsell",
+      "ruleType": "ROLE",
+      "sourceType": "VERIFIED_MANUAL_FACT",
+      "scope": "ORDER_CONTEXT",
+      "confidence": 0.99,
+      "humanConfirmed": true,
+      "pattern": {
+        "family": "CABLE_TIE",
+        "companionFamily": "CAMOUFLAGE_NET"
+      },
+      "action": {
+        "role": "UPSELL",
+        "quantityStrategy": "ACTUAL_UNITS"
+      },
+      "sourceRef": "manual-10451-1001-1162",
+      "version": 1
+    },
+    {
+      "id": "v81:camouflage:ratchet-context-upsell",
+      "ruleType": "ROLE",
+      "sourceType": "VERIFIED_MANUAL_FACT",
+      "scope": "ORDER_CONTEXT",
+      "confidence": 0.99,
+      "humanConfirmed": true,
+      "pattern": {
+        "family": "RATCHET_CORD",
+        "companionFamily": "CAMOUFLAGE_NET"
+      },
+      "action": {
+        "role": "UPSELL",
+        "quantityStrategy": "ACTUAL_UNITS"
+      },
+      "sourceRef": "manual-10451-1001-1162",
+      "version": 1
+    },
+    {
+      "id": "v81:pencil:refill-context-upsell",
+      "ruleType": "ROLE",
+      "sourceType": "VERIFIED_HISTORICAL_RULE",
+      "scope": "ORDER_CONTEXT",
+      "confidence": 0.96,
+      "humanConfirmed": true,
+      "pattern": {
+        "family": "PENCIL_REFILL",
+        "companionFamily": "PENCIL"
+      },
+      "action": {
+        "role": "UPSELL",
+        "quantityStrategy": "ACTUAL_UNITS"
+      },
+      "sourceRef": "historical-complete-pencil-facts",
+      "version": 1
+    },
+    {
+      "id": "v81:main:configuration-order-count",
+      "ruleType": "QUANTITY_STRATEGY",
+      "sourceType": "VERIFIED_MANUAL_FACT",
+      "scope": "GLOBAL_PATTERN",
+      "confidence": 0.93,
+      "humanConfirmed": true,
+      "pattern": {
+        "role": "MAIN"
+      },
+      "action": {
+        "quantityStrategy": "MATCHING_ORDERS"
+      },
+      "sourceRef": "cross-batch-complete-facts",
+      "version": 1
+    }
+  ]
+}

@@ -589,6 +589,14 @@ startImport = async function(fileList){
 };
 
 
+
+window.WRITE_V8_SOURCE_BRIDGE = function(){
+ const cloneItem=(x)=>({...x,sourceRawFields:x?.sourceRawFields?{...x.sourceRawFields}:x?.sourceRawFields});
+ const snapshotOrders=(classified?.orders||[]).map(o=>({...o,sourceRawFields:o?.sourceRawFields?{...o.sourceRawFields}:o?.sourceRawFields,lineItems:(o?.lineItems||[]).map(cloneItem)}));
+ const snapshotLineItems=(classified?.lineItems||[]).map(cloneItem);
+ const snapshotWorkbooks=(sourceWorkbooks||[]).map(w=>({...w}));
+ return Object.freeze({version:V759_VERSION,orders:snapshotOrders,lineItems:snapshotLineItems,sourceWorkbooks:snapshotWorkbooks,sourceRecordCount:Number(sourceRecordCount||snapshotOrders.length),bridgeMode:'READ_ONLY_SNAPSHOT'});
+};
 // Runtime version marker keeps the currently deployed shell honest even before
 // the next full HTML cache-bust package is applied.
 try{

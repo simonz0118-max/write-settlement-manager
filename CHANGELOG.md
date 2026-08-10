@@ -1,3 +1,7 @@
+## v8.1.2 — 2026-08-10 22:55 (Europe/Paris)
+- 补充V8 Shadow只读Source Bridge，不改变V7.5.9正式FACT逻辑。
+- 强化Bridge/非阻断发布门并修复旧版本提示。
+
 ## v7.5.9 — 2026-08-10 21:05 (Europe/Paris)
 - 以人工 FACT 1001-1162 为唯一统计学习基准。
 - 主商品按国家+订单配置汇总，Quantity=订单数；UPSell独立按实际件数汇总。

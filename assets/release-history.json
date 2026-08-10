@@ -1,35 +1,37 @@
 {
   "current": {
-    "version": "7.5.9",
-    "time": "2026-08-10 21:05",
-    "title": "Manual FACT Rule Learning · 人工统计规则固化",
+    "version": "8.1.2",
+    "time": "2026-08-10 22:55",
+    "title": "Source Bridge Hotfix",
     "sections": [
       {
-        "label": "人工FACT为准",
+        "label": "Source Bridge",
         "items": [
-          "主商品按国家+订单主商品组合汇总，Quantity=匹配该组合的订单数。",
-          "UPSell从订单中拆出独立汇总，Quantity=实际UPSell件数。",
-          "源订单、源商品数量仍完整保留在后台审计，不因FACT聚合丢失。"
+          "V8 Shadow通过只读克隆快照读取orders/lineItems/sourceWorkbooks。",
+          "V8不能通过bridge改写V7.5.9生产状态。"
         ]
       },
       {
-        "label": "Description学习",
+        "label": "生产保护",
         "items": [
-          "伪装网颜色/premium/renforcé统一简化为核心商品名+尺寸。",
-          "三角网保留三边尺寸；多主商品用多行组合描述。",
-          "SKU不默认进入正式FACT。"
-        ]
-      },
-      {
-        "label": "UPSell学习",
-        "items": [
-          "Colliers、Cordes à cliquets、Kit Suspendu在伪装网订单中按人工规则拆为UPSell。",
-          "无可靠价格继续留空，不因未知商品/价格阻断导出。"
+          "V7.5.9正式FACT generator/export保持不变。",
+          "Bridge/Shadow越权时发布直接失败。"
         ]
       }
     ]
   },
   "history": [
+    {
+      "version": "8.1.2",
+      "time": "2026-08-10 22:55",
+      "title": "Source Bridge Hotfix",
+      "items": [
+        "V8 Shadow通过只读克隆快照读取orders/lineItems/sourceWorkbooks。",
+        "V8不能通过bridge改写V7.5.9生产状态。",
+        "V7.5.9正式FACT generator/export保持不变。",
+        "Bridge/Shadow越权时发布直接失败。"
+      ]
+    },
     {
       "version": "7.5.9",
       "time": "2026-08-10 21:05",
