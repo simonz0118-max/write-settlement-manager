@@ -1,27 +1,48 @@
 {
   "current": {
-    "version": "7.5.7",
-    "time": "2026-08-10 20:41",
-    "title": "One Order = One FACT Row · 禁止跨订单聚合",
+    "version": "7.5.8",
+    "time": "2026-08-10 20:45",
+    "title": "One Order One Row + True Product Quantity",
     "sections": [
       {
-        "label": "订单行绝对守恒",
+        "label": "订单行守恒",
         "items": [
-          "一个有效源订单必须对应一条独立 FACT 行，Quantity 固定为 1。",
-          "即使国家、Description、SKU 或价格完全相同，也禁止跨订单合并。",
-          "正式 FACT 有效订单行数、Quantity 合计、唯一源订单键三者必须同时等于源有效订单数。"
+          "一个有效源订单固定生成一条独立 FACT 行，禁止跨订单聚合。",
+          "1001-1162 黄金样本必须保持 160 条有效订单行。"
         ]
       },
       {
-        "label": "保持不变",
+        "label": "商品数量守恒",
         "items": [
-          "Description 继续使用人工标准化简化方式。",
-          "商品件数只做后台审计；历史订单价格总额保持兼容；未知价格留空。"
+          "Quantity 读取该订单真实产品总数，优先使用源表产品总数。",
+          "1001-1162 黄金样本的已知 Quantity 合计必须严格等于 288。"
+        ]
+      },
+      {
+        "label": "价格与描述",
+        "items": [
+          "多商品订单 Description 使用简洁的核心商品组合描述。",
+          "历史整单成本按 Quantity 折算成单位成本，Amount 保持原历史整单金额。",
+          "未知价格留空，不阻断导出。"
         ]
       }
     ]
   },
   "history": [
+    {
+      "version": "7.5.8",
+      "time": "2026-08-10 20:45",
+      "title": "One Order One Row + True Product Quantity",
+      "items": [
+        "一个有效源订单固定生成一条独立 FACT 行，禁止跨订单聚合。",
+        "1001-1162 黄金样本必须保持 160 条有效订单行。",
+        "Quantity 读取该订单真实产品总数，优先使用源表产品总数。",
+        "1001-1162 黄金样本的已知 Quantity 合计必须严格等于 288。",
+        "多商品订单 Description 使用简洁的核心商品组合描述。",
+        "历史整单成本按 Quantity 折算成单位成本，Amount 保持原历史整单金额。",
+        "未知价格留空，不阻断导出。"
+      ]
+    },
     {
       "version": "7.5.7",
       "time": "2026-08-10 20:41",

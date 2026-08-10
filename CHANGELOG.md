@@ -1,3 +1,9 @@
+## v7.5.8 — 2026-08-10 20:45 (Europe/Paris)
+- 一单一行不变，但 Quantity 恢复为订单真实商品总数。
+- 订单行数与商品 Quantity 双重硬守恒：160 行 + 288 件黄金样本。
+- 多商品订单 Description 保留核心商品组合，SKU 不默认展示。
+- 历史整单成本折算为单位成本，Amount 保持原整单总额。
+
 ## v7.5.7 — 2026-08-10 20:41 (Europe/Paris)
 - ONE ORDER = ONE FACT ROW：正式 FACT 禁止跨订单聚合。
 - 160 个有效订单必须产生 160 条独立订单行，每条 Quantity=1。

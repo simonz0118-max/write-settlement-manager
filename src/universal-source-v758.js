@@ -2,7 +2,7 @@
 (function(){
 'use strict';
 
-const V757_VERSION='7.5.7';
+const V758_VERSION='7.5.8';
 
 function clean(v=''){return String(v??'').trim()}
 function finite(v){if(v===null||v===undefined||v==='')return null;const n=Number(v);return Number.isFinite(n)?n:null}
@@ -218,15 +218,41 @@ function historicalDescriptionForPrimary(item,country){
     return history.descFor?.(fam,n,item.productName||'')||'';
   }catch(e){return ''}
 }
+function conciseItemDescription(item){
+  if(!item)return '';
+  const raw=standardizeFactDescription(item.productName||'',item.sku||'');
+  return clean(raw);
+}
 function packageDescription(order){
-  const item=primaryLineForOrder(order);
-  if(item){
-    const hist=historicalDescriptionForPrimary(item,order?.country);
-    if(hist)return standardizeFactDescription(hist,item.sku||'');
-    return standardizeFactDescription(item.productName||'',item.sku||'');
+  const items=(order?.lineItems||[]).filter(x=>!x?.isFree&&isMeaningfulProductLine(x?.productName||'',x?.sku||''));
+  const names=[];
+  for(const item of items){
+    const d=conciseItemDescription(item);
+    if(d&&!names.some(x=>x.toLowerCase()===d.toLowerCase()))names.push(d);
   }
+  if(names.length)return names.join(' + ');
   const fallback=meaningfulRawFallback(order);
   return standardizeFactDescription(fallback,'')||'Article';
+}
+function trueProductQuantityForOrder(order){
+  const raw=finite(order?.sourceProductCountValue);
+  if(order?.sourceProductCountWasExplicit){
+    return raw!==null&&raw>0?raw:null;
+  }
+  const items=(order?.lineItems||[]).filter(x=>!x?.isFree&&isMeaningfulProductLine(x?.productName||'',x?.sku||''));
+  if(!items.length)return null;
+  let total=0;
+  for(const item of items){
+    const q=finite(item?.quantity);
+    if(q===null||q<=0)return null;
+    total+=q;
+  }
+  return total>0?total:null;
+}
+function expectedProductQuantityForWorkbook(workbookName){
+  return (classified?.orders||[])
+    .filter(o=>String(o?.sourceFile||'')===String(workbookName||''))
+    .reduce((a,o)=>a+(trueProductQuantityForOrder(o)||0),0);
 }
 function costTotalsFromRows(rows=[]){
   let cogs=0,shipping=0,total=0,known=true,seen=false;
@@ -291,60 +317,72 @@ window.generatedGenericFactRowsForWorkbook = function(workbookName){
     const primary=primaryLineForOrder(order),sku=clean(primary?.sku);
     const orderKey=String(order?.recordKey||order?.orderId||'');
     const sourceRow=Number(order?.sourceRow||0)||0;
+    const trueQty=trueProductQuantityForOrder(order);
 
-    if(!immutableOrderForFact(order)){
+    if(trueQty===null){
       rows.push({
         country,description,sku,quantity:null,quantityKnown:false,
         cogs:null,shipping:null,unitTotal:null,amount:null,currency,
-        costStatus:'PRICE_BLANK',sourceFile:workbookName,sourceSheet:'ORDER_NOT_COUNTED_V757',
+        costStatus:'PRICE_BLANK',sourceFile:workbookName,sourceSheet:'ORDER_QUANTITY_UNKNOWN_V758',
         sourceRow,generated:true,orderCount:0,sourceOrderKey:orderKey,
         systemKind:'ORDER_QUANTITY_UNKNOWN',oneSourceOrderOneFactRow:true
       });
       continue;
     }
 
-    const cost=packageCostForOrder(order,workbookName,currency);
-    const c=finite(cost?.cogs),sh=finite(cost?.shipping),unit=finite(cost?.unitTotal),priced=!!cost;
-    const unitValue=priced?(unit??((c??0)+(sh??0))):null;
+    const packageCost=packageCostForOrder(order,workbookName,currency);
+    const totalC=finite(packageCost?.cogs),totalS=finite(packageCost?.shipping),totalU=finite(packageCost?.unitTotal),priced=!!packageCost;
+    // Historical / learned cost is a PACKAGE TOTAL. Formal FACT displays true item
+    // Quantity, so convert package totals to per-item unit rates. The Excel formula
+    // Quantity × Unit Total then reconstructs exactly the original package total.
+    const unitC=priced&&totalC!==null?totalC/trueQty:null;
+    const unitS=priced&&totalS!==null?totalS/trueQty:null;
+    const packageTotal=priced?(totalU??((totalC??0)+(totalS??0))):null;
+    const unitValue=priced&&packageTotal!==null?packageTotal/trueQty:null;
 
     rows.push({
       country,description,sku,
-      quantity:1,quantityKnown:true,
-      cogs:priced?c:null,
-      shipping:priced?sh:null,
-      unitTotal:priced?unitValue:null,
-      amount:priced?Math.round((unitValue+Number.EPSILON)*100)/100:null,
+      quantity:trueQty,quantityKnown:true,
+      cogs:unitC,
+      shipping:unitS,
+      unitTotal:unitValue,
+      amount:priced&&packageTotal!==null?Math.round((packageTotal+Number.EPSILON)*100)/100:null,
       currency,
       costStatus:priced?'KNOWN':'PRICE_BLANK',
       sourceFile:workbookName,
-      sourceSheet:'ONE_ORDER_ONE_FACT_ROW_V757',
+      sourceSheet:'ONE_ORDER_TRUE_QUANTITY_V758',
       sourceRow,
       generated:true,
       orderCount:1,
       sourceOrderKey:orderKey,
       sourceOrderId:String(order?.orderId||''),
-      priceSource:priced?(cost.source||'PACKAGE_EXACT'):'',
+      priceSource:priced?(packageCost.source||'PACKAGE_EXACT'):'',
       historicalSafe:true,
       systemKind:'ORDER_PACKAGE',
-      oneSourceOrderOneFactRow:true
+      oneSourceOrderOneFactRow:true,
+      trueProductQuantity:true,
+      packageCostTotal:packageTotal
     });
   }
 
   const counted=rows.filter(r=>finite(r.quantity)!==null&&finite(r.quantity)>0);
-  const expected=window.immutableOrderCountForWorkbook(workbookName);
-  const actualQty=counted.reduce((a,r)=>a+(finite(r.quantity)??0),0);
+  const expectedOrders=window.immutableOrderCountForWorkbook(workbookName);
   const actualRows=counted.length;
   const uniqueKeys=new Set(counted.map(r=>String(r.sourceOrderKey||''))).size;
+  const actualQty=counted.reduce((a,r)=>a+(finite(r.quantity)??0),0);
+  const expectedQty=expectedProductQuantityForWorkbook(workbookName);
 
-  if(actualQty!==expected||actualRows!==expected||uniqueKeys!==expected){
-    throw new Error(`ORDER_ROW_INVARIANT_FAILED: source=${expected}, FACT_rows=${actualRows}, FACT_qty=${actualQty}, unique_orders=${uniqueKeys}`);
+  if(actualRows!==expectedOrders||uniqueKeys!==expectedOrders){
+    throw new Error(`ORDER_ROW_INVARIANT_FAILED: source_orders=${expectedOrders}, FACT_rows=${actualRows}, unique_orders=${uniqueKeys}`);
+  }
+  if(Math.abs(actualQty-expectedQty)>1e-9){
+    throw new Error(`PRODUCT_QUANTITY_INVARIANT_FAILED: source_qty=${expectedQty}, FACT_qty=${actualQty}`);
   }
 
   const preferred=['FRANCE','BELGIUM','CANADA','SWITZERLAND','LUXEMBOURG','GERMANY','SPAIN','ITALY','NETHERLANDS','AUSTRIA','PORTUGAL','REUNION ISLAND','GREECE','GLOBAL'];
   const rank=c=>{const i=preferred.indexOf(clean(c).toUpperCase());return i<0?999:i};
   rows.sort((a,b)=>rank(a.country)-rank(b.country)||clean(a.country).localeCompare(clean(b.country),'en')||
     (Number(a.sourceRow||0)-Number(b.sourceRow||0))||clean(a.sourceOrderKey).localeCompare(clean(b.sourceOrderKey),'en'));
-
   return rows.map((r,i)=>({...r,no:i+1}));
 };
 // Completely remove profile routing from all active V7.5 reporting paths.
@@ -356,8 +394,8 @@ window.allGeneratedFactRows = function(){return (sourceWorkbooks||[]).flatMap(w=
 window.buildFactExportData = function(){
   const factRows=allGeneratedFactRows();
   const active=factRows.filter(r=>finite(r.quantity)!==null&&finite(r.quantity)>0);
-  const orderCount=active.reduce((a,r)=>a+(finite(r.quantity)??0),0);
-  const merchandiseQty=(classified?.lineItems||[]).reduce((a,x)=>a+(finite(x?.quantity)??0),0);
+  const orderCount=active.length;
+  const merchandiseQty=active.reduce((a,r)=>a+(finite(r.quantity)??0),0);
   const totalAmount=active.reduce((a,r)=>a+(Number(r.amount)||0),0);
   const cogsTotal=active.reduce((a,r)=>a+(Number(r.quantity)||0)*(Number(r.cogs)||0),0);
   const shippingTotal=active.reduce((a,r)=>a+(Number(r.quantity)||0)*(Number(r.shipping)||0),0);
@@ -373,7 +411,7 @@ window.buildFactExportData = function(){
   const countries=new Map();for(const r of factRows){const c=clean(r.country)||'GLOBAL';if(!countries.has(c))countries.set(c,[]);countries.get(c).push(r)}
   const preferred=['FRANCE','BELGIUM','CANADA','SWITZERLAND','LUXEMBOURG','GERMANY','SPAIN','ITALY','NETHERLANDS','AUSTRIA','PORTUGAL','GREECE','GLOBAL'];
   const countryOrder=[...countries.keys()].sort((a,b)=>{const ai=preferred.indexOf(a.toUpperCase()),bi=preferred.indexOf(b.toUpperCase());return(ai<0?999:ai)-(bi<0?999:bi)||a.localeCompare(b,'en')});
-  return {factRows,active,totalAmount,totalQty:orderCount,orderCount,parcelCount:orderCount,merchandiseQty,cogsTotal,shippingTotal,unallocated:0,summary,countries,countryOrder,parcelRows:[]};
+  return {factRows,active,totalAmount,totalQty:merchandiseQty,orderCount,parcelCount:orderCount,merchandiseQty,cogsTotal,shippingTotal,unallocated:0,summary,countries,countryOrder,parcelRows:[]};
 };
 
 // Import flow: schema learning remains available, but review/unknown states can
@@ -399,7 +437,7 @@ startImport = async function(fileList){
       if(!orders.length){classified=null;els.progressFill.style.width='100%';els.progressText.textContent='100% · 未检测到订单数据';els.currentFile.textContent='解析完成';setBusy(false);showError('没有检测到可统计的订单 Sheet；FACT/说明 Sheet 不会被误当订单。');worker?.terminate();worker=null;return}
       classified=classifyOrders(orders);
       els.progressFill.style.width='100%';els.progressText.textContent='100% · 全部源记录已保留并完成统计';els.currentFile.textContent='解析完成';hideError();setBusy(false);renderResults();
-      window.dispatchEvent(new CustomEvent('write-import-complete',{detail:{sourceRecordCount,records:orders.length,sameOrderIdGroups:sameWorkbookOrderIdGroups.length,sourceFidelityVersion:V757_VERSION}}));
+      window.dispatchEvent(new CustomEvent('write-import-complete',{detail:{sourceRecordCount,records:orders.length,sameOrderIdGroups:sameWorkbookOrderIdGroups.length,sourceFidelityVersion:V758_VERSION}}));
       worker?.terminate();worker=null;
     }
     if(data.type==='error'){setBusy(false);showError(data.message||'未知导入错误');worker?.terminate();worker=null}
@@ -412,17 +450,25 @@ startImport = async function(fileList){
 // Runtime version marker keeps the currently deployed shell honest even before
 // the next full HTML cache-bust package is applied.
 try{
-  document.body.dataset.release=V757_VERSION;
-  const brandVersion=document.querySelector('.brand-copy small');if(brandVersion)brandVersion.textContent=`v${V757_VERSION}`;
-  const historyCurrent=document.getElementById('historyCurrentVersion');if(historyCurrent)historyCurrent.textContent=`v${V757_VERSION}`;
+  document.body.dataset.release=V758_VERSION;
+  const brandVersion=document.querySelector('.brand-copy small');if(brandVersion)brandVersion.textContent=`v${V758_VERSION}`;
+  const historyCurrent=document.getElementById('historyCurrentVersion');if(historyCurrent)historyCurrent.textContent=`v${V758_VERSION}`;
   const historyHost=document.getElementById('releaseHistory');
-  if(historyHost&&!historyHost.querySelector('[data-v757-entry]')){
+  if(historyHost&&!historyHost.querySelector('[data-v758-entry]')){
     const article=document.createElement('article');article.className='history-item current';article.dataset.v757Entry='1';
-    article.innerHTML='<div class="history-meta"><span class="history-version">v7.5.6</span><time class="history-time">2026-08-10 20:18</time></div><div class="history-body"><h3>One Order = One FACT Row · 禁止跨订单聚合</h3><ul><li>160 个有效源订单必须生成 160 条独立 FACT 订单行。</li><li>相同 Description 也不得跨订单合并；每条 Quantity 固定为 1。</li><li>商品件数继续只做后台审计，历史价格与未知价格规则保持不变。</li></ul></div>';
+    article.innerHTML='<div class="history-meta"><span class="history-version">v7.5.8</span><time class="history-time">2026-08-10 20:45</time></div><div class="history-body"><h3>One Order One Row + True Product Quantity</h3><ul><li>160 个有效源订单必须生成 160 条独立 FACT 订单行。</li><li>Quantity 必须读取每个订单真实商品总数；不得强制为 1。</li><li>订单行数与商品数量双重守恒；历史整单成本转换为单位价后保持总金额不变。</li></ul></div>';
     historyHost.prepend(article);
     const count=document.getElementById('historyCount');if(count){const n=Number((count.textContent.match(/\d+/)||[])[0]||0);count.textContent=`${n+1} 个版本`;}
   }
-}catch(e){console.warn('WRITE v7.5.6 version marker:',e)}
+}catch(e){console.warn('WRITE v7.5.8 version marker:',e)}
 
-window.WRITE_ONE_ORDER_ONE_ROW_V757={version:V757_VERSION,oneOrderOneFactRow:true,quantityPerValidOrder:1,crossOrderAggregation:false,unknownNeverBlocks:true,descriptionStandard:'MANUAL_FACT_STYLE_V1'};
+window.WRITE_ONE_ORDER_TRUE_QTY_V758={
+  version:V758_VERSION,
+  oneOrderOneFactRow:true,
+  quantity:'SOURCE_PRODUCT_COUNT',
+  crossOrderAggregation:false,
+  dualInvariant:true,
+  unknownNeverBlocks:true,
+  descriptionStandard:'MANUAL_FACT_STYLE_V1'
+};
 })();
