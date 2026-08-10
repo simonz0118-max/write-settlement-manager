@@ -1,3 +1,9 @@
+## v8.2.0 — 2026-08-10 23:12 (Europe/Paris)
+- Zero-Loss：Lost Order/Product/Quantity必须为0；UNKNOWN与缺价格不阻断。
+- 多商品Configuration保持组合；MAIN/UPSELL分离；Triangle语义强化。
+- 占位记录保留但不计商品数量；源数据冲突不静默修正。
+- 双向追踪：FACT Shadow↔源订单。
+
 ## v8.1.2 — 2026-08-10 22:55 (Europe/Paris)
 - 补充V8 Shadow只读Source Bridge，不改变V7.5.9正式FACT逻辑。
 - 强化Bridge/非阻断发布门并修复旧版本提示。

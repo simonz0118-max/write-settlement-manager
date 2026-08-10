@@ -1,26 +1,53 @@
 {
   "current": {
-    "version": "8.1.2",
-    "time": "2026-08-10 22:55",
-    "title": "Source Bridge Hotfix",
+    "version": "8.2.0",
+    "time": "2026-08-10 23:12",
+    "title": "Zero-Loss Classification Engine",
     "sections": [
       {
-        "label": "Source Bridge",
+        "label": "零遗漏账本",
         "items": [
-          "V8 Shadow通过只读克隆快照读取orders/lineItems/sourceWorkbooks。",
-          "V8不能通过bridge改写V7.5.9生产状态。"
+          "所有源订单/商品记录/有效数量必须进入语义追踪；UNKNOWN允许，Lost必须为0。",
+          "占位记录如97保留审计但Quantity=0，不伪造成商品。"
+        ]
+      },
+      {
+        "label": "分类完整性",
+        "items": [
+          "多MAIN商品保持完整Configuration；UPSELL与MAIN分离。",
+          "Triangle Family/尺寸保留，内部备注不得直接作为正式Description。"
+        ]
+      },
+      {
+        "label": "人工复核优先",
+        "items": [
+          "缺价格/缺计算方式允许人工后补，不阻断统计和FACT。",
+          "源字段发生矛盾时两套事实都保留并标记复核，不静默修正。"
         ]
       },
       {
         "label": "生产保护",
         "items": [
-          "V7.5.9正式FACT generator/export保持不变。",
-          "Bridge/Shadow越权时发布直接失败。"
+          "V8.2继续Shadow，V7.5.9继续正式FACT，直到Golden语义达到接管阈值。"
         ]
       }
     ]
   },
   "history": [
+    {
+      "version": "8.2.0",
+      "time": "2026-08-10 23:12",
+      "title": "Zero-Loss Classification Engine",
+      "items": [
+        "所有源订单/商品记录/有效数量必须进入语义追踪；UNKNOWN允许，Lost必须为0。",
+        "占位记录如97保留审计但Quantity=0，不伪造成商品。",
+        "多MAIN商品保持完整Configuration；UPSELL与MAIN分离。",
+        "Triangle Family/尺寸保留，内部备注不得直接作为正式Description。",
+        "缺价格/缺计算方式允许人工后补，不阻断统计和FACT。",
+        "源字段发生矛盾时两套事实都保留并标记复核，不静默修正。",
+        "V8.2继续Shadow，V7.5.9继续正式FACT，直到Golden语义达到接管阈值。"
+      ]
+    },
     {
       "version": "8.1.2",
       "time": "2026-08-10 22:55",

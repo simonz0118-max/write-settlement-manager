@@ -1,3 +1,5 @@
 .v8-semantic-panel{position:relative;overflow:hidden}.v8-semantic-panel small{font-size:10px;opacity:.55}.v8-audit-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:12px 0}.v8-audit-grid article{border:1px solid var(--line,#e7e7ea);border-radius:12px;padding:12px}.v8-audit-grid span{display:block;font-size:12px;opacity:.62}.v8-audit-grid strong{display:block;font-size:22px;margin-top:4px}.v8-review-title{font-size:12px;font-weight:700;opacity:.7;margin:8px 0}.v8-review-row{display:grid;grid-template-columns:minmax(0,1.6fr) auto minmax(0,1fr);gap:10px;align-items:center;padding:8px 0;border-top:1px solid var(--line,#eee)}.v8-review-row b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.v8-review-row span,.v8-review-row small{font-size:12px;opacity:.68}@media(max-width:900px){.v8-audit-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.v8-review-row{grid-template-columns:1fr}.v8-review-row b{white-space:normal}}
 
 .v81-training-panel .success-strip{margin-top:10px}.v81-training-panel{overflow:hidden}
+
+.v82-zero-loss-panel .error-card{position:static;margin-top:10px}.v82-zero-loss-panel{overflow:hidden}
