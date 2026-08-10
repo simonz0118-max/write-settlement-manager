@@ -1,7 +1,9 @@
-WRITE Settlement Manager V7.3.1
-Unified FACT canonical template + pencil export fix.
+WRITE Settlement Manager V7.4.0
+Universal FACT Engine
 
-All formal invoices use the historical WRITE FACT visual language.
-Generic invoices use FACT_TEMPLATE_UNIFIED_V1.xlsx.
-Mature pencil/CN FACT keeps its verified dedicated generator.
-Unknown price may stay blank; country/product/SKU/quantity remain mandatory.
+Source data first.
+Classification does not block export.
+Learning does not block export.
+Unknown price remains blank.
+All formal invoices use the canonical historical FACT layout.
+Only true source-record loss may hard-block export.
