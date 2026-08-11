@@ -1,39 +1,46 @@
 {
   "current": {
-    "version": "8.2.0",
-    "time": "2026-08-10 23:12",
-    "title": "Zero-Loss Classification Engine",
+    "version": "8.5.0",
+    "time": "2026-08-11 21:05",
+    "title": "Multi-Dataset Golden Harness + Regression Firewall",
     "sections": [
       {
-        "label": "零遗漏账本",
+        "label": "多数据集Golden",
         "items": [
-          "所有源订单/商品记录/有效数量必须进入语义追踪；UNKNOWN允许，Lost必须为0。",
-          "占位记录如97保留审计但Quantity=0，不伪造成商品。"
+          "Thomas/伪装网、YD/归档、铅笔、香皂四类历史行为同时进入发布硬回归。",
+          "修复一类商品时破坏另一类，发布直接失败。"
         ]
       },
       {
-        "label": "分类完整性",
+        "label": "证据去重",
         "items": [
-          "多MAIN商品保持完整Configuration；UPSELL与MAIN分离。",
-          "Triangle Family/尺寸保留，内部备注不得直接作为正式Description。"
+          "完全相同的人工Excel即使出现在YD与归档两个ZIP，也只算1份训练证据。",
+          "当前60个Excel副本按SHA256去重后为55份独立证据。"
         ]
       },
       {
-        "label": "人工复核优先",
+        "label": "接管防火墙",
         "items": [
-          "缺价格/缺计算方式允许人工后补，不阻断统计和FACT。",
-          "源字段发生矛盾时两套事实都保留并标记复核，不静默修正。"
-        ]
-      },
-      {
-        "label": "生产保护",
-        "items": [
-          "V8.2继续Shadow，V7.5.9继续正式FACT，直到Golden语义达到接管阈值。"
+          "Zero-Loss + Classification + Trace + 四数据集回归 + Evidence Dedup必须同时PASS才具有候选资格。",
+          "正式FACT接管仍为OFF，V7.5.9继续生产。"
         ]
       }
     ]
   },
   "history": [
+    {
+      "version": "8.5.0",
+      "time": "2026-08-11 21:05",
+      "title": "Multi-Dataset Golden Harness + Regression Firewall",
+      "items": [
+        "Thomas/伪装网、YD/归档、铅笔、香皂四类历史行为同时进入发布硬回归。",
+        "修复一类商品时破坏另一类，发布直接失败。",
+        "完全相同的人工Excel即使出现在YD与归档两个ZIP，也只算1份训练证据。",
+        "当前60个Excel副本按SHA256去重后为55份独立证据。",
+        "Zero-Loss + Classification + Trace + 四数据集回归 + Evidence Dedup必须同时PASS才具有候选资格。",
+        "正式FACT接管仍为OFF，V7.5.9继续生产。"
+      ]
+    },
     {
       "version": "8.2.0",
       "time": "2026-08-10 23:12",

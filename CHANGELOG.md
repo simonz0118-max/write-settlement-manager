@@ -1,3 +1,9 @@
+## v8.5.0 — 2026-08-11 21:05 (Europe/Paris)
+- Multi-Dataset Golden Harness：Thomas/YD归档/铅笔/香皂同时回归。
+- Regression Firewall：任何一套历史行为退化都阻止发布候选。
+- Evidence Fingerprint：相同Excel副本只算一次训练证据；60副本→55独立证据。
+- 正式FACT仍由V7.5.9生产，formalFactTakeover=false。
+
 ## v8.2.0 — 2026-08-10 23:12 (Europe/Paris)
 - Zero-Loss：Lost Order/Product/Quantity必须为0；UNKNOWN与缺价格不阻断。
 - 多商品Configuration保持组合；MAIN/UPSELL分离；Triangle语义强化。

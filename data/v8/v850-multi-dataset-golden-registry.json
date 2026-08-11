@@ -1,0 +1,83 @@
+{
+  "version": "8.5.0",
+  "formalFactTakeover": false,
+  "datasets": [
+    {
+      "id": "THOMAS_CAMOUFLAGE_1001_1162",
+      "kind": "EXACT_GOLDEN",
+      "source": "FACT- 10451_Thomas Hurel_10_08_26(1001-1162)(3)(2).xlsx",
+      "requirements": {
+        "sourceRecords": 162,
+        "sourceItems": 260,
+        "validQuantity": 289,
+        "lostOrders": 0,
+        "lostItems": 0,
+        "lostQuantity": 0,
+        "classification": "49/49",
+        "trace": "49/49"
+      },
+      "status": "ACTIVE_HARD_GATE"
+    },
+    {
+      "id": "YD_ARCHIVE_MULTI_FAMILY",
+      "kind": "HISTORICAL_EVIDENCE_SET",
+      "archives": [
+        "YD(1).zip",
+        "归档(4).zip"
+      ],
+      "rawCopies": 10,
+      "uniqueEvidenceWorkbooks": 5,
+      "families": [
+        "HUGO_GILET",
+        "JELLY",
+        "LUDOVIC_CHEMISE",
+        "MELANY"
+      ],
+      "requirements": {
+        "duplicateEvidenceCountsOnce": true,
+        "factOnlyManualDoesNotTrain": true,
+        "partialUnexplainedDoesNotTrain": true,
+        "familySpecificDescription": true
+      },
+      "status": "ACTIVE_SEMANTIC_GATE"
+    },
+    {
+      "id": "PENCIL_WRITE_STORE",
+      "kind": "HISTORICAL_EVIDENCE_SET",
+      "archive": "铅笔(3).zip",
+      "rawWorkbooks": 21,
+      "requirements": {
+        "mainQuantityIsPackageCount": true,
+        "refillUpsellIsActualUnits": true,
+        "historicalPricingSeparateFromClassification": true,
+        "ambiguousPromotionRequiresEvidence": true,
+        "factOnlyManualDoesNotTrain": true
+      },
+      "status": "ACTIVE_SEMANTIC_GATE"
+    },
+    {
+      "id": "SOAP_THIBAULT_HISTORY",
+      "kind": "HISTORICAL_EVIDENCE_SET",
+      "archive": "香皂.zip",
+      "rawWorkbooks": 29,
+      "requirements": {
+        "soapBalmNailTowelArePackageComponents": true,
+        "giftPouchNonBillable": true,
+        "originBeforeCountry": true,
+        "orderIdOnlyDedupeForbidden": true,
+        "unexplainedMismatchDoesNotPartiallyTrain": true,
+        "factOnlyManualDoesNotTrain": true
+      },
+      "status": "ACTIVE_SEMANTIC_GATE"
+    }
+  ],
+  "takeoverPolicy": {
+    "allDatasetsMustPass": true,
+    "zeroLossMustPass": true,
+    "classificationMustPass": true,
+    "traceMustPass": true,
+    "crossDatasetRegressionMustPass": true,
+    "minimumDistinctHistoricalBatchesBeforeTakeover": 4,
+    "currentFormalTakeover": false
+  }
+}
