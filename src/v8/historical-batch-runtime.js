@@ -1,0 +1,7 @@
+/* WRITE V8.6 Historical Batch Scoring UI */
+(function(g){'use strict';
+function panel(){let e=document.getElementById('v86BatchScorePanel');if(e)return e;const p=document.getElementById('v85MultiDatasetPanel')?.parentElement||document.querySelector('[data-view-panel="dashboard"] .dashboard-grid');if(!p)return null;e=document.createElement('section');e.id='v86BatchScorePanel';e.className='panel wide v86-score-panel';e.innerHTML='<div class="panel-head"><div><h2>V8.6 历史批次评分</h2><p>分类 / 数量 / 价格分领域授权训练</p></div><span>SHADOW</span></div><div class="v8-audit-grid"><article><span>默认历史批次</span><strong>REFERENCE ONLY</strong></article><article><span>未知指标</span><strong>禁止晋级</strong></article><article><span>FACT-only</span><strong>不学习</strong></article><article><span>部分差异</span><strong>不部分学习</strong></article><article><span>可靠价格</span><strong>可独立学习</strong></article><article><span>正式接管</span><strong>OFF</strong></article></div><div class="success-strip">✓ 一个批次可以“价格可学、分类不可学”；证据不足不会被强行升级为规则。</div>';p.appendChild(e);return e}
+function start(){panel()}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();
+g.WRITE_V86_BATCH_SCORE_RUNTIME={VERSION:'8.6.0'};
+})(window);

@@ -1,3 +1,9 @@
+## v8.6.0 — 2026-08-11 21:32 (Europe/Paris)
+- Historical Batch Scoring：每个历史工作簿独立评分。
+- Classification / Quantity / Price分领域训练资格。
+- 未知证据禁止晋级；FACT-only与无法解释的部分差异禁止训练。
+- V8.5多数据集防回归与V7.5.9正式FACT保持。
+
 ## v8.5.0 — 2026-08-11 21:05 (Europe/Paris)
 - Multi-Dataset Golden Harness：Thomas/YD归档/铅笔/香皂同时回归。
 - Regression Firewall：任何一套历史行为退化都阻止发布候选。
