@@ -1,0 +1,18 @@
+{
+  "version": "8.7.0",
+  "policy": "A mismatch is EXPLAINED_CLOSED only when a specific historical example fully proves the exact difference.",
+  "rules": [
+    {
+      "id": "SCHEMA_EXAMPLE_NOT_ACTIVE",
+      "enabled": false,
+      "code": "VERIFIED_NOT_YET_FULFILLED_EXCLUSION",
+      "sourceQuantity": 22,
+      "factQuantity": 21,
+      "verified": true,
+      "explainsFullDifference": true,
+      "evidenceRef": "example-schema-only"
+    }
+  ],
+  "factOnlyManualTraining": false,
+  "partialUnexplainedTraining": false
+}

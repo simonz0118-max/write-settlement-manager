@@ -1,34 +1,46 @@
 {
   "current": {
-    "version": "8.6.0",
-    "time": "2026-08-11 21:32",
-    "title": "Historical Batch Scoring",
+    "version": "8.7.0",
+    "time": "2026-08-11 21:50",
+    "title": "Automatic Historical Closure Analyzer",
     "sections": [
       {
-        "label": "批次评分",
+        "label": "自动闭环",
         "items": [
-          "每个历史Excel独立评分，不再整包默认学习。",
-          "分类/数量/价格分领域授权；一个批次可以价格可学而分类不可学。"
+          "历史Order↔FACT逐配置判定EXACT/EXPLAINED/TEMPLATE/MANUAL/PARTIAL。",
+          "8 vs 10等无法解释差异禁止部分学习。"
         ]
       },
       {
-        "label": "保守晋级",
+        "label": "解释证据",
         "items": [
-          "未知指标不会自动变成高置信度。",
-          "FACT-only人工行、无法解释的部分差异继续禁止学习。",
-          "历史资料能完整解释差异时，只晋级被完整解释的领域。"
+          "EXPLAINED_CLOSED必须命中明确历史证据，不能因为差异“看起来像”某规则就学习。",
+          "FACT-only人工临时行继续隔离。"
         ]
       },
       {
-        "label": "生产保护",
+        "label": "晋级控制",
         "items": [
-          "V8.5多数据集回归保持。",
-          "正式FACT仍为V7.5.9，formalFactTakeover=false。"
+          "闭环结果自动送入V8.6分领域评分器，再决定classification/quantity/price资格。",
+          "正式FACT仍为V7.5.9，接管OFF。"
         ]
       }
     ]
   },
   "history": [
+    {
+      "version": "8.7.0",
+      "time": "2026-08-11 21:50",
+      "title": "Automatic Historical Closure Analyzer",
+      "items": [
+        "历史Order↔FACT逐配置判定EXACT/EXPLAINED/TEMPLATE/MANUAL/PARTIAL。",
+        "8 vs 10等无法解释差异禁止部分学习。",
+        "EXPLAINED_CLOSED必须命中明确历史证据，不能因为差异“看起来像”某规则就学习。",
+        "FACT-only人工临时行继续隔离。",
+        "闭环结果自动送入V8.6分领域评分器，再决定classification/quantity/price资格。",
+        "正式FACT仍为V7.5.9，接管OFF。"
+      ]
+    },
     {
       "version": "8.6.0",
       "time": "2026-08-11 21:32",

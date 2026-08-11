@@ -1,3 +1,9 @@
+## v8.7.0 — 2026-08-11 21:50 (Europe/Paris)
+- Automatic Historical Closure Analyzer：Order↔FACT自动闭环。
+- EXACT_CLOSED / EXPLAINED_CLOSED / TEMPLATE_ONLY / FACT_ONLY_MANUAL / PARTIAL_UNEXPLAINED / SOURCE_ONLY状态机。
+- 解释型晋级必须有明确历史证据；禁止8-vs-10部分学习。
+- 接入V8.6批次评分和分领域训练路由；正式FACT仍由V7.5.9生产。
+
 ## v8.6.0 — 2026-08-11 21:32 (Europe/Paris)
 - Historical Batch Scoring：每个历史工作簿独立评分。
 - Classification / Quantity / Price分领域训练资格。
