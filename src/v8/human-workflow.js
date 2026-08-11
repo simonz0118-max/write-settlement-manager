@@ -41,21 +41,21 @@ function fulfillmentRecordKey(order={},index=0){
 
 function family(item={}){
   const text=`${clean(item.productName)} ${clean(item.sku)}`;
-  if(/filet\s+de\s+camouflage.*triang|三角形?网|triangulaire/i.test(text))return 'CAMOUFLAGE_NET_TRIANGLE';
-  if(/filet\s+de\s+camouflage/i.test(text))return 'CAMOUFLAGE_NET';
-  if(/kit\s+de\s+fixation/i.test(text))return 'FIXATION_KIT';
+  if(/filet\s+de\s+camouflage.*triang|三角(?:形)?伪装网|三角形?网|triangulaire/i.test(text))return 'CAMOUFLAGE_NET_TRIANGLE';
+  if(/filet\s+de\s+camouflage|伪装网|\bYD\b.*(?:net|filet|camouflage)/i.test(text))return 'CAMOUFLAGE_NET';
+  if(/kit\s+de\s+fixation|\bYD\b.*\bkit\b/i.test(text))return 'FIXATION_KIT';
   if(/colliers?\s+de\s+serrage/i.test(text))return 'CABLE_TIE';
   if(/cordes?\s+à\s+cliquets/i.test(text))return 'RATCHET_CORD';
   if(/gel[ée]e?\s+au\s+collag[èe]ne|collagen.*jelly|jelly/i.test(text))return 'COLLAGEN_JELLY';
   if(/\bchemise\b/i.test(text))return 'CHEMISE';
   if(/\bgilet\b|kryonify/i.test(text))return 'GILET';
-  if(/mine(?:s)?\s+(?:rechargeable|color[ée]e)|refill/i.test(text))return 'PENCIL_REFILL';
+  if(/\bmine(?:s)?\b|refill/i.test(text))return 'PENCIL_REFILL';
   if(/stylo\s+[ée]ternel|crayon\s+[ée]ternel|pencil/i.test(text))return 'PENCIL';
   if(/baume/i.test(text))return 'SOAP_BALM';
   if(/ongles?|nail/i.test(text))return 'SOAP_NAIL';
   if(/serviette|towel/i.test(text))return 'SOAP_TOWEL';
+  if(/sachet\s+moussant|exfoliant|soap\s+(?:gift\s+)?pouch/i.test(text))return 'SOAP_GIFT_POUCH';
   if(/savon|soap/i.test(text))return 'SOAP';
-  if(/sachet\s+moussant|exfoliant|soap\s+pouch/i.test(text))return 'SOAP_GIFT_POUCH';
   if(/gravure|engraving/i.test(text))return 'ENGRAVING_SERVICE';
   if(/frais\s+d.?importation|import\s+fee/i.test(text))return 'IMPORT_FEE';
   return `NEW:${(clean(item.productName)||clean(item.sku)||'UNKNOWN').slice(0,64)}`;
