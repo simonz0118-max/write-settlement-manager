@@ -1,0 +1,16 @@
+/* WRITE V9.0 Autonomous Learning Store */
+(function(g){'use strict';const VERSION='9.0.0',DB='write-autonomous-learning-v9',OBS='observations',RULES='corrections';let cache=new Map(),ready=false;
+const clean=v=>String(v??'').replace(/\r/g,' ').replace(/\s+/g,' ').trim();
+function idFor(parts=[]){let s=parts.map(clean).join('\u0001'),h=2166136261;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)}return`v9:${(h>>>0).toString(16)}`}
+function open(){return new Promise((resolve,reject)=>{const r=indexedDB.open(DB,1);r.onupgradeneeded=()=>{const db=r.result;if(!db.objectStoreNames.contains(OBS))db.createObjectStore(OBS,{keyPath:'id'});if(!db.objectStoreNames.contains(RULES)){const s=db.createObjectStore(RULES,{keyPath:'id'});s.createIndex('signature','signature')}};r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error)})}
+async function all(store){const db=await open();return new Promise((resolve,reject)=>{const r=db.transaction(store,'readonly').objectStore(store).getAll();r.onsuccess=()=>resolve(r.result||[]);r.onerror=()=>reject(r.error)})}
+async function put(store,obj){const db=await open();return new Promise((resolve,reject)=>{const t=db.transaction(store,'readwrite');t.objectStore(store).put(obj);t.oncomplete=()=>resolve(obj);t.onerror=()=>reject(t.error)})}
+async function init(){const r=await all(RULES).catch(()=>[]);cache=new Map(r.map(x=>[x.signature,x]));ready=true;return{rules:r.length}}
+function signature(x={}){return[clean(x.country).toUpperCase(),clean(x.origin).toUpperCase(),clean(x.family),clean(x.sku).toLowerCase(),clean(x.productName).toLowerCase()].join('\u0001')}
+function getCorrection(x={}){return cache.get(signature(x))||null}
+async function observe(x={}){const sig=signature(x),id=idFor([sig,x.orderKey,x.sourceItemKey,x.quantity]);const obj={id,signature:sig,kind:'OBSERVATION',country:clean(x.country),origin:clean(x.origin),family:clean(x.family),sku:clean(x.sku),productName:clean(x.productName),quantity:Number(x.quantity)||0,role:clean(x.role),description:clean(x.description),orderKey:clean(x.orderKey),sourceItemKey:clean(x.sourceItemKey),updatedAt:Date.now()};await put(OBS,obj);return obj}
+async function observeMany(items=[]){for(const x of items)await observe(x);return true}
+async function confirmCorrection(x={}){const sig=signature(x),obj={id:idFor(['CORRECTION',sig]),signature:sig,kind:'HUMAN_CONFIRMED',country:clean(x.country),origin:clean(x.origin),family:clean(x.family),sku:clean(x.sku),productName:clean(x.productName),description:clean(x.description),role:clean(x.role),configuration:clean(x.configuration),confidence:1,confirmed:true,updatedAt:Date.now()};await put(RULES,obj);cache.set(sig,obj);try{if(g.WRITE_RULE_STORE_V8?.put){await g.WRITE_RULE_STORE_V8.put({id:obj.id,sourceType:'HUMAN_CORRECTION',scope:'EXACT_PRODUCT',confidence:1,humanConfirmed:true,pattern:{product:obj.productName,country:obj.country},action:{description:obj.description,role:obj.role},sourceRef:'V9_REVIEW'});g.WRITE_RULE_STORE_V8.sync?.().catch(()=>{})}}catch(e){console.warn('[V9 cloud learning]',e)}return obj}
+async function exportJson(){return JSON.stringify({version:VERSION,observations:await all(OBS),corrections:await all(RULES)},null,2)}
+g.WRITE_V9_LEARNING={VERSION,init,signature,getCorrection,observe,observeMany,confirmCorrection,exportJson,isReady:()=>ready};
+})(window);

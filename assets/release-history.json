@@ -1,40 +1,91 @@
 {
   "current": {
-    "version": "8.8.0",
-    "time": "2026-08-11 22:06",
-    "title": "Historical Batch Auto-Extraction",
+    "version": "9.0.0",
+    "time": "2026-08-11 22:40",
+    "title": "Autonomous Human-Like FACT Engine",
     "sections": [
       {
-        "label": "历史Excel直读",
+        "label": "正式生产模式",
         "items": [
-          "自动识别订单页、FACT页、参考页与未知结构页。",
-          "支持现有SheetJS workbook直接转换，无需人工先整理Order/FACT中间数据。"
+          "未来新订单默认只有订单数据，不要求FACT页。",
+          "订单是唯一事实来源。"
         ]
       },
       {
-        "label": "安全抽取",
+        "label": "唯一Golden模板",
         "items": [
-          "同内容sheet只计一次；Order ID重复不自动删包裹。",
-          "FACT空Quantity作为TEMPLATE候选；无订单来源的FACT由V8.7识别MANUAL_ONLY。"
+          "固定使用唯一FACT模板，只按实际数据微调动态行。",
+          "历史模板数据行不能进入新订单FACT。"
         ]
       },
       {
-        "label": "训练链",
+        "label": "红字审核",
         "items": [
-          "自动抽取→人工工作流→V8.7闭环→V8.6评分→分领域训练。",
-          "抽取成功绝不等于允许学习。"
+          "未知/低置信商品仍必须输出，Description红字。",
+          "人工确认/修改后自动学习并转黑。"
         ]
       },
       {
-        "label": "生产保护",
+        "label": "全自动学习",
         "items": [
-          "V8.5/8.6/8.7硬门全部保留。",
-          "V7.5.9继续正式FACT，formalFactTakeover=false。"
+          "所有订单观察自动记录。",
+          "人工修改无需二次选择是否学习。"
+        ]
+      },
+      {
+        "label": "生产保障",
+        "items": [
+          "缺价格留空不阻断。",
+          "V9正式接管，V7.5.9保留回滚。"
         ]
       }
     ]
   },
   "history": [
+    {
+      "version": "9.0.0",
+      "time": "2026-08-11 22:40",
+      "title": "Autonomous Human-Like FACT Engine",
+      "items": [
+        "未来新订单默认没有FACT页面；系统只读取订单并自动生成FACT。",
+        "订单是唯一事实来源；历史模板数据不得带入新FACT。",
+        "唯一Golden FACT模板锁定，仅根据实际数据增减动态行。",
+        "未知/低置信商品必须进入FACT，Description红字审核，不写待确认文字。",
+        "人工修改/确认自动长期学习；所有订单观察自动记录。",
+        "可靠历史价格精确匹配才自动填，缺价格留空。",
+        "V9正式接管FACT统计路由，V7.5.9保留回滚。"
+      ]
+    },
+    {
+      "version": "8.4.0",
+      "time": "2026-08-11 20:35",
+      "title": "Unified Human Workflow Engine",
+      "items": [
+        "统一YD/归档/铅笔/香皂人工统计行为。",
+        "履约记录→组件角色→Package Configuration→FACT统一人工工作流。",
+        "FACT-only人工项和无法解释的部分差异不学习。"
+      ]
+    },
+    {
+      "version": "8.3.1",
+      "time": "2026-08-11 20:12",
+      "title": "Classification Fidelity · Trace Hardening",
+      "items": [
+        "49/49必须逐行有sourceOrderKeys和sourceItemKeys。",
+        "MAIN订单唯一Configuration路由；计费商品唯一FACT路由。",
+        "Zero-Loss + Classification Exact + Trace Exact三重门。"
+      ]
+    },
+    {
+      "version": "8.3.0",
+      "time": "2026-08-11 19:55",
+      "title": "Classification Fidelity",
+      "items": [
+        "Country + Role + Configuration + Quantity逐行对比人工FACT。",
+        "1001-1162 Golden从39/49提升至49/49。",
+        "修复多MAIN、Context Role、Triangle及配件角色差异。"
+      ]
+    },
     {
       "version": "8.8.0",
       "time": "2026-08-11 22:06",
