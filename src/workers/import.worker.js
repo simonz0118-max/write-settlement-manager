@@ -387,10 +387,10 @@ function xmlDecode(value = '') {
 
 function parseSharedStrings(xml) {
   const result = [];
-  const siRe = /<si(?:\s[^>]*)?>([\s\S]*?)<\/si>/g;
+  const siRe = /<(?:[A-Za-z_][\w.-]*:)?si(?:\s[^>]*)?>([\s\S]*?)<\/(?:[A-Za-z_][\w.-]*:)?si>/g;
   let match;
   while ((match = siRe.exec(xml))) {
-    const text = [...match[1].matchAll(/<t(?:\s[^>]*)?>([\s\S]*?)<\/t>/g)]
+    const text = [...match[1].matchAll(/<(?:[A-Za-z_][\w.-]*:)?t(?:\s[^>]*)?>([\s\S]*?)<\/(?:[A-Za-z_][\w.-]*:)?t>/g)]
       .map((m) => xmlDecode(m[1])).join('');
     result.push(text);
   }
@@ -404,7 +404,7 @@ function normalizeTarget(target) {
 
 function parseWorkbookMap(workbookXml, relsXml) {
   const rels = new Map();
-  const relRe = /<Relationship\b([^>]*)\/?\s*>/g;
+  const relRe = /<(?:[A-Za-z_][\w.-]*:)?Relationship\b([^>]*)\/?\s*>/g;
   let m;
   while ((m = relRe.exec(relsXml))) {
     const id = /\bId="([^"]+)"/.exec(m[1])?.[1];
@@ -412,7 +412,7 @@ function parseWorkbookMap(workbookXml, relsXml) {
     if (id && target) rels.set(id, normalizeTarget(target));
   }
   const map = new Map();
-  const sheetRe = /<sheet\b([^>]*)\/?\s*>/g;
+  const sheetRe = /<(?:[A-Za-z_][\w.-]*:)?sheet\b([^>]*)\/?\s*>/g;
   while ((m = sheetRe.exec(workbookXml))) {
     const name = /\bname="([^"]+)"/.exec(m[1])?.[1];
     const rid = /\br:id="([^"]+)"/.exec(m[1])?.[1];
@@ -433,24 +433,24 @@ function columnNumber(cellRef = '') {
 function resolveCell(cellXml, attrs, sharedStrings) {
   const type = /\bt="([^"]+)"/.exec(attrs)?.[1] || '';
   if (type === 'inlineStr') {
-    return [...cellXml.matchAll(/<t(?:\s[^>]*)?>([\s\S]*?)<\/t>/g)].map((m) => xmlDecode(m[1])).join('');
+    return [...cellXml.matchAll(/<(?:[A-Za-z_][\w.-]*:)?t(?:\s[^>]*)?>([\s\S]*?)<\/(?:[A-Za-z_][\w.-]*:)?t>/g)].map((m) => xmlDecode(m[1])).join('');
   }
-  const raw = /<v(?:\s[^>]*)?>([\s\S]*?)<\/v>/.exec(cellXml)?.[1] ?? '';
+  const raw = /<(?:[A-Za-z_][\w.-]*:)?v(?:\s[^>]*)?>([\s\S]*?)<\/(?:[A-Za-z_][\w.-]*:)?v>/.exec(cellXml)?.[1] ?? '';
   if (type === 's') return sharedStrings[Number(raw)] ?? '';
   if (type === 'b') return raw === '1' ? 'TRUE' : 'FALSE';
   return xmlDecode(raw);
 }
 
 function parseRelevantRow(rowXml, sharedStrings) {
-  const rowNum = Number(/<row[^>]*\br="(\d+)"/.exec(rowXml)?.[1] || 0);
+  const rowNum = Number(/<(?:[A-Za-z_][\w.-]*:)?row[^>]*\br="(\d+)"/.exec(rowXml)?.[1] || 0);
   // The pathological 150 MB workbook expands to ~1.3 GB because rows contain styled cells up to XFD.
   // WRITE order data only uses A:P, so discard the row suffix starting at Q before parsing cells.
-  const qCell = rowXml.search(/<c\b[^>]*\br="Q\d+"/);
+  const qCell = rowXml.search(/<(?:[A-Za-z_][\w.-]*:)?c\b[^>]*\br="Q\d+"/);
   const relevant = qCell >= 0 ? rowXml.slice(0, qCell) : rowXml;
   const values = new Array(16).fill('');
   // Match both self-closing styled cells (<c .../>) and normal value cells.
   // This matters on FACT sheets, where column A is often an empty self-closing cell before the real data in B:H.
-  const cellRe = /<c\b([^>]*?)(?:\/>|>([\s\S]*?)<\/c>)/g;
+  const cellRe = /<(?:[A-Za-z_][\w.-]*:)?c\b([^>]*?)(?:\/>|>([\s\S]*?)<\/(?:[A-Za-z_][\w.-]*:)?c>)/g;
   let match;
   while ((match = cellRe.exec(relevant))) {
     const ref = /\br="([A-Z]+\d+)"/.exec(match[1])?.[1];
@@ -458,6 +458,14 @@ function parseRelevantRow(rowXml, sharedStrings) {
     if (col >= 1 && col <= 16) values[col - 1] = resolveCell(match[2] || '', match[1], sharedStrings);
   }
   return { rowNum, values };
+}
+
+function nextXmlRow(buffer=''){
+  const open=/<(?:[A-Za-z_][\w.-]*:)?row\b/.exec(buffer);
+  if(!open)return null;
+  const close=/<\/(?:[A-Za-z_][\w.-]*:)?row\s*>/.exec(buffer.slice(open.index));
+  if(!close)return {start:open.index,end:-1,length:0};
+  return {start:open.index,end:open.index+close.index,length:close[0].length};
 }
 
 
@@ -533,9 +541,9 @@ async function parseSheetStream(archive, entry, sharedStrings, sourceFile, sheet
   }
   function consume(){
     while(true){
-      const start=buffer.indexOf('<row');if(start<0){if(buffer.length>4096)buffer=buffer.slice(-4096);return}
-      const end=buffer.indexOf('</row>',start);if(end<0){if(start>0)buffer=buffer.slice(start);return}
-      const rowXml=buffer.slice(start,end+6);buffer=buffer.slice(end+6);
+      const bounds=nextXmlRow(buffer);if(!bounds){if(buffer.length>4096)buffer=buffer.slice(-4096);return}
+      const {start,end,length}=bounds;if(end<0){if(start>0)buffer=buffer.slice(start);return}
+      const rowXml=buffer.slice(start,end+length);buffer=buffer.slice(end+length);
       const row=parseRelevantRow(rowXml,sharedStrings);
       const hasData=row.values.some(v=>String(v??'').trim());if(hasData)nonEmptyRows++;
       if(!schema){
@@ -596,12 +604,12 @@ async function parseFactSheetStream(archive, entry, sharedStrings, sourceFile, s
   }
   function consume() {
     while (true) {
-      const start = buffer.indexOf('<row');
-      if (start < 0) { if (buffer.length > 4096) buffer = buffer.slice(-4096); return; }
-      const end = buffer.indexOf('</row>', start);
+      const bounds = nextXmlRow(buffer);
+      if (!bounds) { if (buffer.length > 4096) buffer = buffer.slice(-4096); return; }
+      const {start,end,length}=bounds;
       if (end < 0) { if (start > 0) buffer = buffer.slice(start); return; }
-      const rowXml = buffer.slice(start, end + 6);
-      buffer = buffer.slice(end + 6);
+      const rowXml = buffer.slice(start, end + length);
+      buffer = buffer.slice(end + length);
       const row = parseRelevantRow(rowXml, sharedStrings);
       const v = row.values.map(x => String(x ?? '').trim());
       const hasData = v.slice(1,8).some(Boolean);
