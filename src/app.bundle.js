@@ -1320,6 +1320,10 @@ function shiftTemplateRowXml(rowXml,oldRow,newRow,totalOld,totalNew){
   let out=rowXml.replace(new RegExp(`r="${oldRow}"`,'g'),`r="${newRow}"`);
   out=out.replace(new RegExp(`([A-Z]{1,3})${oldRow}(?=[^0-9]|$)`,'g'),(_,c)=>`${c}${newRow}`);
   out=out.replace(new RegExp(`([A-Z]{1,3})${totalOld}(?=[^0-9]|$)`,'g'),(_,c)=>`${c}${totalNew}`);
+  // Formula results cached by the historical template belong to its old data.
+  // Keep the formula and style, but force Excel/LibreOffice to calculate the
+  // current workbook instead of briefly displaying the historical amount.
+  out=out.replace(/(<c\b[^>]*>[\s\S]*?<f\b[^>]*>[\s\S]*?<\/f>)<v>[^<]*<\/v>([\s\S]*?<\/c>)/g,'$1$2');
   if(oldRow===20)out=out.replace(`ref="B${newRow}"`,`ref="B${newRow}"`);
   return out;
 }
