@@ -165,7 +165,7 @@ function unifiedFactDataRow(r,rowNo,index){
   return `<row r="${rowNo}" s="7" customFormat="1" ht="27.75" customHeight="1" spans="1:11">${cells.join('')}</row>`;
 }
 function patchUnifiedFactTemplateSheetXml(xml,data,workbookName){
-  const raw=(Array.isArray(data)&&data.length)?[...data]:[{country:'GLOBAL',description:'Article',sku:'',quantity:0,cogs:null,shipping:null,unitTotal:null}];
+  const raw=Array.isArray(data)?[...data]:[{country:'GLOBAL',description:'Article',sku:'',quantity:0,cogs:null,shipping:null,unitTotal:null}];
 
   const preferred=['FRANCE','BELGIUM','CANADA','SWITZERLAND','LUXEMBOURG','GERMANY','SPAIN','ITALY','NETHERLANDS','AUSTRIA','PORTUGAL','REUNION ISLAND'];
   const rank=c=>{const i=preferred.indexOf(String(c||'').toUpperCase());return i<0?999:i};

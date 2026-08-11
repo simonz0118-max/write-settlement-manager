@@ -17,6 +17,7 @@ context.WRITE_V8_SOURCE_BRIDGE = () => ({
     { orderId: 'A', trackingNumber: 'CN-1', fulfillmentOrigin: 'CN', sourceFile: 'orders.xlsx', country: 'FRANCE', lineItems: [{ productName: 'Savon', sku: 'S*2', quantity: 2 }] },
     { orderId: 'A', trackingNumber: 'CN-2', fulfillmentOrigin: 'CN', sourceFile: 'orders.xlsx', country: 'FRANCE', lineItems: [{ productName: 'Savon', sku: 'S*2', quantity: 2 }] },
     { orderId: 'B', trackingNumber: 'FR-1', fulfillmentOrigin: 'FR', sourceFile: 'orders.xlsx', country: 'FRANCE', lineItems: [{ productName: 'Savon', sku: 'S*2', quantity: 2 }] },
+    { orderId: 'EMPTY', trackingNumber: 'AUDIT-1', fulfillmentOrigin: 'FR', sourceFile: 'orders.xlsx', country: 'FRANCE', lineItems: [] },
   ],
   sourceWorkbooks: [{ name: 'orders.xlsx' }],
 });
@@ -31,10 +32,16 @@ const result = context.WRITE_V9_FACT_ENGINE.buildWorkbookRows('orders.xlsx');
 const cn = result.rows.find(row => row.origin === 'CN');
 const fr = result.rows.find(row => row.origin === 'FR');
 
-assert.equal(result.audit.sourceOrders, 3);
+assert.equal(result.audit.sourceOrders, 4);
+assert.equal(result.audit.trackedOrders, 4);
 assert.equal(result.audit.sourceItems, 3);
 assert.equal(result.audit.trackedItems, 3);
+assert.equal(result.audit.sourceQuantity, 6);
+assert.equal(result.audit.trackedQuantity, 6);
+assert.equal(result.audit.lostQuantity, 0);
+assert.equal(result.audit.lostOrders.length, 0);
 assert.equal(result.audit.lostItems.length, 0);
+assert.deepEqual(result.audit.auditOnlyOrders, ['EMPTY::AUDIT-1']);
 assert.equal(cn.quantity, 2, 'two tracking records with one order ID must both count');
 assert.equal(new Set(cn.sourceOrderKeys).size, 2, 'tracking records must retain distinct trace keys');
 assert.equal(new Set(cn.sourceItemKeys).size, 2, 'source items must retain distinct trace keys');
