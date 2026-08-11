@@ -57,36 +57,6 @@
       ]
     },
     {
-      "version": "8.4.0",
-      "time": "2026-08-11 20:35",
-      "title": "Unified Human Workflow Engine",
-      "items": [
-        "统一YD/归档/铅笔/香皂人工统计行为。",
-        "履约记录→组件角色→Package Configuration→FACT统一人工工作流。",
-        "FACT-only人工项和无法解释的部分差异不学习。"
-      ]
-    },
-    {
-      "version": "8.3.1",
-      "time": "2026-08-11 20:12",
-      "title": "Classification Fidelity · Trace Hardening",
-      "items": [
-        "49/49必须逐行有sourceOrderKeys和sourceItemKeys。",
-        "MAIN订单唯一Configuration路由；计费商品唯一FACT路由。",
-        "Zero-Loss + Classification Exact + Trace Exact三重门。"
-      ]
-    },
-    {
-      "version": "8.3.0",
-      "time": "2026-08-11 19:55",
-      "title": "Classification Fidelity",
-      "items": [
-        "Country + Role + Configuration + Quantity逐行对比人工FACT。",
-        "1001-1162 Golden从39/49提升至49/49。",
-        "修复多MAIN、Context Role、Triangle及配件角色差异。"
-      ]
-    },
-    {
       "version": "8.8.0",
       "time": "2026-08-11 22:06",
       "title": "Historical Batch Auto-Extraction",
@@ -139,6 +109,36 @@
         "当前60个Excel副本按SHA256去重后为55份独立证据。",
         "Zero-Loss + Classification + Trace + 四数据集回归 + Evidence Dedup必须同时PASS才具有候选资格。",
         "正式FACT接管仍为OFF，V7.5.9继续生产。"
+      ]
+    },
+    {
+      "version": "8.4.0",
+      "time": "2026-08-11 20:35",
+      "title": "Unified Human Workflow Engine",
+      "items": [
+        "统一YD/归档/铅笔/香皂人工统计行为。",
+        "履约记录→组件角色→Package Configuration→FACT统一人工工作流。",
+        "FACT-only人工项和无法解释的部分差异不学习。"
+      ]
+    },
+    {
+      "version": "8.3.1",
+      "time": "2026-08-11 20:12",
+      "title": "Classification Fidelity · Trace Hardening",
+      "items": [
+        "49/49必须逐行有sourceOrderKeys和sourceItemKeys。",
+        "MAIN订单唯一Configuration路由；计费商品唯一FACT路由。",
+        "Zero-Loss + Classification Exact + Trace Exact三重门。"
+      ]
+    },
+    {
+      "version": "8.3.0",
+      "time": "2026-08-11 19:55",
+      "title": "Classification Fidelity",
+      "items": [
+        "Country + Role + Configuration + Quantity逐行对比人工FACT。",
+        "1001-1162 Golden从39/49提升至49/49。",
+        "修复多MAIN、Context Role、Triangle及配件角色差异。"
       ]
     },
     {

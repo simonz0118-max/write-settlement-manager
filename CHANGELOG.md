@@ -1,14 +1,9 @@
-## v8.3.0 — 2026-08-11 19:55 (Europe/Paris)
-- Classification Fidelity：按Country + Role + Configuration + Quantity逐行对比人工FACT。\n- 1001-1162 Golden从39/49提升至49/49。\n- 修复多MAIN、Context Role、Triangle与配件角色差异。
-
-## v8.3.1 — 2026-08-11 20:12 (Europe/Paris)
-- Classification Fidelity · Trace Hardening：49/49必须逐行有源订单和源商品支撑。\n- MAIN订单唯一Configuration路由；计费商品唯一FACT路由。\n- Zero-Loss + Classification Exact + Trace Exact三重门。
-
-## v8.4.0 — 2026-08-11 20:35 (Europe/Paris)
-- Unified Human Workflow Engine：统一YD/归档/铅笔/香皂人工统计行为。\n- 统一履约记录→组件角色→Package Configuration→FACT。\n- FACT-only人工项与无法解释的部分差异不学习。
-
 ## v9.0.0 — 2026-08-11 22:40 (Europe/Paris)
-- Autonomous Human-Like FACT Engine：未来生产输入默认只有订单，不要求FACT页。\n- 订单是唯一事实来源；历史模板数据不得凭空进入新FACT。\n- 唯一Golden FACT模板锁定；未知/低置信商品必须输出并使用红字Description。\n- 人工确认/修改后自动学习；所有订单观察自动记录；缺价格留空不阻断。\n- V9正式接管FACT统计路由，V7.5.9保留回滚兼容。
+- Autonomous Human-Like FACT Engine：未来生产输入默认只有订单，不要求FACT页。
+- 订单是唯一事实来源；历史模板数据不得凭空进入新FACT。
+- 唯一Golden FACT模板锁定；未知/低置信商品必须输出并使用红字Description。
+- 人工确认/修改后自动学习；所有订单观察自动记录；缺价格留空不阻断。
+- V9正式接管FACT统计路由，V7.5.9保留回滚兼容。
 
 ## v8.8.0 — 2026-08-11 22:06 (Europe/Paris)
 - Historical Batch Auto-Extraction：历史Excel自动识别订单页与FACT页。
@@ -33,6 +28,21 @@
 - Regression Firewall：任何一套历史行为退化都阻止发布候选。
 - Evidence Fingerprint：相同Excel副本只算一次训练证据；60副本→55独立证据。
 - 正式FACT仍由V7.5.9生产，formalFactTakeover=false。
+
+## v8.4.0 — 2026-08-11 20:35 (Europe/Paris)
+- Unified Human Workflow Engine：统一YD/归档/铅笔/香皂人工统计行为。
+- 统一履约记录→组件角色→Package Configuration→FACT。
+- FACT-only人工项与无法解释的部分差异不学习。
+
+## v8.3.1 — 2026-08-11 20:12 (Europe/Paris)
+- Classification Fidelity · Trace Hardening：49/49必须逐行有源订单和源商品支撑。
+- MAIN订单唯一Configuration路由；计费商品唯一FACT路由。
+- Zero-Loss + Classification Exact + Trace Exact三重门。
+
+## v8.3.0 — 2026-08-11 19:55 (Europe/Paris)
+- Classification Fidelity：按Country + Role + Configuration + Quantity逐行对比人工FACT。
+- 1001-1162 Golden从39/49提升至49/49。
+- 修复多MAIN、Context Role、Triangle与配件角色差异。
 
 ## v8.2.0 — 2026-08-10 23:12 (Europe/Paris)
 - Zero-Loss：Lost Order/Product/Quantity必须为0；UNKNOWN与缺价格不阻断。
