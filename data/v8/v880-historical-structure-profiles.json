@@ -1,0 +1,50 @@
+{
+  "version": "8.8.0",
+  "profiles": [
+    {
+      "id": "CAMOUFLAGE_YD",
+      "signals": [
+        "FACT",
+        "numeric-range order sheet",
+        "SKU",
+        "Product Name/Country"
+      ],
+      "behavior": "multi-main configuration + contextual separate upsell"
+    },
+    {
+      "id": "ARCHIVE_MULTI_FAMILY",
+      "signals": [
+        "FACT",
+        "order source sheet"
+      ],
+      "behavior": "family-specific accounting aliases; partial FACT excluded"
+    },
+    {
+      "id": "PENCIL",
+      "signals": [
+        "FACT",
+        "order source sheet",
+        "SKU/Product Name"
+      ],
+      "behavior": "main configuration + refill upsell; price domain separate"
+    },
+    {
+      "id": "SOAP_CN_FR",
+      "signals": [
+        "FACT CN",
+        "FACT FR",
+        "range CN",
+        "range FR"
+      ],
+      "behavior": "origin-first package configuration; blank FACT quantity may be template"
+    }
+  ],
+  "safety": {
+    "sheetDetectionDoesNotAuthorizeTraining": true,
+    "unknownSheetIsReferenceOnly": true,
+    "duplicateSheetContentCountsOnce": true,
+    "orderIdOnlyDedupeForbidden": true,
+    "blankFactQuantityIsTemplateCandidate": true,
+    "formalFactTakeover": false
+  }
+}

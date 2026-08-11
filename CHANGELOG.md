@@ -1,3 +1,9 @@
+## v8.8.0 — 2026-08-11 22:06 (Europe/Paris)
+- Historical Batch Auto-Extraction：历史Excel自动识别订单页与FACT页。
+- SheetJS直读适配；支持CN/FR Sheet Origin、模板空Quantity、重复sheet去重。
+- 自动抽取结果继续经过V8.7闭环与V8.6评分，抽取成功不等于训练授权。
+- 正式FACT仍由V7.5.9生产。
+
 ## v8.7.0 — 2026-08-11 21:50 (Europe/Paris)
 - Automatic Historical Closure Analyzer：Order↔FACT自动闭环。
 - EXACT_CLOSED / EXPLAINED_CLOSED / TEMPLATE_ONLY / FACT_ONLY_MANUAL / PARTIAL_UNEXPLAINED / SOURCE_ONLY状态机。

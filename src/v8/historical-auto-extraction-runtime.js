@@ -1,0 +1,6 @@
+/* WRITE V8.8 Historical Auto-Extraction Runtime */
+(function(g){'use strict';
+function panel(){let e=document.getElementById('v88AutoExtractPanel');if(e)return e;const p=document.getElementById('v87ClosurePanel')?.parentElement||document.querySelector('[data-view-panel="dashboard"] .dashboard-grid');if(!p)return null;e=document.createElement('section');e.id='v88AutoExtractPanel';e.className='panel wide v88-extract-panel';e.innerHTML='<div class="panel-head"><div><h2>V8.8 历史Excel自动抽取</h2><p>自动识别订单页 / FACT页 / 模板页 / 参考页</p></div><span>SHADOW</span></div><div class="v8-audit-grid"><article><span>订单页</span><strong>自动识别</strong></article><article><span>FACT页</span><strong>自动识别</strong></article><article><span>模板空Quantity</span><strong>TEMPLATE_ONLY</strong></article><article><span>人工临时项</span><strong>MANUAL_ONLY</strong></article><article><span>识别失败</span><strong>REFERENCE_ONLY</strong></article><article><span>正式接管</span><strong>OFF</strong></article></div><div class="success-strip">✓ 自动抽取只是证据准备；是否学习仍必须经过V8.7闭环与V8.6评分。</div>';p.appendChild(e);return e}
+function start(){panel()}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();
+g.WRITE_V88_AUTO_EXTRACT_RUNTIME={VERSION:'8.8.0'};
+})(window);

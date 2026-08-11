@@ -1,33 +1,55 @@
 {
   "current": {
-    "version": "8.7.0",
-    "time": "2026-08-11 21:50",
-    "title": "Automatic Historical Closure Analyzer",
+    "version": "8.8.0",
+    "time": "2026-08-11 22:06",
+    "title": "Historical Batch Auto-Extraction",
     "sections": [
       {
-        "label": "自动闭环",
+        "label": "历史Excel直读",
         "items": [
-          "历史Order↔FACT逐配置判定EXACT/EXPLAINED/TEMPLATE/MANUAL/PARTIAL。",
-          "8 vs 10等无法解释差异禁止部分学习。"
+          "自动识别订单页、FACT页、参考页与未知结构页。",
+          "支持现有SheetJS workbook直接转换，无需人工先整理Order/FACT中间数据。"
         ]
       },
       {
-        "label": "解释证据",
+        "label": "安全抽取",
         "items": [
-          "EXPLAINED_CLOSED必须命中明确历史证据，不能因为差异“看起来像”某规则就学习。",
-          "FACT-only人工临时行继续隔离。"
+          "同内容sheet只计一次；Order ID重复不自动删包裹。",
+          "FACT空Quantity作为TEMPLATE候选；无订单来源的FACT由V8.7识别MANUAL_ONLY。"
         ]
       },
       {
-        "label": "晋级控制",
+        "label": "训练链",
         "items": [
-          "闭环结果自动送入V8.6分领域评分器，再决定classification/quantity/price资格。",
-          "正式FACT仍为V7.5.9，接管OFF。"
+          "自动抽取→人工工作流→V8.7闭环→V8.6评分→分领域训练。",
+          "抽取成功绝不等于允许学习。"
+        ]
+      },
+      {
+        "label": "生产保护",
+        "items": [
+          "V8.5/8.6/8.7硬门全部保留。",
+          "V7.5.9继续正式FACT，formalFactTakeover=false。"
         ]
       }
     ]
   },
   "history": [
+    {
+      "version": "8.8.0",
+      "time": "2026-08-11 22:06",
+      "title": "Historical Batch Auto-Extraction",
+      "items": [
+        "自动识别订单页、FACT页、参考页与未知结构页。",
+        "支持现有SheetJS workbook直接转换，无需人工先整理Order/FACT中间数据。",
+        "同内容sheet只计一次；Order ID重复不自动删包裹。",
+        "FACT空Quantity作为TEMPLATE候选；无订单来源的FACT由V8.7识别MANUAL_ONLY。",
+        "自动抽取→人工工作流→V8.7闭环→V8.6评分→分领域训练。",
+        "抽取成功绝不等于允许学习。",
+        "V8.5/8.6/8.7硬门全部保留。",
+        "V7.5.9继续正式FACT，formalFactTakeover=false。"
+      ]
+    },
     {
       "version": "8.7.0",
       "time": "2026-08-11 21:50",
