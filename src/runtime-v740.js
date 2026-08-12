@@ -142,19 +142,24 @@ function unifiedFactDataRow(r,rowNo,index){
   const c=priceNum(r?.cogs);
   const s=priceNum(r?.shipping);
   const u=priceNum(r?.unitTotal);
-  const reviewStyle=r?.needsReview?PRICE_REVIEW_STYLE:47;
-  const priceBlank=true;
+  const a=priceNum(r?.amount);
+  const priceComplete=c!==null&&s!==null&&u!==null&&a!==null;
+  const needsReview=!!r?.needsReview||!priceComplete;
+  const centerStyle=needsReview?PRICE_REVIEW_STYLE:47;
+  const leftStyle=needsReview?PRICE_REVIEW_STYLE_LEFT:49;
   const cells=[
     `<c r="A${rowNo}" s="43"/>`,
     xmlNumberCell(`B${rowNo}`,46,index),
-    xmlTextCell(`C${rowNo}`,reviewStyle,desc),
+    xmlTextCell(`C${rowNo}`,needsReview?PRICE_REVIEW_STYLE:47,desc),
     q===null?`<c r="D${rowNo}" s="48"/>`:xmlNumberCell(`D${rowNo}`,48,q),
-    `<c r="E${rowNo}" s="${PRICE_REVIEW_STYLE}"/>`,
-    `<c r="F${rowNo}" s="${PRICE_REVIEW_STYLE_LEFT}"/>`
+    c===null?`<c r="E${rowNo}" s="${centerStyle}"/>`:xmlNumberCell(`E${rowNo}`,centerStyle,c),
+    s===null?`<c r="F${rowNo}" s="${leftStyle}"/>`:xmlNumberCell(`F${rowNo}`,leftStyle,s),
+    u===null?`<c r="G${rowNo}" s="${centerStyle}"/>`:xmlNumberCell(`G${rowNo}`,centerStyle,u),
+    a===null?`<c r="H${rowNo}" s="${centerStyle}"/>`:xmlNumberCell(`H${rowNo}`,centerStyle,a)
   ];
-  // Golden FACT body fill/borders/alignment are preserved. Review styles are
-  // clones of original body styles 47/49 with font color changed only.
-  if(priceBlank){cells.push(`<c r="G${rowNo}" s="${PRICE_REVIEW_STYLE}"/>`);cells.push(`<c r="H${rowNo}" s="${PRICE_REVIEW_STYLE}"/>`)}
+  // V10.1: after a reviewed workbook has supplied a complete cost row, the
+  // same exact accounting Configuration renders with normal Golden styles.
+  // Incomplete/unknown costs remain red and are never fabricated.
   return `<row r="${rowNo}" s="7" customFormat="1" ht="27.75" customHeight="1" spans="1:11">${cells.join('')}</row>`;
 }
 function patchUnifiedFactTemplateSheetXml(xml,data,workbookName){
