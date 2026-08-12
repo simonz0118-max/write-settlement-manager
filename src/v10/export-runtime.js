@@ -4,7 +4,7 @@
  * - one Golden FACT XLSX per imported workbook
  * Internal audit JSON is not a user-facing download.
  */
-(function(g){'use strict';const VERSION='10.0.5';
+(function(g){'use strict';const VERSION='10.0.6';
 function blobDownload(blob,name){if(!(blob instanceof Blob)||!blob.size)throw new Error(`EMPTY_EXPORT:${name}`);const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;a.style.display='none';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),2500)}
 async function goldenFactForRows(workbookName,rows){if(typeof g.buildGeneratedFactWorkbook!=='function')throw new Error('GOLDEN_FACT_BUILDER_UNAVAILABLE');const oldGeneric=g.generatedGenericFactRowsForWorkbook,oldGenerated=g.generatedFactRowsForWorkbook;try{g.generatedGenericFactRowsForWorkbook=()=>rows;g.generatedFactRowsForWorkbook=g.generatedGenericFactRowsForWorkbook;return await g.buildGeneratedFactWorkbook(workbookName)}finally{g.generatedGenericFactRowsForWorkbook=oldGeneric;g.generatedFactRowsForWorkbook=oldGenerated}}
 function accountingReport(){if(typeof g.buildAccountingReport!=='function')throw new Error('ACCOUNTING_REPORT_BUILDER_UNAVAILABLE');const r=g.buildAccountingReport();if(!r?.blob?.size)throw new Error('ACCOUNTING_REPORT_EMPTY');return r}

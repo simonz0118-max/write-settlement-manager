@@ -1,39 +1,44 @@
 {
   "current": {
-    "version": "10.0.5",
-    "time": "2026-08-12 17:40",
-    "title": "Golden FACT Fidelity + Single ZIP Delivery",
+    "version": "10.0.6",
+    "time": "2026-08-12 18:10",
+    "title": "FACT Grid Integrity Hotfix",
     "sections": [
       {
-        "label": "FACT 模板完整性",
+        "label": "FACT 表格完整性",
         "items": [
-          "动态数据行完整继承 Golden FACT 底色、边框、字体、对齐和数字格式。",
-          "待审核仅改变字体颜色，不再改变版式。"
+          "修复 E:H 动态数据单元格底色和边框缺失。",
+          "样式索引改按实际 cellXfs 数量计算，不再相信模板错误的 count 声明。"
+        ]
+      },
+      {
+        "label": "Golden 模板",
+        "items": [
+          "红字样式从真实 style 47/49 克隆，只改字体颜色。",
+          "灰色底色、thin 边框、字体、对齐、数字格式全部保留。"
         ]
       },
       {
         "label": "正式导出",
         "items": [
-          "一次点击仅下载一个结算 ZIP。",
-          "ZIP 内包含会计结算 Excel + Golden FACT Excel；内部 audit JSON 不再出现。"
-        ]
-      },
-      {
-        "label": "会计安全",
-        "items": [
-          "保留 V10.0.3 人工会计最终聚合逻辑。",
-          "未知价格继续留空，不伪造金额。"
-        ]
-      },
-      {
-        "label": "历史记录",
-        "items": [
-          "补齐 V10.0.3 / V10.0.4 / V10.0.5 的 GitHub 与 WebApp 更新日志。"
+          "继续一次下载一个 ZIP：会计统计 Excel + 全部 FACT Excel。"
         ]
       }
     ]
   },
   "history": [
+    {
+      "version": "10.0.6",
+      "time": "2026-08-12 18:10",
+      "title": "FACT Grid Integrity Hotfix",
+      "items": [
+        "修复 FACT 数据区 E:H 列缺少底色和表格边框的根因。",
+        "Golden FACT 模板 cellXfs 声明数为 87，但实际物理 xf 数为 89；旧逻辑按声明数追加样式，错误引用了无边框 style 87/88。",
+        "V10.0.6 改为扫描 cellXfs 实际物理 xf 数，红字样式从真实 style 47/49 克隆并追加到正确索引。",
+        "新生成 E:H 单元格保留 Golden FACT 原始灰色底色、thin 边框、字体、对齐和数字格式。",
+        "保留 V10.0.5 单一 ZIP 导出、会计统计表和完整更新日志。"
+      ]
+    },
     {
       "version": "10.0.5",
       "time": "2026-08-12 17:40",

@@ -126,7 +126,7 @@ assignGlobalFunction('generatedGenericFactRowsForWorkbook',function(workbookName
 // runtime. The style index MUST be derived from the template's actual cellXfs
 // count instead of being hard-coded: V10.0.1 incorrectly expected 89 while
 // the shipped Golden template contains 87 cellXfs (0..86).
-let PRICE_REVIEW_STYLE=47, PRICE_REVIEW_STYLE_LEFT=49;
+let PRICE_REVIEW_STYLE=89, PRICE_REVIEW_STYLE_LEFT=90;
 function unifiedFactCountryRow(r,rowNo){
   const country=String(r?.country||'').trim()||'GLOBAL';
   return `<row r="${rowNo}" s="7" customFormat="1" ht="15" customHeight="1" spans="1:11"><c r="A${rowNo}" s="43"/>${xmlTextCell(`B${rowNo}`,44,country)}<c r="C${rowNo}" s="44"/><c r="D${rowNo}" s="45"/><c r="E${rowNo}" s="44"/><c r="F${rowNo}" s="44"/><c r="G${rowNo}" s="44"/><c r="H${rowNo}" s="44"/></row>`;
@@ -247,36 +247,57 @@ function patchUnifiedFactTemplateSheetXml(xml,data,workbookName){
 window.WRITE_FACT_V731={patchSheet:patchUnifiedFactTemplateSheetXml};
 
 function ensureProductionRedStyleXml(xml){
-  const markerCenter=/WRITE_V1005_REVIEW_CENTER=(\d+)/.exec(xml);
-  const markerLeft=/WRITE_V1005_REVIEW_LEFT=(\d+)/.exec(xml);
+  const markerCenter=/WRITE_V1006_REVIEW_CENTER=(\d+)/.exec(xml);
+  const markerLeft=/WRITE_V1006_REVIEW_LEFT=(\d+)/.exec(xml);
   if(markerCenter&&markerLeft){
     PRICE_REVIEW_STYLE=Number(markerCenter[1]);
     PRICE_REVIEW_STYLE_LEFT=Number(markerLeft[1]);
     return xml;
   }
-  const fontMatch=/<fonts count="(\d+)">/.exec(xml);
-  const xfMatch=/<cellXfs count="(\d+)">/.exec(xml);
-  const xfsBlock=/<cellXfs count="\d+">([\s\S]*?)<\/cellXfs>/.exec(xml);
-  if(!fontMatch||!xfMatch||!xfsBlock)throw new Error('统一 FACT 样式表结构异常');
-  const fontId=Number(fontMatch[1]),xfCount=Number(xfMatch[1]);
-  const xfs=[...xfsBlock[1].matchAll(/<xf\b[^>]*?(?:\/>|>[\s\S]*?<\/xf>)/g)].map(m=>m[0]);
-  if(!xfs[47]||!xfs[49])throw new Error(`Golden FACT 基础样式缺失：cellXfs=${xfs.length}`);
-  PRICE_REVIEW_STYLE=xfCount;
-  PRICE_REVIEW_STYLE_LEFT=xfCount+1;
-  const font='<font><name val="Arial"/><sz val="10"/><color rgb="FFFF0000"/><family val="2"/></font>';
+
+  const fontMatch=/<fonts count=\"(\d+)\">/.exec(xml);
+  const xfsMatch=/<cellXfs count=\"(\d+)\">([\s\S]*?)<\/cellXfs>/.exec(xml);
+  if(!fontMatch||!xfsMatch)throw new Error('统一 FACT 样式表结构异常');
+
+  const fontId=Number(fontMatch[1]);
+  const declaredXfCount=Number(xfsMatch[1]);
+  const body=xfsMatch[2];
+  function directXfs(text){
+    const out=[];let pos=0;
+    while(pos<text.length){
+      const a=text.indexOf('<xf',pos); if(a<0)break;
+      const openEnd=text.indexOf('>',a); if(openEnd<0)break;
+      const open=text.slice(a,openEnd+1);
+      if(/\/>$/.test(open)){out.push(open);pos=openEnd+1;continue;}
+      const close=text.indexOf('</xf>',openEnd+1); if(close<0)break;
+      out.push(text.slice(a,close+5));pos=close+5;
+    }
+    return out;
+  }
+  const xfs=directXfs(body);
+  const actualXfCount=xfs.length;
+  if(!xfs[47]||!xfs[49])throw new Error(`Golden FACT 基础样式缺失：declared=${declaredXfCount}, actual=${actualXfCount}`);
+
+  PRICE_REVIEW_STYLE=actualXfCount;
+  PRICE_REVIEW_STYLE_LEFT=actualXfCount+1;
+
+  const font='<font><name val=\"Arial\"/><sz val=\"10\"/><color rgb=\"FFFF0000\"/><family val=\"2\"/></font>';
   const cloneWithRedFont=xf=>{
-    let out=xf.replace(/fontId="\d+"/,`fontId="${fontId}"`);
-    if(!/applyFont=/.test(out))out=out.replace('<xf ','<xf applyFont="1" ');
-    else out=out.replace(/applyFont="\d+"/,'applyFont="1"');
+    let out=xf.replace(/fontId=\"\d+\"/,`fontId=\"${fontId}\"`);
+    if(!/applyFont=/.test(out))out=out.replace('<xf ','<xf applyFont=\"1\" ');
+    else out=out.replace(/applyFont=\"\d+\"/,'applyFont=\"1\"');
     return out;
   };
-  const center=cloneWithRedFont(xfs[47]),left=cloneWithRedFont(xfs[49]);
-  const markers=`<!-- WRITE_V1005_REVIEW_CENTER=${PRICE_REVIEW_STYLE} --><!-- WRITE_V1005_REVIEW_LEFT=${PRICE_REVIEW_STYLE_LEFT} -->`;
+  const center=cloneWithRedFont(xfs[47]);
+  const left=cloneWithRedFont(xfs[49]);
+  const markers=`<!-- WRITE_V1006_REVIEW_CENTER=${PRICE_REVIEW_STYLE} --><!-- WRITE_V1006_REVIEW_LEFT=${PRICE_REVIEW_STYLE_LEFT} --><!-- DECLARED_${declaredXfCount}_ACTUAL_${actualXfCount} -->`;
+  const newBody=body+center+left+markers;
+  const newCellXfs=`<cellXfs count=\"${actualXfCount+2}\">${newBody}</cellXfs>`;
+
   return xml
-    .replace(`<fonts count="${fontId}">`,`<fonts count="${fontId+1}">`)
+    .replace(`<fonts count=\"${fontId}\">`,`<fonts count=\"${fontId+1}\">`)
     .replace('</fonts>',font+'</fonts>')
-    .replace(`<cellXfs count="${xfCount}">`,`<cellXfs count="${xfCount+2}">`)
-    .replace('</cellXfs>',center+left+markers+'</cellXfs>');
+    .replace(xfsMatch[0],newCellXfs);
 }
 window.WRITE_FACT_V10_STYLES={
   ensureProductionRedStyleXml,
