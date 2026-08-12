@@ -1,20 +1,36 @@
 {
   "current": {
-    "version": "10.1.7",
+    "version": "10.1.8",
     "time": "2026-08-13",
-    "title": "D1 Sync Endpoint + Serialized Cloud Queue",
+    "title": "Stable Batch Cloud Sync",
     "sections": [
       {
-        "label": "云同步",
+        "label": "云同步稳定性",
         "items": [
-          "修复 Cloud sync 405，Pages Functions 正式提供 POST 同步端点。",
-          "并发同步复用同一 Promise，消除 SYNC_IN_PROGRESS 假失败。",
-          "D1 ruleId 回读闭环后才显示云端已收录。"
+          "修复 V10.1.7 Cloud sync 500：D1 写入从逐规则 SELECT+WRITE 改为分块 db.batch，降低大批量旧发票同步的函数执行压力。",
+          "客户端云同步每次最多上传 250 条 pending 规则并循环到 pending=0，避免单个超大请求。",
+          "批量学习期间暂停自动 microtask 云同步，全部本地学习完成后统一上传，消除学习中途与最终同步竞争。",
+          "冲突规则改为确定性去重；重复导入相同冲突不再生成新的 RULE_CONFLICT，避免冲突数量无限增长。",
+          "继续保留相同知识 ALREADY_LEARNED、CN-only、ZIP 批量学习与跨设备 D1 恢复。",
+          "部署后必须进行空请求、300 条批量写入、重复写入和正式域名四个真实 D1 API smoke test。"
         ]
       }
     ]
   },
   "history": [
+    {
+      "version": "10.1.8",
+      "time": "2026-08-13",
+      "title": "Stable Batch Cloud Sync",
+      "items": [
+        "修复 V10.1.7 Cloud sync 500：D1 写入从逐规则 SELECT+WRITE 改为分块 db.batch，降低大批量旧发票同步的函数执行压力。",
+        "客户端云同步每次最多上传 250 条 pending 规则并循环到 pending=0，避免单个超大请求。",
+        "批量学习期间暂停自动 microtask 云同步，全部本地学习完成后统一上传，消除学习中途与最终同步竞争。",
+        "冲突规则改为确定性去重；重复导入相同冲突不再生成新的 RULE_CONFLICT，避免冲突数量无限增长。",
+        "继续保留相同知识 ALREADY_LEARNED、CN-only、ZIP 批量学习与跨设备 D1 恢复。",
+        "部署后必须进行空请求、300 条批量写入、重复写入和正式域名四个真实 D1 API smoke test。"
+      ]
+    },
     {
       "version": "10.1.7",
       "time": "2026-08-13",

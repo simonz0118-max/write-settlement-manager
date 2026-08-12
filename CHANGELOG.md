@@ -1,3 +1,11 @@
+## v10.1.8 — 2026-08-13 (Europe/Paris)
+- 修复 V10.1.7 Cloud sync 500：D1 写入从逐规则 SELECT+WRITE 改为分块 db.batch，降低大批量旧发票同步的函数执行压力。
+- 客户端云同步每次最多上传 250 条 pending 规则并循环到 pending=0，避免单个超大请求。
+- 批量学习期间暂停自动 microtask 云同步，全部本地学习完成后统一上传，消除学习中途与最终同步竞争。
+- 冲突规则改为确定性去重；重复导入相同冲突不再生成新的 RULE_CONFLICT，避免冲突数量无限增长。
+- 继续保留相同知识 ALREADY_LEARNED、CN-only、ZIP 批量学习与跨设备 D1 恢复。
+- 部署后必须进行空请求、300 条批量写入、重复写入和正式域名四个真实 D1 API smoke test。
+
 ## v10.1.7 — 2026-08-13 (Europe/Paris)
 - 修复批量审核学习 Cloud sync 405：新增 Pages Function `/api/rules/sync` POST/GET/OPTIONS，并直接使用 `WRITE_RULES_DB` D1 binding。
 - 修复 `SYNC_IN_PROGRESS`：并发同步调用复用同一个 syncPromise，不再把正常并发误报为失败。

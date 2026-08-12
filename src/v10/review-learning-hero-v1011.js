@@ -1,6 +1,6 @@
 /* WRITE V10.1.5 — real XLSX/ZIP batch reviewed-learning controller */
 (function(g){'use strict';
-const VERSION='10.1.6';
+const VERSION='10.1.8';
 const LIMIT_FILES=500,LIMIT_BYTES=250*1024*1024,MAX_NESTED_ZIP_DEPTH=2;
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const num=v=>Number.isFinite(Number(v))?Number(v):0;
@@ -61,7 +61,7 @@ async function syncCloud(expectedRuleIds=[]){try{if(!g.WRITE_KB?.sync)throw Erro
 
 async function run(files){
   const raw=[...files].filter(f=>/\.(xlsx|zip)$/i.test(String(f.name||'')));if(!raw.length)throw Error('请选择 XLSX 或 ZIP 文件');
-  setBusy(true);let p=view('正在解析批量学习文件',`已选择 ${raw.length} 个文件`,5,true);p.querySelector('#rlFiles').innerHTML='';p.querySelector('#rlTotals').innerHTML='';p.querySelector('#rlSync').innerHTML='<i></i>等待本地学习完成';
+  setBusy(true);g.WRITE_KB?.beginBatchLearning?.();let p=view('正在解析批量学习文件',`已选择 ${raw.length} 个文件`,5,true);p.querySelector('#rlFiles').innerHTML='';p.querySelector('#rlTotals').innerHTML='';p.querySelector('#rlSync').innerHTML='<i></i>等待本地学习完成';
   let pack;try{pack=await expandInputFiles(raw)}catch(e){setBusy(false);throw e}
   renderSources(p,pack.sourceSummary);
   if(!pack.expanded.length){setBusy(false);throw Error('没有找到可学习的 XLSX；ZIP 必须包含 .xlsx 文件')}
@@ -73,12 +73,12 @@ async function run(files){
     renderFiles(p,rows)
   }
   const t=aggregate(rows);view('正在同步 Cloudflare D1',`${t.success} 个工作簿成功 / ${t.failed} 个失败`,84,true);renderSources(p,pack.sourceSummary);renderFiles(p,rows);
-  const cloud=await syncCloud(t.ruleIds);view(t.failed?'批量学习完成（部分失败）':'批量学习完成',`源文件 ${raw.length} 个 · 实际 XLSX ${pack.expanded.length} 个`,100,false);renderSources(p,pack.sourceSummary);renderFiles(p,rows);
+  g.WRITE_KB?.endBatchLearning?.();const cloud=await syncCloud(t.ruleIds);view(t.failed?'批量学习完成（部分失败）':'批量学习完成',`源文件 ${raw.length} 个 · 实际 XLSX ${pack.expanded.length} 个`,100,false);renderSources(p,pack.sourceSummary);renderFiles(p,rows);
   p.querySelector('#rlTotals').innerHTML=`<div><span>成功 XLSX</span><b>${t.success}</b></div><div><span>失败 XLSX</span><b>${t.failed}</b></div><div><span>FACT</span><b>${t.factRules}</b></div><div><span>商品</span><b>${t.productRules}</b></div><div><span>新增知识</span><b>${t.newRules}</b></div><div><span>云端已收录</span><b>${t.alreadyLearned}</b></div><div><span>成本</span><b>${t.costRules}</b></div><div><span>未闭环</span><b>${t.unmatched}</b></div><div><span>冲突</span><b>${t.conflicts}</b></div><div><span>忽略 FR</span><b>${t.ignoredFR+t.ignoredFRSheets}</b></div>`;
   p.querySelector('#rlSync').innerHTML=`<i class="${cloud.ok?'ok':'bad'}"></i>${esc(cloud.msg)}`;setBusy(false);
   return{sources:pack.sourceSummary,rows,totals:t,cloud}
 }
-function install(){const i=input();if(!i)return;i.multiple=true;i.accept='.xlsx,.zip';document.addEventListener('click',e=>{const b=e.target?.closest?.('.reviewed-import-trigger,#knowledgeImportReviewed');if(!b)return;e.preventDefault();e.stopImmediatePropagation();i.click()},true);i.addEventListener('change',async()=>{const fs=[...(i.files||[])];i.value='';if(!fs.length)return;try{await run(fs)}catch(e){setBusy(false);const p=view('学习失败',e?.message||String(e),100,false);p.querySelector('#rlSync').innerHTML='<i class="bad"></i>未上传云端'}},true)}
+function install(){const i=input();if(!i)return;i.multiple=true;i.accept='.xlsx,.zip';document.addEventListener('click',e=>{const b=e.target?.closest?.('.reviewed-import-trigger,#knowledgeImportReviewed');if(!b)return;e.preventDefault();e.stopImmediatePropagation();i.click()},true);i.addEventListener('change',async()=>{const fs=[...(i.files||[])];i.value='';if(!fs.length)return;try{await run(fs)}catch(e){g.WRITE_KB?.endBatchLearning?.();setBusy(false);const p=view('学习失败',e?.message||String(e),100,false);p.querySelector('#rlSync').innerHTML='<i class="bad"></i>未上传云端'}},true)}
 function start(){install();panel();document.body.dataset.release=VERSION;document.querySelectorAll('.brand-copy small').forEach(e=>e.textContent='v10.1.5 Production')}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();
 g.WRITE_V1015_BATCH_LEARNING={VERSION,run,expandInputFiles,extractZip,_test:{safeEntryName,aggregate}};

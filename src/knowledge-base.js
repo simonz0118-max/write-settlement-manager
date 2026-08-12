@@ -22,6 +22,7 @@ let ready=false;
 let initPromise=null;
 let syncing=false;
 let syncPromise=null;
+let batchSyncDepth=0;
 let cache=new Map();
 let pending=new Set();
 
@@ -130,7 +131,7 @@ async function upsert(raw,{queueSync=true}={}){
   cache.set(id,incoming);
   if(queueSync)pending.add(incoming.ruleId);
   renderStatus();
-  if(queueSync&&navigator.onLine)queueMicrotask(()=>sync().catch(()=>{}));
+  if(queueSync&&navigator.onLine&&batchSyncDepth===0)queueMicrotask(()=>sync().catch(()=>{}));
   return incoming;
 }
 function productCategory(productName='',sku=''){
@@ -207,7 +208,11 @@ function semanticPayloadSignature(type,payload={}){
 function sameSemanticPayload(type,a,b){return semanticPayloadSignature(type,a)===semanticPayloadSignature(type,b)}
 function learnedNoop(rule){return {rule,unchanged:true,alreadyLearned:true,syncState:String(rule?.syncState||''),ruleId:String(rule?.ruleId||'')}}
 async function recordConflict(ruleType,lookupKey,existingPayload,incomingPayload,source='AUTO'){
-  return upsert({type:'RULE_CONFLICT',lookupKey:ruleType+'\\u0001'+lookupKey+'\\u0001'+Date.now(),
+  const conflictIdentity=ruleType+'\u0001'+lookupKey+'\u0001'+semanticPayloadSignature(ruleType,existingPayload)+'\u0001'+semanticPayloadSignature(ruleType,incomingPayload);
+  const conflictKey='conflict:'+payloadSignature(conflictIdentity);
+  const existing=find('RULE_CONFLICT',conflictKey);
+  if(existing)return existing;
+  return upsert({type:'RULE_CONFLICT',lookupKey:conflictKey,
     payload:{ruleType,lookupKey,existingPayload,incomingPayload,status:'OPEN'},confidenceLevel:'MANUAL_CONFIRMED',
     confirmed:false,source:'CONFLICT:'+source});
 }
@@ -323,6 +328,9 @@ function setSyncMeta(patch){
   try{localStorage.setItem(SYNC_META_KEY,JSON.stringify(next))}catch(e){}
   renderStatus();
 }
+function beginBatchLearning(){batchSyncDepth++;return batchSyncDepth}
+function endBatchLearning(){batchSyncDepth=Math.max(0,batchSyncDepth-1);return batchSyncDepth}
+function batchLearningActive(){return batchSyncDepth>0}
 async function init(){
   if(initPromise)return initPromise;
   initPromise=(async()=>{
@@ -352,33 +360,36 @@ async function sync({force=false}={}){
   syncPromise=(async()=>{
     syncing=true;renderStatus();
     try{
-      let finalResult=null;
-      for(let pass=0;pass<3;pass++){
+      let pushed=0,pulled=0,acceptedAll=[],cloudIds=[],cursor=getSyncMeta().lastCloudCursor||null;
+      for(let pass=0;pass<30;pass++){
         const all=await allRules(),unsynced=all.filter(r=>r.syncState!=='SYNCED');
-        const meta=getSyncMeta();
+        const chunk=unsynced.slice(0,250);
         const resp=await fetch(SYNC_ENDPOINT,{method:'POST',headers:{'content-type':'application/json'},
-          body:JSON.stringify({deviceId:deviceId(),since:(force||pass>0)?null:(meta.lastCloudCursor||null),rules:unsynced})});
+          body:JSON.stringify({deviceId:deviceId(),since:(force||pass>0)?null:cursor,rules:chunk})});
         if(!resp.ok)throw new Error('Cloud sync '+resp.status);
-        const data=await resp.json(); if(data?.ok===false)throw new Error(data.error||'Cloud sync rejected');
+        const data=await resp.json();if(data?.ok===false)throw new Error(data.error||'Cloud sync rejected');
         for(const raw of(data.rules||[])){
           const incoming=normalizeRule({...raw,syncState:'SYNCED'}),current=find(incoming.type,incoming.lookupKey);
           if(shouldReplace(current,incoming))await putRule(incoming);
         }
         const accepted=new Set(data.acceptedRuleIds||[]);
-        for(const rule of unsynced)if(accepted.has(rule.ruleId))await putRule({...rule,syncState:'SYNCED'});
+        for(const rule of chunk)if(accepted.has(rule.ruleId))await putRule({...rule,syncState:'SYNCED'});
         rebuild(await allRules());
-        const lastSyncAt=new Date().toISOString();
-        setSyncMeta({cloudStatus:'connected',lastSyncAt,lastCloudCursor:data.cursor||lastSyncAt,lastError:''});
-        finalResult={ok:true,pushed:accepted.size,pendingBefore:unsynced.length,pulled:Array.isArray(data.rules)?data.rules.length:0,
-          acceptedRuleIds:[...accepted],cloudRuleIds:(data.rules||[]).map(r=>String(r?.ruleId||'')).filter(Boolean),
-          cursor:data.cursor||lastSyncAt,lastSyncAt,cloudStatus:'connected'};
+        pushed+=accepted.size;pulled+=Array.isArray(data.rules)?data.rules.length:0;
+        acceptedAll.push(...accepted);cloudIds.push(...(data.rules||[]).map(r=>String(r?.ruleId||'')).filter(Boolean));
+        cursor=data.cursor||cursor||new Date().toISOString();
         if(stats().pending===0)break;
+        if(chunk.length===0)break;
       }
+      const remaining=stats().pending,lastSyncAt=new Date().toISOString();
+      if(remaining!==0)throw new Error('Cloud sync incomplete: pending '+remaining);
+      setSyncMeta({cloudStatus:'connected',lastSyncAt,lastCloudCursor:cursor||lastSyncAt,lastError:''});
       window.dispatchEvent(new CustomEvent('write-kb-updated'));
-      return finalResult||{ok:true,pushed:0,pulled:0,acceptedRuleIds:[],cloudRuleIds:[],cloudStatus:'connected'};
+      return {ok:true,pushed,pulled,acceptedRuleIds:[...new Set(acceptedAll)],cloudRuleIds:[...new Set(cloudIds)],
+        cursor:cursor||lastSyncAt,lastSyncAt,cloudStatus:'connected',pending:0};
     }catch(err){
       const message=String(err?.message||err);setSyncMeta({cloudStatus:'local-only',lastError:message});
-      return {ok:false,error:message,cloudStatus:'local-only'};
+      return {ok:false,error:message,cloudStatus:'local-only',pending:stats().pending};
     }finally{syncing=false;syncPromise=null;renderStatus()}
   })();
   return syncPromise;
@@ -438,7 +449,7 @@ setInterval(()=>{if(navigator.onLine)sync().catch(()=>{})},5*60*1000);
 
 
 window.WRITE_KB={
-  init,sync,stats,list,productCategory,factPrice,learnProduct,learnPrice,learnSchema,schemaRules,schemaFor,costModel,calculateCost,learnCostModel,currencyPolicy,learnCurrencyPolicy,taxPolicy,learnTaxPolicy,learnFactModel,reviewedProduct,learnReviewedProduct,reviewedFact,learnReviewedFact,conflicts,cloudReceiptStatus,exportBackup,importBackup,renderStatus,
+  init,sync,stats,list,productCategory,factPrice,learnProduct,learnPrice,learnSchema,schemaRules,schemaFor,costModel,calculateCost,learnCostModel,currencyPolicy,learnCurrencyPolicy,taxPolicy,learnTaxPolicy,learnFactModel,reviewedProduct,learnReviewedProduct,reviewedFact,learnReviewedFact,conflicts,cloudReceiptStatus,beginBatchLearning,endBatchLearning,batchLearningActive,exportBackup,importBackup,renderStatus,
   priority:PRIORITY
 };
 })();
