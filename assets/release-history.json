@@ -1,30 +1,30 @@
 {
   "current": {
-    "version": "10.1.6",
-    "time": "2026-08-13 01:05",
-    "title": "Cloud-Confirmed Idempotent Learning",
+    "version": "10.1.7",
+    "time": "2026-08-13",
+    "title": "D1 Sync Endpoint + Serialized Cloud Queue",
     "sections": [
       {
-        "label": "重复学习",
+        "label": "云同步",
         "items": [
-          "相同数据再次导入显示“云端已收录”，不新增版本。"
-        ]
-      },
-      {
-        "label": "云端确认",
-        "items": [
-          "只有 D1 同步回执闭环且待同步为 0 才显示云端已收录。"
-        ]
-      },
-      {
-        "label": "跨设备",
-        "items": [
-          "新电脑初始化时从云端拉取已确认规则。"
+          "修复 Cloud sync 405，Pages Functions 正式提供 POST 同步端点。",
+          "并发同步复用同一 Promise，消除 SYNC_IN_PROGRESS 假失败。",
+          "D1 ruleId 回读闭环后才显示云端已收录。"
         ]
       }
     ]
   },
   "history": [
+    {
+      "version": "10.1.7",
+      "time": "2026-08-13",
+      "title": "D1 Sync Endpoint + Serialized Cloud Queue",
+      "items": [
+        "修复 Cloud sync 405，Pages Functions 正式提供 POST 同步端点。",
+        "并发同步复用同一 Promise，消除 SYNC_IN_PROGRESS 假失败。",
+        "D1 ruleId 回读闭环后才显示云端已收录。"
+      ]
+    },
     {
       "version": "10.1.6",
       "time": "2026-08-13 01:05",

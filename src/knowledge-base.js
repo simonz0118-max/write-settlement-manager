@@ -21,6 +21,7 @@ let db=null;
 let ready=false;
 let initPromise=null;
 let syncing=false;
+let syncPromise=null;
 let cache=new Map();
 let pending=new Set();
 
@@ -345,43 +346,42 @@ async function init(){
   return initPromise;
 }
 async function sync({force=false}={}){
-  if(syncing)return {ok:false,skipped:true,reason:'SYNC_IN_PROGRESS'};
   if(!ready)return {ok:false,skipped:true,reason:'KB_NOT_READY'};
   if(!navigator.onLine)return {ok:false,skipped:true,reason:'OFFLINE'};
-  syncing=true;renderStatus();
-  try{
-    const all=await allRules();
-    const unsynced=all.filter(r=>r.syncState!=='SYNCED');
-    const meta=getSyncMeta();
-    const resp=await fetch(SYNC_ENDPOINT,{
-      method:'POST',headers:{'content-type':'application/json'},
-      body:JSON.stringify({deviceId:deviceId(),since:force?null:(meta.lastCloudCursor||null),rules:unsynced})
-    });
-    if(!resp.ok)throw new Error('Cloud sync '+resp.status);
-    const data=await resp.json();
-    for(const raw of (data.rules||[])){
-      const incoming=normalizeRule({...raw,syncState:'SYNCED'});
-      const current=find(incoming.type,incoming.lookupKey);
-      if(shouldReplace(current,incoming))await putRule(incoming);
-    }
-    const accepted=new Set(data.acceptedRuleIds||unsynced.map(r=>r.ruleId));
-    for(const rule of unsynced){
-      if(accepted.has(rule.ruleId))await putRule({...rule,syncState:'SYNCED'});
-    }
-    rebuild(await allRules());
-    const lastSyncAt=new Date().toISOString();
-    setSyncMeta({cloudStatus:'connected',lastSyncAt,lastCloudCursor:data.cursor||lastSyncAt,lastError:''});
-    window.dispatchEvent(new CustomEvent('write-kb-updated'));
-    return {ok:true,pushed:accepted.size,pendingBefore:unsynced.length,pulled:Array.isArray(data.rules)?data.rules.length:0,
-      acceptedRuleIds:[...accepted],cloudRuleIds:(data.rules||[]).map(r=>String(r?.ruleId||'')).filter(Boolean),
-      cursor:data.cursor||lastSyncAt,lastSyncAt,cloudStatus:'connected'};
-  }catch(err){
-    const message=String(err?.message||err);
-    setSyncMeta({cloudStatus:'local-only',lastError:message});
-    return {ok:false,error:message,cloudStatus:'local-only'};
-  }finally{
-    syncing=false;renderStatus();
-  }
+  if(syncPromise)return syncPromise;
+  syncPromise=(async()=>{
+    syncing=true;renderStatus();
+    try{
+      let finalResult=null;
+      for(let pass=0;pass<3;pass++){
+        const all=await allRules(),unsynced=all.filter(r=>r.syncState!=='SYNCED');
+        const meta=getSyncMeta();
+        const resp=await fetch(SYNC_ENDPOINT,{method:'POST',headers:{'content-type':'application/json'},
+          body:JSON.stringify({deviceId:deviceId(),since:(force||pass>0)?null:(meta.lastCloudCursor||null),rules:unsynced})});
+        if(!resp.ok)throw new Error('Cloud sync '+resp.status);
+        const data=await resp.json(); if(data?.ok===false)throw new Error(data.error||'Cloud sync rejected');
+        for(const raw of(data.rules||[])){
+          const incoming=normalizeRule({...raw,syncState:'SYNCED'}),current=find(incoming.type,incoming.lookupKey);
+          if(shouldReplace(current,incoming))await putRule(incoming);
+        }
+        const accepted=new Set(data.acceptedRuleIds||[]);
+        for(const rule of unsynced)if(accepted.has(rule.ruleId))await putRule({...rule,syncState:'SYNCED'});
+        rebuild(await allRules());
+        const lastSyncAt=new Date().toISOString();
+        setSyncMeta({cloudStatus:'connected',lastSyncAt,lastCloudCursor:data.cursor||lastSyncAt,lastError:''});
+        finalResult={ok:true,pushed:accepted.size,pendingBefore:unsynced.length,pulled:Array.isArray(data.rules)?data.rules.length:0,
+          acceptedRuleIds:[...accepted],cloudRuleIds:(data.rules||[]).map(r=>String(r?.ruleId||'')).filter(Boolean),
+          cursor:data.cursor||lastSyncAt,lastSyncAt,cloudStatus:'connected'};
+        if(stats().pending===0)break;
+      }
+      window.dispatchEvent(new CustomEvent('write-kb-updated'));
+      return finalResult||{ok:true,pushed:0,pulled:0,acceptedRuleIds:[],cloudRuleIds:[],cloudStatus:'connected'};
+    }catch(err){
+      const message=String(err?.message||err);setSyncMeta({cloudStatus:'local-only',lastError:message});
+      return {ok:false,error:message,cloudStatus:'local-only'};
+    }finally{syncing=false;syncPromise=null;renderStatus()}
+  })();
+  return syncPromise;
 }
 function stats(){
   const rules=[...cache.values()];

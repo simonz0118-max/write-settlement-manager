@@ -1,3 +1,11 @@
+## v10.1.7 — 2026-08-13 (Europe/Paris)
+- 修复批量审核学习 Cloud sync 405：新增 Pages Function `/api/rules/sync` POST/GET/OPTIONS，并直接使用 `WRITE_RULES_DB` D1 binding。
+- 修复 `SYNC_IN_PROGRESS`：并发同步调用复用同一个 syncPromise，不再把正常并发误报为失败。
+- 同步最多自动补跑 3 轮，直到 pending=0；只有 D1 接受并可回读本批 ruleId 才显示云端已收录。
+- 云端规则表使用独立 `write_rules_v1017`，避免未知旧 schema 污染；支持新设备全量拉取和增量 cursor。
+- 保留 V10.1.6 的 CN-only、语义幂等、重复文件/改名文件不重复学习规则。
+- 更新日志与版本标识同步到 V10.1.7。
+
 ## v10.1.6 — 2026-08-13 01:05 (Europe/Paris)
 - 相同文件或相同知识再次导入时不再重复 upsert；语义完全一致的 REVIEWED_FACT / REVIEWED_PRODUCT / COST_MODEL 返回 ALREADY_LEARNED。
 - 重复命中不增加规则 version、不重新标记 PENDING，学习界面区分“新增知识 / 云端已收录 / 冲突 / 未闭环”。
