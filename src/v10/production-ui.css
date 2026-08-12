@@ -45,3 +45,63 @@
     line-height:1.45;
   }
 }
+/* WRITE V10.0.9 — sidebar footer layout integrity
+ * Root cause fixed:
+ * V10.0.8 set .side-tip overflow:hidden while .sidebar is a fixed-height flex column.
+ * On shorter windows flex-shrink compressed .side-tip, leaving only its title visible.
+ */
+.sidebar{
+  overflow-y:auto;
+  overflow-x:hidden;
+  overscroll-behavior:contain;
+  scrollbar-width:thin;
+}
+.sidebar .side-nav{
+  flex:0 0 auto;
+}
+.sidebar .side-tip{
+  flex:0 0 auto;
+  flex-shrink:0;
+  min-height:max-content;
+  margin-top:16px;
+  overflow:visible;
+}
+.sidebar .side-tip ol{
+  display:block;
+  height:auto;
+  max-height:none;
+  overflow:visible;
+}
+.sidebar .side-status{
+  flex:0 0 auto;
+  flex-shrink:0;
+  margin-bottom:2px;
+}
+
+/* Keep long capability strings inside the card without clipping the card itself. */
+.sidebar .side-tip,
+.sidebar .side-tip ol,
+.sidebar .side-tip li{
+  min-width:0;
+  max-width:100%;
+}
+.sidebar .side-tip li{
+  white-space:normal;
+  overflow-wrap:anywhere;
+  word-break:break-word;
+}
+
+/* Short-height laptop windows: compact spacing instead of shrinking/cropping content. */
+@media (max-height:900px){
+  .sidebar{padding-top:18px;padding-bottom:12px}
+  .brand{padding-bottom:12px}
+  .side-nav{gap:2px}
+  .nav-item{padding-top:10px;padding-bottom:10px}
+  .sidebar .side-tip{margin-top:10px;padding:10px 11px}
+  .sidebar .side-tip ol{margin-top:6px;font-size:10px;line-height:1.5}
+  .sidebar .side-status{margin-top:8px;padding:10px}
+}
+@media (max-height:760px){
+  .sidebar .side-tip ol{font-size:9.5px;line-height:1.4}
+  .sidebar .side-status small{font-size:9.5px}
+}

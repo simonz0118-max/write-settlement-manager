@@ -1,25 +1,37 @@
 {
   "current": {
-    "version": "10.0.8",
-    "time": "2026-08-12 20:32",
-    "title": "Sidebar Usage Tip Overflow Hotfix",
+    "version": "10.0.9",
+    "time": "2026-08-12 20:55",
+    "title": "Sidebar Footer Integrity Hotfix",
     "sections": [
       {
-        "label": "UI 修复",
+        "label": "侧栏UI",
         "items": [
-          "左下角使用提示长文本现在会在卡片内部自动换行。",
-          "不再越过边框或与主内容重叠。"
+          "使用提示正文不再被压缩裁切。",
+          "使用提示和状态卡在矮窗口中完整保留，必要时侧栏内部滚动。"
         ]
       },
       {
         "label": "业务逻辑",
         "items": [
-          "未修改订单统计、FACT、会计报表、ZIP导出、学习规则。"
+          "未修改订单、FACT、会计统计、ZIP导出和规则学习。"
         ]
       }
     ]
   },
   "history": [
+    {
+      "version": "10.0.9",
+      "time": "2026-08-12 20:55",
+      "title": "Sidebar Footer Integrity Hotfix",
+      "items": [
+        "修复左下角“使用提示”只剩标题条、正文被裁切的问题。",
+        "根因是固定高度侧栏中的 flex-shrink 与 V10.0.8 overflow:hidden 叠加，较矮窗口会把 side-tip 压缩。",
+        "side-tip 与状态卡改为不可压缩；侧栏自身允许纵向滚动，内容过高时滚动而不是裁掉。",
+        "长格式列表继续在卡片内部自动换行；较矮窗口只压缩间距，不压缩内容高度。",
+        "不修改订单统计、FACT、会计报表、ZIP导出和学习规则。"
+      ]
+    },
     {
       "version": "10.0.8",
       "time": "2026-08-12 20:32",

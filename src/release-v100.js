@@ -1,1 +1,1 @@
-(function(){window.WRITE_RELEASE_V100={version:'10.0.8',title:'Universal Order-to-Invoice Production Compiler',candidate:false,formalProductionEngine:'V10.0.8',productionTakeover:true,canaryDefault:100,rollbackEngine:'V9.0',fivefoldConservation:true,pricingModes:['BLANK_RED_HUMAN']};})();
+(function(){window.WRITE_RELEASE_V100={version:'10.0.9',title:'Universal Order-to-Invoice Production Compiler',candidate:false,formalProductionEngine:'V10.0.9',productionTakeover:true,canaryDefault:100,rollbackEngine:'V9.0',fivefoldConservation:true,pricingModes:['BLANK_RED_HUMAN']};})();
