@@ -1,6 +1,6 @@
 /* WRITE V10.2.1 — Rule Learning accessibility + canonical release history */
 (function(g){'use strict';
-const VERSION='10.2.1',API='/api/rules/catalog';let data=null,selected=new Set(),loading=false;
+const VERSION='10.2.2',API='/api/rules/catalog';let data=null,selected=new Set(),loading=false;
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt=v=>v==null||v===''?'—':String(v),byId=id=>document.getElementById(id);
 const semver=v=>String(v||'0').replace(/^v/i,'').split('.').map(x=>Number.parseInt(x,10)||0);
@@ -40,14 +40,14 @@ async function refresh(q=''){
 }
 function selectedProducts(){return(data?.products||[]).filter(p=>selected.has(p.id))}
 function render(){
-  const c=data?.counts||{};byId('crSummary').innerHTML=`<div><span>产品</span><b>${c.products||0}</b></div><div><span>Product规则</span><b>${c.reviewedProduct||0}</b></div><div><span>成本规则</span><b>${c.costModel||0}</b></div><div><span>FACT规则</span><b>${c.reviewedFact||0}</b></div><div><span>冲突</span><b>${c.conflicts||0}</b></div>`;
+  const c=data?.counts||{};byId('crSummary').innerHTML=`<div><span>产品</span><b>${c.products||0}</b></div><div><span>Product规则</span><b>${c.reviewedProduct||0}</b></div><div><span>成本规则</span><b>${c.costModel||0}</b></div><div><span>FACT规则</span><b>${c.reviewedFact||0}</b></div><div class="cr-conflict-card" title="同一知识键出现两个不同人工结论。这里显示去重后的待处理冲突，不再把历史重复记录重复计数。"><span>待处理冲突</span><b>${c.conflicts||0}</b><small>${c.historicalConflictDuplicates?`历史重复 ${c.historicalConflictDuplicates}`:'无重复'}</small></div>`;
   const ps=data?.products||[];byId('crTable').innerHTML=ps.length?`<div class="cr-grid cr-th"><span></span><span>产品 / SKU</span><span>分类</span><span>范围</span><span>FACT / 成本</span><span>更新</span><span>操作</span></div>`+ps.map(row).join(''):`<div class="cr-empty">没有匹配的云端产品规则</div>`;
   byId('crOtherCount').textContent=(data?.otherRules||[]).length;renderOther();updateSelection();
 }
 function row(p){
   const scope=[...(p.origins||[]),...(p.countries||[]),...(p.currencies||[])].join(' · '),desc=(p.descriptions||[])[0]||'—';
   return `<div class="cr-row-wrap" data-id="${esc(p.id)}"><div class="cr-grid cr-row"><span><input class="cr-check" type="checkbox" data-id="${esc(p.id)}" ${selected.has(p.id)?'checked':''}></span>
-  <span><b>${esc(p.productName||'未命名产品')}</b><small>${esc(p.sku||'无 SKU')}</small></span><span>${esc(p.family||'—')}<small>${esc(p.role||'—')}</small></span><span>${esc(scope||'—')}</span>
+  <span><b>${esc(p.productName||'待命名')}</b><small>${p.displayKind==='PACKAGE'?'套装 / Configuration':esc(p.sku||'无 SKU')}</small></span><span>${esc(p.family||'—')}<small>${esc(p.role||'—')}</small></span><span>${esc(scope||'—')}</span>
   <span><b>${p.factCount||0} FACT</b><small>${p.costCount||0} 成本 · ${esc(desc)}</small></span><span><small>${esc((p.updatedAt||'').replace('T',' ').slice(0,19)||'—')}</small></span>
   <span class="cr-actions"><button data-detail="${esc(p.id)}">详情</button><button data-edit="${esc(p.id)}">修改</button><button class="danger" data-delete="${esc(p.id)}">删除</button></span></div>
   <div class="cr-details" id="crd-${cssId(p.id)}" hidden>${detailHtml(p)}</div></div>`;
@@ -77,12 +77,12 @@ function bind(){
 function releaseEntry(e){return `<article class="canonical-release-entry"><div class="canonical-release-version"><b>v${esc(e.version||'')}</b><small>${esc(e.time||'')}</small></div><div><h3>${esc(e.title||'WRITE Settlement Manager')}</h3>${(e.items||[]).map(x=>`<p>— ${esc(x)}</p>`).join('')}</div></article>`}
 function repairHistory(){
   const host=document.querySelector('[data-view-panel="history"]');if(!host)return;
-  const meta=g.WRITE_RELEASE_META||{},history=sortedHistory(meta.history||[]),current='10.2.1';
+  const meta=g.WRITE_RELEASE_META||{},history=sortedHistory(meta.history||[]),current='10.2.2';
   host.querySelectorAll('.panel,.release-list,.history-list').forEach(x=>{if(x.id!=='canonicalReleaseHistory')x.hidden=true});
   let box=byId('canonicalReleaseHistory');if(!box){box=document.createElement('section');box.id='canonicalReleaseHistory';box.className='panel canonical-release-history';const head=host.querySelector('.page-head');head?.after(box)}
   box.innerHTML=`<div class="canonical-current"><span>当前版本</span><b>v${current}</b></div><div class="canonical-history-summary">WRITE Settlement Manager · ${history.length} 个历史版本</div><div class="canonical-release-list">${history.map(releaseEntry).join('')}</div>`;
 }
-function start(){inject();forceNavigation();document.body.dataset.release=VERSION;document.querySelectorAll('.brand-copy small').forEach(e=>e.textContent='v10.2.1 Production');if(document.querySelector('[data-view-panel="learning"].active'))refresh();if(document.querySelector('[data-view-panel="history"].active'))repairHistory()}
+function start(){inject();forceNavigation();document.body.dataset.release=VERSION;document.querySelectorAll('.brand-copy small').forEach(e=>e.textContent='v10.2.2 Production');if(document.querySelector('[data-view-panel="learning"].active'))refresh();if(document.querySelector('[data-view-panel="history"].active'))repairHistory()}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();
 g.WRITE_CLOUD_RULE_LIBRARY={VERSION,refresh,showView,repairHistory,_test:{compareVersions,sortedHistory}};
 })(window);

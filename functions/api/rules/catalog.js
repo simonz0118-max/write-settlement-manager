@@ -14,6 +14,23 @@ async function ensure(db){
 }
 const norm=v=>String(v??'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ');
 const upper=v=>String(v??'').trim().toUpperCase();
+const cleanControl=v=>String(v??'').replace(/[\u0000-\u001f\u007f]+/g,' ').replace(/\s+/g,' ').trim();
+function configIdentityFromRule(rule){
+  const p=rule?.payload||{},sku=String(p.sku||'');
+  if(rule?.type==='COST_MODEL'&&/^CONFIG:/i.test(sku))return cleanControl(sku.replace(/^CONFIG:/i,''));
+  return cleanControl(p.configurationFingerprint||'');
+}
+function configDisplayName(config,facts=[]){
+  const key=norm(cleanControl(config)),fact=facts.find(f=>norm(cleanControl(f.payload?.configurationFingerprint))===key);
+  const fromFact=cleanControl(fact?.payload?.description||'');
+  if(fromFact)return fromFact;
+  return cleanControl(config).replace(/\s+([0-9]+)$/,' ×$1');
+}
+function conflictSignature(r){
+  const p=r?.payload||{};
+  return JSON.stringify([String(p.ruleType||''),String(p.lookupKey||''),p.existingPayload||{},p.incomingPayload||{}]);
+}
+
 function parsePayload(s){try{return JSON.parse(s||'{}')}catch{return {}}}
 function rowToRule(r){
   return {ruleId:r.rule_id,type:r.type,lookupKey:r.lookup_key,payload:parsePayload(r.payload_json),confidenceLevel:r.confidence_level,
@@ -22,6 +39,9 @@ function rowToRule(r){
 }
 function productIdentity(rule){
   const p=rule.payload||{},sku=norm(p.sku),name=norm(p.productName);
+  if(rule.type==='COST_MODEL'&&/^config:/i.test(String(p.sku||''))){
+    const cfg=configIdentityFromRule(rule);return 'config:'+norm(cfg);
+  }
   return sku?'sku:'+sku:(name?'name:'+name:'rule:'+rule.ruleId);
 }
 function lookupFor(type,p={}){
@@ -47,16 +67,39 @@ function productGroup(rules){
   const groups=new Map(),facts=rules.filter(r=>r.type==='REVIEWED_FACT');
   for(const r of rules.filter(r=>PRODUCT_TYPES.has(r.type))){
     const id=productIdentity(r);let g=groups.get(id);
-    if(!g){g={id,sku:'',productName:'',family:'',role:'',countries:new Set(),origins:new Set(),currencies:new Set(),descriptions:new Set(),rules:[],costRules:[],factRules:[],updatedAt:''};groups.set(id,g)}
-    const p=r.payload||{};g.sku=g.sku||String(p.sku||'');g.productName=g.productName||String(p.productName||'');
-    g.family=g.family||String(p.family||p.category||'');g.role=g.role||String(p.role||'');
+    if(!g){g={id,sku:'',productName:'',displayKind:'PRODUCT',family:'',role:'',countries:new Set(),origins:new Set(),currencies:new Set(),descriptions:new Set(),rules:[],costRules:[],factRules:[],updatedAt:''};groups.set(id,g)}
+    const p=r.payload||{},cfg=configIdentityFromRule(r);
+    if(id.startsWith('config:')){
+      g.displayKind='PACKAGE';
+      g.sku='';
+      g.productName=g.productName||configDisplayName(cfg,facts);
+      g.family=g.family||'PACKAGE_CONFIGURATION';
+      g.role=g.role||'PACKAGE';
+      const fact=facts.find(f=>norm(cleanControl(f.payload?.configurationFingerprint))===norm(cleanControl(cfg)));
+      if(fact){
+        const fp=fact.payload||{};
+        if(fp.country)g.countries.add(upper(fp.country));if(fp.origin)g.origins.add(upper(fp.origin));if(fp.currency)g.currencies.add(upper(fp.currency));
+        if(fp.description)g.descriptions.add(cleanControl(fp.description));
+      }
+    }else{
+      g.sku=g.sku||cleanControl(p.sku||'');g.productName=g.productName||cleanControl(p.productName||'');
+      g.family=g.family||cleanControl(p.family||p.category||'');g.role=g.role||cleanControl(p.role||'');
+    }
     if(p.country)g.countries.add(upper(p.country));if(p.origin)g.origins.add(upper(p.origin));if(p.currency)g.currencies.add(upper(p.currency));
-    if(p.approvedFactDescription)g.descriptions.add(String(p.approvedFactDescription));if(p.normalizedDescription)g.descriptions.add(String(p.normalizedDescription));
+    if(p.approvedFactDescription)g.descriptions.add(cleanControl(p.approvedFactDescription));if(p.normalizedDescription)g.descriptions.add(cleanControl(p.normalizedDescription));
+    if(p.sourceFactDescription)g.descriptions.add(cleanControl(p.sourceFactDescription));
     g.rules.push(r);if(r.type==='COST_MODEL')g.costRules.push(r);if(String(r.updatedAt)>g.updatedAt)g.updatedAt=String(r.updatedAt);
   }
   for(const g of groups.values()){
-    const fps=new Set(g.rules.map(r=>String(r.payload?.configurationFingerprint||'')).filter(Boolean));
-    g.factRules=facts.filter(f=>fps.has(String(f.payload?.configurationFingerprint||'')));
+    const fps=new Set();
+    for(const r of g.rules){
+      const cfg=configIdentityFromRule(r);if(cfg)fps.add(norm(cfg));
+      const fp=cleanControl(r.payload?.configurationFingerprint||'');if(fp)fps.add(norm(cleanControl(fp)));
+    }
+    g.factRules=facts.filter(f=>fps.has(norm(cleanControl(f.payload?.configurationFingerprint||''))));
+    if(g.displayKind==='PACKAGE'&&!g.productName){
+      const cfg=[...fps][0]||'';g.productName=configDisplayName(cfg,facts)||'套装配置';
+    }
   }
   return [...groups.values()].map(g=>({...g,countries:[...g.countries],origins:[...g.origins],currencies:[...g.currencies],descriptions:[...g.descriptions],
     ruleCount:g.rules.length+g.factRules.length,costCount:g.costRules.length,factCount:g.factRules.length}));
@@ -99,10 +142,13 @@ export async function onRequestGet({request,env}){
     const rules=await loadAll(env.WRITE_RULES_DB),allProducts=productGroup(rules),products=allProducts.filter(g=>matchesGroup(g,terms));
     const attachedFactIds=new Set(allProducts.flatMap(g=>(g.factRules||[]).map(r=>r.ruleId)));
     const nonProduct=rules.filter(r=>!PRODUCT_TYPES.has(r.type)&&!attachedFactIds.has(r.ruleId));
+    const conflictRows=rules.filter(r=>r.type==='RULE_CONFLICT'),uniqueConflictMap=new Map();
+    for(const r of conflictRows){const sig=conflictSignature(r);if(!uniqueConflictMap.has(sig))uniqueConflictMap.set(sig,r)}
     const counts={totalRules:rules.length,products:products.length,reviewedProduct:rules.filter(r=>r.type==='REVIEWED_PRODUCT').length,
       costModel:rules.filter(r=>r.type==='COST_MODEL').length,reviewedFact:rules.filter(r=>r.type==='REVIEWED_FACT').length,
-      conflicts:rules.filter(r=>r.type==='RULE_CONFLICT').length,other:nonProduct.length};
-    return json({ok:true,version:'10.2.0',counts,products,otherRules:nonProduct.slice(0,1000)});
+      conflicts:uniqueConflictMap.size,rawConflictRows:conflictRows.length,historicalConflictDuplicates:Math.max(0,conflictRows.length-uniqueConflictMap.size),other:nonProduct.length};
+    return json({ok:true,version:'10.2.2',counts,products,otherRules:nonProduct.slice(0,1000),
+      conflicts:[...uniqueConflictMap.values()].slice(0,1000)});
   }catch(e){return json({ok:false,error:String(e?.message||e)},500)}
 }
 export async function onRequestPost({request,env}){

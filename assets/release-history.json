@@ -1,23 +1,36 @@
 {
   "current": {
-    "version": "10.2.1",
-    "time": "2026-08-13 01:12",
-    "title": "Rule Learning Access + Canonical Release History",
+    "version": "10.2.2",
+    "time": "2026-08-13 01:28",
+    "title": "Bundle Naming + Conflict Semantics + Rule UI Polish",
     "sections": [
       {
-        "label": "修复",
+        "label": "规则学习",
         "items": [
-          "修复左侧“规则学习”在未导入订单或 appViews 隐藏状态下无法进入的问题；点击后强制打开规则学习工作区并读取 D1。",
-          "规则学习页增加 sticky 云端状态、搜索栏和表头，控制高度与横向滚动，修复窄屏/深色模式下的视觉错位。",
-          "历史更新改为 canonical release history：只从 release-meta 权威数据重建，按语义版本号倒序显示，不再受旧 DOM 顺序影响。",
-          "当前版本统一锁定为 V10.2.1；品牌标识、历史页当前版本、release-history.json、release-meta.js、CHANGELOG 一致。",
-          "保留 V10.2.0 云端规则检索、单独/批量修改删除、软删除及 expectedUpdatedAt 多设备并发保护。",
-          "新增发布硬门：历史元数据当前版本必须等于页面版本，10.2.1 必须为 history 第一条。"
+          "修复规则学习深色模式按钮白底/低对比度、搜索区比例失衡、表格操作区拥挤和底部按钮视觉异常。",
+          "CONFIG 成本规则不再显示为“未命名产品”；按 Configuration 归类为套装，并优先使用关联 REVIEWED_FACT Description 作为套装名称。",
+          "例如 Lot de 4 mines rechargeables 配置现在显示为套装名称，而不是生成一个未命名产品。",
+          "冲突数字改为去重后的待处理冲突；同时保留 rawConflictRows 和 historicalConflictDuplicates，区分真实冲突与旧版本历史重复记录。",
+          "待处理冲突定义：同一个知识 lookupKey 已有人工确认内容，但新导入人工审核数据给出了不同语义内容，因此系统不自动覆盖，保留冲突等待处理。",
+          "保留 V10.2.1 规则学习可直接进入、云端检索/修改/删除、历史版本修复和多设备并发保护。"
         ]
       }
     ]
   },
   "history": [
+    {
+      "version": "10.2.2",
+      "time": "2026-08-13 01:28",
+      "title": "Bundle Naming + Conflict Semantics + Rule UI Polish",
+      "items": [
+        "修复规则学习深色模式按钮白底/低对比度、搜索区比例失衡、表格操作区拥挤和底部按钮视觉异常。",
+        "CONFIG 成本规则不再显示为“未命名产品”；按 Configuration 归类为套装，并优先使用关联 REVIEWED_FACT Description 作为套装名称。",
+        "例如 Lot de 4 mines rechargeables 配置现在显示为套装名称，而不是生成一个未命名产品。",
+        "冲突数字改为去重后的待处理冲突；同时保留 rawConflictRows 和 historicalConflictDuplicates，区分真实冲突与旧版本历史重复记录。",
+        "待处理冲突定义：同一个知识 lookupKey 已有人工确认内容，但新导入人工审核数据给出了不同语义内容，因此系统不自动覆盖，保留冲突等待处理。",
+        "保留 V10.2.1 规则学习可直接进入、云端检索/修改/删除、历史版本修复和多设备并发保护。"
+      ]
+    },
     {
       "version": "10.2.1",
       "time": "2026-08-13 01:12",
