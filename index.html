@@ -27,25 +27,24 @@
 <link href="./src/v8/v8.css?v=9.0.0-001" rel="stylesheet"/>
 <link href="./src/v9/v9.css?v=9.0.0-001" rel="stylesheet"/>
 <link href="./src/v10/production-ui.css?v=10.0.9-sidebar-footer-001" rel="stylesheet"/>
-<link href="./src/v10/v101-ui.css?v=10.1.0-001" rel="stylesheet"/>
+<link href="./src/v10/v101-ui.css?v=10.1.1-hero-learning-001" rel="stylesheet"/>
+<link href="./src/v10/v1011-hero-learning.css?v=10.1.1-001" rel="stylesheet"/>
 </head>
-<body data-release="10.1.0">
+<body data-release="10.1.1">
 <div class="app-shell">
 <aside class="sidebar">
 <div class="brand">
 <img class="brand-logo brand-logo-c" src="./assets/panda-logo-c-image2.png" alt="WRITE 熊猫简笔画 Logo"/>
-<div class="brand-copy"><strong>WRITE</strong><span>Settlement Manager</span><small>v10.1.0 Production</small></div>
+<div class="brand-copy"><strong>WRITE</strong><span>Settlement Manager</span><small>v10.1.1 Production</small></div>
 </div>
 <nav class="side-nav" id="sideNav">
 <button class="nav-item active" data-view="dashboard"><span>⌂</span>首页</button>
-<button class="nav-item" id="navImportButton"><span>⇧</span>订单导入</button>
 <button class="nav-item" data-view="orders"><span>▤</span>订单管理</button>
 <button class="nav-item" data-view="products"><span>◇</span>商品分类</button>
 <button class="nav-item" data-view="review"><span>◎</span>待复核 <b hidden="" id="navReviewCount">0</b></button>
 <button class="nav-item" data-view="quality"><span>△</span>数据质量</button>
 <button class="nav-item" data-view="learning"><span>⌘</span>规则学习</button>
 <button class="nav-item" data-view="imports"><span>↧</span>导入记录</button>
-<button class="nav-item" data-view="export"><span>⇩</span>导出报表</button>
 <button class="nav-item" data-view="history"><span>↺</span>历史更新</button>
 <button class="nav-item theme-cycle" id="themeToggleButton" type="button" title="切换主题：自动 / 浅色 / 深色"><span id="themeIcon">◐</span><span class="theme-label" id="themeLabel">主题：自动</span></button>
 </nav>
@@ -76,6 +75,7 @@
 <input accept=".xlsx,.zip,.csv,.tsv,.json,.xml,.xls,.pdf,.png,.jpg,.jpeg" hidden="" id="fileInput" multiple="" type="file"/>
 <div class="landing-actions" id="idleState">
 <button class="primary-hero" id="chooseButton"><span>⇧</span><div><b>开始导入订单</b><small>支持 Excel / ZIP 格式</small></div></button>
+<button class="secondary-hero reviewed-import-trigger" id="landingReviewedImportButton" type="button"><span>✓</span><div><b>导入人工审核表</b><small>学习已审核 FACT / 成本 / SKU</small></div></button>
 <div class="privacy">文件仅在本机浏览器处理，不上传服务器</div>
 </div>
 <div class="busy-box" hidden="" id="busyState">
@@ -126,6 +126,7 @@
 <div class="hero-buttons">
 <button class="export-hero" id="heroExportButton"><span>⇩</span><div><b>导出结算报表</b><small>FACT 汇总 + 会计明细 Excel</small></div></button>
 <button class="secondary-hero" id="heroImportButton"><span>⇧</span><div><b>重新导入订单</b><small>清空当前统计后重新选择文件</small></div></button>
+<button class="secondary-hero reviewed-import-trigger" id="heroReviewedImportButton" type="button"><span>✓</span><div><b>导入人工审核表</b><small>随时更新知识库，不清空当前订单</small></div></button>
 </div>
 </div>
 <div class="hero-image"><div aria-hidden="true" class="hero-visual">
@@ -195,8 +196,7 @@
     <div class="panel-head">
       <div><h2>知识库控制</h2><p>规则先保存到本机 IndexedDB；云端不可用不会影响结算。</p></div>
       <div class="knowledge-actions">
-        <button type="button" id="knowledgeImportReviewed">⇧ 导入人工审核表</button>
-        <input id="knowledgeReviewedFile" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden>
+        <button type="button" id="knowledgeImportReviewed" class="reviewed-import-trigger">⇧ 导入人工审核表</button>
         <button type="button" id="knowledgeSyncNow">↻ 立即同步</button>
         <button type="button" id="knowledgeExportBackup">⇩ 导出备份</button>
         <button type="button" id="knowledgeImportBackup">⇧ 恢复备份</button>
@@ -293,5 +293,7 @@ setTimeout(function(){
 <script defer src="./src/v10/export-runtime.js?v=10.1.0-001"></script>
 <script defer src="./src/v10/runtime.js?v=10.1.0-001"></script>
 <script src="./src/v10/unified-settlement-v101.js?v=10.1.0-001"></script>
-<script defer src="./src/v10/review-learning-v101.js?v=10.1.0-001"></script>
+<script defer src="./src/v10/review-learning-v101.js?v=10.1.1-hero-learning-001"></script>
+<script defer src="./src/v10/review-learning-hero-v1011.js?v=10.1.1-001"></script>
+<input id="knowledgeReviewedFile" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden>
 </body></html>

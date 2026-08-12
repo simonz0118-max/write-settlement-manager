@@ -1,0 +1,9 @@
+/* WRITE V10.1.1 hero reviewed-learning UI */
+.landing-actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.landing-actions .privacy{flex-basis:100%}
+.landing-actions .reviewed-import-trigger{min-height:74px}
+.dashboard-hero .hero-buttons{flex-wrap:wrap}
+.dashboard-hero .reviewed-import-trigger{min-width:220px}
+@media(max-width:760px){
+ .landing-actions>.primary-hero,.landing-actions>.secondary-hero,.dashboard-hero .hero-buttons>button{width:100%}
+}

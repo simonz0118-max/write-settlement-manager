@@ -1,37 +1,43 @@
 {
   "current": {
-    "version": "10.1.0",
-    "time": "2026-08-12 21:54",
-    "title": "Unified Reviewed-Learning Workbook",
+    "version": "10.1.1",
+    "time": "2026-08-12 22:55",
+    "title": "Hero Reviewed-Learning Access + Sidebar Simplification",
     "sections": [
       {
-        "label": "统一结算工作簿",
+        "label": "英雄页",
         "items": [
-          "FACT 固定第一张；会计统计和全部明细同一个 XLSX。"
+          "人工审核表学习入口在导入前、结算后均可直接使用。",
+          "学习导入不清空当前订单。"
         ]
       },
       {
-        "label": "人工审核学习",
+        "label": "侧栏",
         "items": [
-          "规则学习页直接上传人工审核后的统一 XLSX。",
-          "自动学习 SKU、产品名、Description、角色、Configuration 和有证据成本。"
+          "移除重复的“订单导入”和“导出报表”导航项。"
         ]
       },
       {
-        "label": "下次自动开票",
+        "label": "业务逻辑",
         "items": [
-          "同一人工审核 Configuration 自动复用并取消红字；新配置/冲突/缺价格仍安全复核。"
-        ]
-      },
-      {
-        "label": "知识库",
-        "items": [
-          "继续 IndexedDB + Cloudflare D1 同步。"
+          "FACT、会计、数量、成本学习和 D1 同步逻辑保持不变。"
         ]
       }
     ]
   },
   "history": [
+    {
+      "version": "10.1.1",
+      "time": "2026-08-12 22:55",
+      "title": "Hero Reviewed-Learning Access + Sidebar Simplification",
+      "items": [
+        "“导入人工审核表”移动到英雄页：未导入订单时和已完成结算后都可随时直接导入审核后的统一 XLSX。",
+        "人工审核学习入口不再依赖当前订单状态，导入学习不会清空当前订单统计。",
+        "左侧菜单移除“订单导入”和“导出报表”两个重复入口；订单导入、重新导入和导出功能仍保留在英雄页/顶部快捷按钮。",
+        "规则学习页面继续保留审核导入按钮，作为知识库管理入口。",
+        "不修改 FACT、数量统计、会计聚合、价格学习、IndexedDB/D1 同步和正式导出逻辑。"
+      ]
+    },
     {
       "version": "10.1.0",
       "time": "2026-08-12 21:54",
