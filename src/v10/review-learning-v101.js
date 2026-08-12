@@ -10,7 +10,7 @@
  */
 (function(g){'use strict';
 
-const VERSION='10.1.2';
+const VERSION='10.1.5';
 const dec=new TextDecoder();
 const clean=v=>String(v??'').replace(/\r/g,' ').replace(/\s+/g,' ').trim();
 const upper=v=>clean(v).toUpperCase();
@@ -309,12 +309,12 @@ async function importLegacyCN(file,map,ss,sheets){
     ignoredFRSheets,hardSourcePass:!!built.audit?.hardPass};
 }
 
-async function importReviewedWorkbook(file){
+async function importReviewedWorkbook(file,options={}){
   await g.WRITE_KB?.init?.();
   const map=await g.WRITE_V101_WORKBOOK.readZip(file),ss=sharedStrings(map),sheets=locateSheets(map);
   const hasProv=sheets.some(s=>s.name==='WRITE_LEARNING_SOURCE');
   const result=hasProv?await importNewCN(file,map,ss,sheets):await importLegacyCN(file,map,ss,sheets);
-  await g.WRITE_KB.sync?.({force:true}).catch(()=>{});
+  if(!options.skipSync)await g.WRITE_KB.sync?.({force:true}).catch(()=>{});
   window.dispatchEvent(new CustomEvent('write-kb-updated',{detail:result}));
   return result;
 }

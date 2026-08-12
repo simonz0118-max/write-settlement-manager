@@ -1,31 +1,72 @@
 {
   "current": {
-    "version": "10.1.1",
-    "time": "2026-08-12 22:55",
-    "title": "Hero Reviewed-Learning Access + Sidebar Simplification",
+    "version": "10.1.5",
+    "time": "2026-08-13 00:20",
+    "title": "Real ZIP Batch Learning + Release History Gate",
     "sections": [
       {
-        "label": "英雄页",
+        "label": "ZIP 批量学习",
         "items": [
-          "人工审核表学习入口在导入前、结算后均可直接使用。",
-          "学习导入不清空当前订单。"
+          "ZIP 先解包为 XLSX 再逐文件学习，不再把 ZIP 当 Excel。",
+          "多个 XLSX/ZIP 可一次处理，失败文件不阻断后续。"
         ]
       },
       {
-        "label": "侧栏",
+        "label": "云端验证",
         "items": [
-          "移除重复的“订单导入”和“导出报表”导航项。"
+          "全部本地学习完成后统一强制同步 Cloudflare D1，并展示返回结果。"
         ]
       },
       {
-        "label": "业务逻辑",
+        "label": "发布日志",
         "items": [
-          "FACT、会计、数量、成本学习和 D1 同步逻辑保持不变。"
+          "V10.1.2~V10.1.5 全部补齐；今后发布缺少当前版本日志则部署失败。"
         ]
       }
     ]
   },
   "history": [
+    {
+      "version": "10.1.5",
+      "time": "2026-08-13 00:20",
+      "title": "Real ZIP Batch Learning + Release History Gate",
+      "items": [
+        "修复 ZIP 被当成 XLSX 直接解析导致全部学习失败：现在先安全解包，再逐个学习内部 XLSX。",
+        "支持一次选择多个 XLSX、多个 ZIP，以及 ZIP 中的 XLSX；支持最多 2 层嵌套 ZIP。",
+        "批量学习单个工作簿失败不会阻断剩余文件；显示源 ZIP → XLSX 展开数量与逐文件结果。",
+        "批量模式各 XLSX 本地学习时跳过重复云同步，全部完成后统一强制同步 Cloudflare D1，并显示同步返回摘要。",
+        "增加 500 个 XLSX / 250MB 解压数据保护上限；忽略 __MACOSX 和 AppleDouble 垃圾文件。",
+        "补齐 V10.1.2/V10.1.3/V10.1.4 缺失的历史更新，并将发布脚本的更新日志完整性作为硬门。"
+      ]
+    },
+    {
+      "version": "10.1.4",
+      "time": "2026-08-13 00:05",
+      "title": "Batch Reviewed Learning UI",
+      "items": [
+        "修复深色主题审核学习窗口低对比度。",
+        "人工审核学习入口支持多文件选择，并新增批量结果汇总与云同步状态。"
+      ]
+    },
+    {
+      "version": "10.1.3",
+      "time": "2026-08-12 23:45",
+      "title": "Reviewed Learning Status Center",
+      "items": [
+        "审核学习不再自动切换页面，新增独立状态中心。",
+        "新增 FACT/商品/成本/闭环/冲突/FR 忽略统计以及 Cloudflare D1 同步结果显示。"
+      ]
+    },
+    {
+      "version": "10.1.2",
+      "time": "2026-08-12 23:25",
+      "title": "Universal CN Reviewed FACT Learning",
+      "items": [
+        "兼容新版带 WRITE_LEARNING_SOURCE 的审核表与历史 FACT + 原订单 Sheet。",
+        "学习范围固定 CN-only；FACT-FR 和 FR 订单源在候选生成前排除。",
+        "历史数据只有可唯一闭环部分才学习，避免错误规则污染知识库。"
+      ]
+    },
     {
       "version": "10.1.1",
       "time": "2026-08-12 22:55",
