@@ -1,31 +1,43 @@
 {
   "current": {
-    "version": "10.1.5",
-    "time": "2026-08-13 00:20",
-    "title": "Real ZIP Batch Learning + Release History Gate",
+    "version": "10.1.6",
+    "time": "2026-08-13 01:05",
+    "title": "Cloud-Confirmed Idempotent Learning",
     "sections": [
       {
-        "label": "ZIP 批量学习",
+        "label": "重复学习",
         "items": [
-          "ZIP 先解包为 XLSX 再逐文件学习，不再把 ZIP 当 Excel。",
-          "多个 XLSX/ZIP 可一次处理，失败文件不阻断后续。"
+          "相同数据再次导入显示“云端已收录”，不新增版本。"
         ]
       },
       {
-        "label": "云端验证",
+        "label": "云端确认",
         "items": [
-          "全部本地学习完成后统一强制同步 Cloudflare D1，并展示返回结果。"
+          "只有 D1 同步回执闭环且待同步为 0 才显示云端已收录。"
         ]
       },
       {
-        "label": "发布日志",
+        "label": "跨设备",
         "items": [
-          "V10.1.2~V10.1.5 全部补齐；今后发布缺少当前版本日志则部署失败。"
+          "新电脑初始化时从云端拉取已确认规则。"
         ]
       }
     ]
   },
   "history": [
+    {
+      "version": "10.1.6",
+      "time": "2026-08-13 01:05",
+      "title": "Cloud-Confirmed Idempotent Learning",
+      "items": [
+        "相同文件或相同知识再次导入时不再重复 upsert；语义完全一致的 REVIEWED_FACT / REVIEWED_PRODUCT / COST_MODEL 返回 ALREADY_LEARNED。",
+        "重复命中不增加规则 version、不重新标记 PENDING，学习界面区分“新增知识 / 云端已收录 / 冲突 / 未闭环”。",
+        "云端同步改为结构化回执；只有 sync 返回 ok=true、cloud=connected 且 pending=0 时才显示“云端已收录”。",
+        "相同数据即使文件名不同，也通过忽略 sourceFile、quantity、amount 等批次证据字段进行语义去重。",
+        "云端已收录后，新电脑初始化知识库会从 Cloudflare D1 拉取规则；同一部署环境下可跨设备恢复。",
+        "继续执行 CN-only；FACT-FR / FR 来源不参与学习。"
+      ]
+    },
     {
       "version": "10.1.5",
       "time": "2026-08-13 00:20",

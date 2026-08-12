@@ -198,6 +198,13 @@ async function learnSchema(schema={},manual=true){
 
 
 function payloadSignature(v){try{const stable=x=>Array.isArray(x)?x.map(stable):x&&typeof x==='object'?Object.fromEntries(Object.keys(x).sort().map(k=>[k,stable(x[k])])):x;return JSON.stringify(stable(v))}catch{return String(v)}}
+function semanticPayloadSignature(type,payload={}){
+  const p={...payload};
+  delete p.sourceFile;delete p.quantity;delete p.amount;delete p.confidence;delete p.sourceFactDescription;
+  return payloadSignature(p);
+}
+function sameSemanticPayload(type,a,b){return semanticPayloadSignature(type,a)===semanticPayloadSignature(type,b)}
+function learnedNoop(rule){return {rule,unchanged:true,alreadyLearned:true,syncState:String(rule?.syncState||''),ruleId:String(rule?.ruleId||'')}}
 async function recordConflict(ruleType,lookupKey,existingPayload,incomingPayload,source='AUTO'){
   return upsert({type:'RULE_CONFLICT',lookupKey:ruleType+'\\u0001'+lookupKey+'\\u0001'+Date.now(),
     payload:{ruleType,lookupKey,existingPayload,incomingPayload,status:'OPEN'},confidenceLevel:'MANUAL_CONFIRMED',
@@ -225,10 +232,12 @@ async function learnCostModel(spec={},manual=true){
     strategy:String(spec.strategy||'UNIT_FIXED'),unitCost:spec.unitCost,orderCost:spec.orderCost,percent:spec.percent,tiers:Array.isArray(spec.tiers)?spec.tiers:[],
     cogs:spec.cogs,shipping:spec.shipping,sourceFactDescription:String(spec.sourceFactDescription||''),sourceFile:String(spec.sourceFile||''),confidence:Number(spec.confidence)||0};
   const existing=find('COST_MODEL',lookupKey);
-  if(existing?.confirmed && payloadSignature(existing.payload)!==payloadSignature(payload)){
+  if(existing?.confirmed&&sameSemanticPayload('COST_MODEL',existing.payload,payload))return learnedNoop(existing);
+  if(existing?.confirmed){
     const conflict=await recordConflict('COST_MODEL',lookupKey,existing.payload,payload,manual?'MANUAL':'AUTO');return {conflict:true,rule:existing,conflictRule:conflict};
   }
-  return upsert({type:'COST_MODEL',lookupKey,payload,confidenceLevel:manual?'MANUAL_CONFIRMED':'AUTO_INFERRED',confirmed:!!manual,source:manual?'MANUAL_COST':'FACT_LEARNING'});
+  const rule=await upsert({type:'COST_MODEL',lookupKey,payload,confidenceLevel:manual?'MANUAL_CONFIRMED':'AUTO_INFERRED',confirmed:!!manual,source:manual?'MANUAL_COST':'FACT_LEARNING'});
+  return {rule,created:true,ruleId:rule?.ruleId||'',syncState:rule?.syncState||''};
 }
 function currencyPolicy(key='DEFAULT'){return find('CURRENCY_POLICY',String(key||'DEFAULT'))}
 async function learnCurrencyPolicy(key='DEFAULT',payload={},manual=true){
@@ -258,8 +267,10 @@ async function learnReviewedProduct(spec={},manual=true){
   const keys=reviewedProductLookupKeys(spec);if(!keys.length)throw new Error('审核商品规则缺少 SKU/产品名');
   const lookupKey=keys[0],payload={productName:String(spec.productName||''),sku:String(spec.sku||''),family:String(spec.family||''),role:String(spec.role||''),normalizedDescription:String(spec.normalizedDescription||''),approvedFactDescription:String(spec.approvedFactDescription||''),country:country(spec.country),origin:country(spec.origin),currency:String(spec.currency||'').toUpperCase(),configurationFingerprint:String(spec.configurationFingerprint||''),sourceFile:String(spec.sourceFile||'')};
   const existing=find('REVIEWED_PRODUCT',lookupKey);
-  if(existing?.confirmed&&payloadSignature(existing.payload)!==payloadSignature(payload)){const c=await recordConflict('REVIEWED_PRODUCT',lookupKey,existing.payload,payload,'MANUAL');return{conflict:true,rule:existing,conflictRule:c}}
-  return upsert({type:'REVIEWED_PRODUCT',lookupKey,payload,confidenceLevel:'MANUAL_CONFIRMED',confirmed:true,source:'REVIEWED_WORKBOOK'});
+  if(existing?.confirmed&&sameSemanticPayload('REVIEWED_PRODUCT',existing.payload,payload))return learnedNoop(existing);
+  if(existing?.confirmed){const c=await recordConflict('REVIEWED_PRODUCT',lookupKey,existing.payload,payload,'MANUAL');return{conflict:true,rule:existing,conflictRule:c}}
+  const rule=await upsert({type:'REVIEWED_PRODUCT',lookupKey,payload,confidenceLevel:'MANUAL_CONFIRMED',confirmed:true,source:'REVIEWED_WORKBOOK'});
+  return {rule,created:true,ruleId:rule?.ruleId||'',syncState:rule?.syncState||''};
 }
 function reviewedFactLookupKey(spec={}){return[String(spec.invoiceEntity||'DEFAULT'),country(spec.origin),country(spec.country),String(spec.currency||'').toUpperCase(),String(spec.taxRegime||'UNSPECIFIED'),String(spec.role||''),String(spec.configurationFingerprint||'')].join('\\u0001')}
 function reviewedFact(spec={}){return find('REVIEWED_FACT',reviewedFactLookupKey(spec))||null}
@@ -267,8 +278,10 @@ async function learnReviewedFact(spec={},manual=true){
   const lookupKey=reviewedFactLookupKey(spec),payload={invoiceEntity:String(spec.invoiceEntity||'DEFAULT'),origin:country(spec.origin),country:country(spec.country),currency:String(spec.currency||'').toUpperCase(),taxRegime:String(spec.taxRegime||'UNSPECIFIED'),role:String(spec.role||''),configurationFingerprint:String(spec.configurationFingerprint||''),description:String(spec.description||''),cogs:spec.cogs,shipping:spec.shipping,unitTotal:spec.unitTotal,amount:spec.amount,quantity:spec.quantity,sourceFile:String(spec.sourceFile||'')};
   if(!payload.configurationFingerprint)throw new Error('审核 FACT 规则缺少 Configuration');
   const existing=find('REVIEWED_FACT',lookupKey);
-  if(existing?.confirmed&&payloadSignature(existing.payload)!==payloadSignature(payload)){const c=await recordConflict('REVIEWED_FACT',lookupKey,existing.payload,payload,'MANUAL');return{conflict:true,rule:existing,conflictRule:c}}
-  return upsert({type:'REVIEWED_FACT',lookupKey,payload,confidenceLevel:'MANUAL_CONFIRMED',confirmed:true,source:'REVIEWED_WORKBOOK'});
+  if(existing?.confirmed&&sameSemanticPayload('REVIEWED_FACT',existing.payload,payload))return learnedNoop(existing);
+  if(existing?.confirmed){const c=await recordConflict('REVIEWED_FACT',lookupKey,existing.payload,payload,'MANUAL');return{conflict:true,rule:existing,conflictRule:c}}
+  const rule=await upsert({type:'REVIEWED_FACT',lookupKey,payload,confidenceLevel:'MANUAL_CONFIRMED',confirmed:true,source:'REVIEWED_WORKBOOK'});
+  return {rule,created:true,ruleId:rule?.ruleId||'',syncState:rule?.syncState||''};
 }
 
 function conflicts(){return [...cache.values()].filter(r=>r.type==='RULE_CONFLICT'&&!r.deleted&&r.payload?.status!=='RESOLVED')}
@@ -332,7 +345,9 @@ async function init(){
   return initPromise;
 }
 async function sync({force=false}={}){
-  if(syncing||!ready||!navigator.onLine)return;
+  if(syncing)return {ok:false,skipped:true,reason:'SYNC_IN_PROGRESS'};
+  if(!ready)return {ok:false,skipped:true,reason:'KB_NOT_READY'};
+  if(!navigator.onLine)return {ok:false,skipped:true,reason:'OFFLINE'};
   syncing=true;renderStatus();
   try{
     const all=await allRules();
@@ -354,10 +369,16 @@ async function sync({force=false}={}){
       if(accepted.has(rule.ruleId))await putRule({...rule,syncState:'SYNCED'});
     }
     rebuild(await allRules());
-    setSyncMeta({cloudStatus:'connected',lastSyncAt:new Date().toISOString(),lastCloudCursor:data.cursor||new Date().toISOString(),lastError:''});
+    const lastSyncAt=new Date().toISOString();
+    setSyncMeta({cloudStatus:'connected',lastSyncAt,lastCloudCursor:data.cursor||lastSyncAt,lastError:''});
     window.dispatchEvent(new CustomEvent('write-kb-updated'));
+    return {ok:true,pushed:accepted.size,pendingBefore:unsynced.length,pulled:Array.isArray(data.rules)?data.rules.length:0,
+      acceptedRuleIds:[...accepted],cloudRuleIds:(data.rules||[]).map(r=>String(r?.ruleId||'')).filter(Boolean),
+      cursor:data.cursor||lastSyncAt,lastSyncAt,cloudStatus:'connected'};
   }catch(err){
-    setSyncMeta({cloudStatus:'local-only',lastError:String(err?.message||err)});
+    const message=String(err?.message||err);
+    setSyncMeta({cloudStatus:'local-only',lastError:message});
+    return {ok:false,error:message,cloudStatus:'local-only'};
   }finally{
     syncing=false;renderStatus();
   }
@@ -382,6 +403,7 @@ function stats(){
   };
 }
 function list(){return [...cache.values()].sort((a,b)=>String(b.updatedAt).localeCompare(String(a.updatedAt)))}
+function cloudReceiptStatus(){const st=stats(),meta=getSyncMeta();return {cloud:!!st.cloud,pending:Number(st.pending)||0,lastSyncAt:st.lastSyncAt||null,cloudStatus:meta.cloudStatus||'unknown',lastError:meta.lastError||''};}
 async function exportBackup(){
   const rules=ready?await allRules():[];
   const blob=new Blob([JSON.stringify({format:'WRITE_KNOWLEDGE_BACKUP',version:1,exportedAt:new Date().toISOString(),deviceId:deviceId(),rules},null,2)],{type:'application/json;charset=utf-8'});
@@ -416,7 +438,7 @@ setInterval(()=>{if(navigator.onLine)sync().catch(()=>{})},5*60*1000);
 
 
 window.WRITE_KB={
-  init,sync,stats,list,productCategory,factPrice,learnProduct,learnPrice,learnSchema,schemaRules,schemaFor,costModel,calculateCost,learnCostModel,currencyPolicy,learnCurrencyPolicy,taxPolicy,learnTaxPolicy,learnFactModel,reviewedProduct,learnReviewedProduct,reviewedFact,learnReviewedFact,conflicts,exportBackup,importBackup,renderStatus,
+  init,sync,stats,list,productCategory,factPrice,learnProduct,learnPrice,learnSchema,schemaRules,schemaFor,costModel,calculateCost,learnCostModel,currencyPolicy,learnCurrencyPolicy,taxPolicy,learnTaxPolicy,learnFactModel,reviewedProduct,learnReviewedProduct,reviewedFact,learnReviewedFact,conflicts,cloudReceiptStatus,exportBackup,importBackup,renderStatus,
   priority:PRIORITY
 };
 })();

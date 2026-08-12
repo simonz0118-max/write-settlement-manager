@@ -1,3 +1,11 @@
+## v10.1.6 — 2026-08-13 01:05 (Europe/Paris)
+- 相同文件或相同知识再次导入时不再重复 upsert；语义完全一致的 REVIEWED_FACT / REVIEWED_PRODUCT / COST_MODEL 返回 ALREADY_LEARNED。
+- 重复命中不增加规则 version、不重新标记 PENDING，学习界面区分“新增知识 / 云端已收录 / 冲突 / 未闭环”。
+- 云端同步改为结构化回执；只有 sync 返回 ok=true、cloud=connected 且 pending=0 时才显示“云端已收录”。
+- 相同数据即使文件名不同，也通过忽略 sourceFile、quantity、amount 等批次证据字段进行语义去重。
+- 云端已收录后，新电脑初始化知识库会从 Cloudflare D1 拉取规则；同一部署环境下可跨设备恢复。
+- 继续执行 CN-only；FACT-FR / FR 来源不参与学习。
+
 ## v10.1.5 — 2026-08-13 00:20 (Europe/Paris)
 - 修复 ZIP 被当成 XLSX 直接解析导致全部学习失败：现在先安全解包，再逐个学习内部 XLSX。
 - 支持一次选择多个 XLSX、多个 ZIP，以及 ZIP 中的 XLSX；支持最多 2 层嵌套 ZIP。
