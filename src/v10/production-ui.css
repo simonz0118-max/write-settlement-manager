@@ -1,3 +1,47 @@
 /* WRITE V10.0.3 production UI cleanup */
 #v85MultiDatasetPanel,#v86BatchScorePanel,#v87ClosurePanel,#v88AutoExtractPanel,#v9ProductionPanel,#v8ShadowPanel,#v8TrainingPanel,#v8ZeroLossPanel{display:none!important}
 .v10-quality-panel .v8-audit-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.v10-quality-panel .v8-audit-grid article{min-width:0;padding:14px}.v10-quality-panel .v8-audit-grid strong{font-size:18px;overflow-wrap:anywhere}@media(max-width:900px){.v10-quality-panel .v8-audit-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:560px){.v10-quality-panel .v8-audit-grid{grid-template-columns:1fr}}
+/* WRITE V10.0.8 — sidebar usage tip overflow hotfix */
+.sidebar,
+.sidebar .side-tip,
+.sidebar .side-tip ol,
+.sidebar .side-tip li{
+  min-width:0;
+  max-width:100%;
+}
+.sidebar .side-tip{
+  overflow:hidden;
+}
+.sidebar .side-tip ol{
+  padding-left:18px;
+  padding-right:2px;
+  margin:8px 0 0;
+  width:100%;
+}
+.sidebar .side-tip li{
+  white-space:normal;
+  overflow-wrap:anywhere;
+  word-break:break-word;
+  line-height:1.55;
+}
+.sidebar .side-tip li + li{
+  margin-top:3px;
+}
+/* Long format lists such as XLSX/XLS/CSV/TSV/JSON/XML/ZIP/PDF/OCR
+   must wrap inside the card instead of crossing the border. */
+.sidebar .side-tip b,
+.sidebar .side-tip span,
+.sidebar .side-tip code{
+  max-width:100%;
+  overflow-wrap:anywhere;
+  word-break:break-word;
+}
+@media(max-height:760px){
+  .sidebar .side-tip{
+    padding:10px 11px;
+  }
+  .sidebar .side-tip ol{
+    font-size:10px;
+    line-height:1.45;
+  }
+}

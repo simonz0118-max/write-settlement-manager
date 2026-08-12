@@ -1,32 +1,36 @@
 {
   "current": {
-    "version": "10.0.6",
-    "time": "2026-08-12 18:10",
-    "title": "FACT Grid Integrity Hotfix",
+    "version": "10.0.8",
+    "time": "2026-08-12 20:32",
+    "title": "Sidebar Usage Tip Overflow Hotfix",
     "sections": [
       {
-        "label": "FACT 表格完整性",
+        "label": "UI 修复",
         "items": [
-          "修复 E:H 动态数据单元格底色和边框缺失。",
-          "样式索引改按实际 cellXfs 数量计算，不再相信模板错误的 count 声明。"
+          "左下角使用提示长文本现在会在卡片内部自动换行。",
+          "不再越过边框或与主内容重叠。"
         ]
       },
       {
-        "label": "Golden 模板",
+        "label": "业务逻辑",
         "items": [
-          "红字样式从真实 style 47/49 克隆，只改字体颜色。",
-          "灰色底色、thin 边框、字体、对齐、数字格式全部保留。"
-        ]
-      },
-      {
-        "label": "正式导出",
-        "items": [
-          "继续一次下载一个 ZIP：会计统计 Excel + 全部 FACT Excel。"
+          "未修改订单统计、FACT、会计报表、ZIP导出、学习规则。"
         ]
       }
     ]
   },
   "history": [
+    {
+      "version": "10.0.8",
+      "time": "2026-08-12 20:32",
+      "title": "Sidebar Usage Tip Overflow Hotfix",
+      "items": [
+        "修复左下角“使用提示”中的长格式列表文字越过卡片边框的问题。",
+        "对 side-tip 列表启用 overflow-wrap:anywhere 与 word-break:break-word，长字符串自动在卡片内部换行。",
+        "保持左侧导航宽度和整体 UI 结构不变，仅修复使用提示卡片内部排版。",
+        "针对较矮窗口同步缩小使用提示内边距与行距，避免底部内容被裁切。"
+      ]
+    },
     {
       "version": "10.0.6",
       "time": "2026-08-12 18:10",
