@@ -1,3 +1,11 @@
+## v10.2.1 — 2026-08-13 01:12 (Europe/Paris)
+- 修复左侧“规则学习”在未导入订单或 appViews 隐藏状态下无法进入的问题；点击后强制打开规则学习工作区并读取 D1。
+- 规则学习页增加 sticky 云端状态、搜索栏和表头，控制高度与横向滚动，修复窄屏/深色模式下的视觉错位。
+- 历史更新改为 canonical release history：只从 release-meta 权威数据重建，按语义版本号倒序显示，不再受旧 DOM 顺序影响。
+- 当前版本统一锁定为 V10.2.1；品牌标识、历史页当前版本、release-history.json、release-meta.js、CHANGELOG 一致。
+- 保留 V10.2.0 云端规则检索、单独/批量修改删除、软删除及 expectedUpdatedAt 多设备并发保护。
+- 新增发布硬门：历史元数据当前版本必须等于页面版本，10.2.1 必须为 history 第一条。
+
 ## v10.2.0 — 2026-08-13 00:49 (Europe/Paris)
 - 左侧“规则学习”升级为云端知识库管理中心，直接读取 Cloudflare D1 权威规则。
 - 产品规则按 SKU 优先、产品名兜底聚合，每个产品只显示一条；详情展开显示 REVIEWED_PRODUCT、COST_MODEL、关联 REVIEWED_FACT 等全部规则。

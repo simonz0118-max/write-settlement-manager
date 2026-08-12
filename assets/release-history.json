@@ -1,25 +1,36 @@
 {
   "current": {
-    "version": "10.2.0",
-    "time": "2026-08-13 00:49",
-    "title": "Cloud Rule Learning Center",
+    "version": "10.2.1",
+    "time": "2026-08-13 01:12",
+    "title": "Rule Learning Access + Canonical Release History",
     "sections": [
       {
-        "label": "云端规则学习",
+        "label": "修复",
         "items": [
-          "左侧“规则学习”升级为云端知识库管理中心，直接读取 Cloudflare D1 权威规则。",
-          "产品规则按 SKU 优先、产品名兜底聚合，每个产品只显示一条；详情展开显示 REVIEWED_PRODUCT、COST_MODEL、关联 REVIEWED_FACT 等全部规则。",
-          "支持单关键词或逗号/换行分隔的多关键词模糊查找，覆盖 SKU、产品名、Family、Role、国家、仓别、币种、Description 和原始 payload。",
-          "支持单产品修改、单规则 JSON 修改、单产品删除、单规则删除；修改后自动强制同步本机知识库。",
-          "支持多选产品批量修改 Family/Role、批量删除产品学习规则；共享 FACT 不随产品批量删除，避免误伤套餐规则。",
-          "云端修改使用 expectedUpdatedAt 乐观锁；若中国/法国两台设备同时修改同一规则，旧页面收到 409 并要求刷新，避免后写覆盖。",
-          "所有删除均采用云端软删除 deleted=1，并通过既有 D1 sync 传播到其他设备。",
-          "保留 V10.1.8 稳定批量同步、CN-only、幂等学习、ZIP 批量学习与确定性冲突去重。"
+          "修复左侧“规则学习”在未导入订单或 appViews 隐藏状态下无法进入的问题；点击后强制打开规则学习工作区并读取 D1。",
+          "规则学习页增加 sticky 云端状态、搜索栏和表头，控制高度与横向滚动，修复窄屏/深色模式下的视觉错位。",
+          "历史更新改为 canonical release history：只从 release-meta 权威数据重建，按语义版本号倒序显示，不再受旧 DOM 顺序影响。",
+          "当前版本统一锁定为 V10.2.1；品牌标识、历史页当前版本、release-history.json、release-meta.js、CHANGELOG 一致。",
+          "保留 V10.2.0 云端规则检索、单独/批量修改删除、软删除及 expectedUpdatedAt 多设备并发保护。",
+          "新增发布硬门：历史元数据当前版本必须等于页面版本，10.2.1 必须为 history 第一条。"
         ]
       }
     ]
   },
   "history": [
+    {
+      "version": "10.2.1",
+      "time": "2026-08-13 01:12",
+      "title": "Rule Learning Access + Canonical Release History",
+      "items": [
+        "修复左侧“规则学习”在未导入订单或 appViews 隐藏状态下无法进入的问题；点击后强制打开规则学习工作区并读取 D1。",
+        "规则学习页增加 sticky 云端状态、搜索栏和表头，控制高度与横向滚动，修复窄屏/深色模式下的视觉错位。",
+        "历史更新改为 canonical release history：只从 release-meta 权威数据重建，按语义版本号倒序显示，不再受旧 DOM 顺序影响。",
+        "当前版本统一锁定为 V10.2.1；品牌标识、历史页当前版本、release-history.json、release-meta.js、CHANGELOG 一致。",
+        "保留 V10.2.0 云端规则检索、单独/批量修改删除、软删除及 expectedUpdatedAt 多设备并发保护。",
+        "新增发布硬门：历史元数据当前版本必须等于页面版本，10.2.1 必须为 history 第一条。"
+      ]
+    },
     {
       "version": "10.2.0",
       "time": "2026-08-13 00:49",
@@ -192,18 +203,6 @@
       "title": "Accounting Golden Final Aggregation",
       "items": [
         "最终 FACT 按完整人工会计 Configuration 唯一归并。"
-      ]
-    },
-    {
-      "version": "10.0.0-rc1",
-      "time": "2026-08-12 13:27",
-      "title": "Universal Order-to-Invoice Compiler RC1",
-      "items": [
-        "CanonicalOrder → BillableAtom → Accounting IR → Pricing → Invoice Compiler 分层架构。",
-        "修复 paid cadeau/free gift、多实体组合、SERVICE/FEE、currency 隔离和五重守恒五个 P0。",
-        "新增 STRICT_FORMAL / ALWAYS_ISSUE、MANUAL_ONLY 审计入口与 V9 回滚。",
-        "输入扩展到 CSV/TSV/JSON/XML/XLS，并提供 PDF 文本与本地 OCR 适配路径。",
-        "RC1 默认 canary 0%，等待独立生产验收后再逐级接管。"
       ]
     },
     {
@@ -1091,6 +1090,18 @@
       "items": [
         "建立真实 WRITE 订单工作簿的稳定本地浏览器导入流程。",
         "加入 GitHub 发布与 Cloudflare Pages 部署脚本。"
+      ]
+    },
+    {
+      "version": "10.0.0-rc1",
+      "time": "2026-08-12 13:27",
+      "title": "Universal Order-to-Invoice Compiler RC1",
+      "items": [
+        "CanonicalOrder → BillableAtom → Accounting IR → Pricing → Invoice Compiler 分层架构。",
+        "修复 paid cadeau/free gift、多实体组合、SERVICE/FEE、currency 隔离和五重守恒五个 P0。",
+        "新增 STRICT_FORMAL / ALWAYS_ISSUE、MANUAL_ONLY 审计入口与 V9 回滚。",
+        "输入扩展到 CSV/TSV/JSON/XML/XLS，并提供 PDF 文本与本地 OCR 适配路径。",
+        "RC1 默认 canary 0%，等待独立生产验收后再逐级接管。"
       ]
     }
   ]
