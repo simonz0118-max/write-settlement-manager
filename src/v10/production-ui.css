@@ -1,0 +1,3 @@
+/* WRITE V10.0.2 production UI cleanup */
+#v85MultiDatasetPanel,#v86BatchScorePanel,#v87ClosurePanel,#v88AutoExtractPanel,#v9ProductionPanel,#v8ShadowPanel,#v8TrainingPanel,#v8ZeroLossPanel{display:none!important}
+.v10-quality-panel .v8-audit-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.v10-quality-panel .v8-audit-grid article{min-width:0;padding:14px}.v10-quality-panel .v8-audit-grid strong{font-size:18px;overflow-wrap:anywhere}@media(max-width:900px){.v10-quality-panel .v8-audit-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:560px){.v10-quality-panel .v8-audit-grid{grid-template-columns:1fr}}

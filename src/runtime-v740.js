@@ -122,11 +122,11 @@ assignGlobalFunction('generatedGenericFactRowsForWorkbook',function(workbookName
 });
 
 /* ---------- 5. FACT unified renderer: styles copied from the user's historical FACT ---------- */
-// FACT_TEMPLATE_UNIFIED_V2 currently has 89 cellXfs (0..88). The appended
-// production review format is therefore style 89. Keep this explicit so blank
-// price cells are emitted as real, fully bordered cells instead of falling
-// back to one of the template's sparse placeholder formats.
-const PRICE_REVIEW_STYLE=89;
+// Production review style is appended to the fixed Golden FACT template at
+// runtime. The style index MUST be derived from the template's actual cellXfs
+// count instead of being hard-coded: V10.0.1 incorrectly expected 89 while
+// the shipped Golden template contains 87 cellXfs (0..86).
+let PRICE_REVIEW_STYLE=87;
 function unifiedFactCountryRow(r,rowNo){
   const country=String(r?.country||'').trim()||'GLOBAL';
   return `<row r="${rowNo}" s="7" customFormat="1" ht="15" customHeight="1" spans="1:11"><c r="A${rowNo}" s="43"/>${xmlTextCell(`B${rowNo}`,44,country)}<c r="C${rowNo}" s="44"/><c r="D${rowNo}" s="45"/><c r="E${rowNo}" s="44"/><c r="F${rowNo}" s="44"/><c r="G${rowNo}" s="44"/><c r="H${rowNo}" s="44"/></row>`;
@@ -247,16 +247,26 @@ function patchUnifiedFactTemplateSheetXml(xml,data,workbookName){
 window.WRITE_FACT_V731={patchSheet:patchUnifiedFactTemplateSheetXml};
 
 function ensureProductionRedStyleXml(xml){
-  if(/WRITE_V10_PRICE_REVIEW/.test(xml))return xml;
   const fontMatch=/<fonts count="(\d+)">/.exec(xml),xfMatch=/<cellXfs count="(\d+)">/.exec(xml);
   if(!fontMatch||!xfMatch)throw new Error('统一 FACT 样式表结构异常');
-  const fontId=Number(fontMatch[1]),xfIndex=Number(xfMatch[1]);
-  if(xfIndex!==PRICE_REVIEW_STYLE)throw new Error(`统一 FACT 样式基线不符：期望 ${PRICE_REVIEW_STYLE}，实际 ${xfIndex}`);
+  const fontId=Number(fontMatch[1]),xfCount=Number(xfMatch[1]);
+  if(/WRITE_V10_PRICE_REVIEW/.test(xml)){
+    PRICE_REVIEW_STYLE=Math.max(0,xfCount-1);
+    return xml;
+  }
+  PRICE_REVIEW_STYLE=xfCount;
   const font='<font><name val="Aptos Narrow"/><sz val="10"/><color rgb="FF9C0006"/><family val="2"/><scheme val="minor"/></font><!-- WRITE_V10_PRICE_REVIEW -->';
   const xf=`<xf numFmtId="177" fontId="${fontId}" fillId="13" borderId="9" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf>`;
-  return xml.replace(`<fonts count="${fontId}">`,`<fonts count="${fontId+1}">`).replace('</fonts>',font+'</fonts>').replace(`<cellXfs count="${xfIndex}">`,`<cellXfs count="${xfIndex+1}">`).replace('</cellXfs>',xf+'</cellXfs>');
+  return xml
+    .replace(`<fonts count="${fontId}">`,`<fonts count="${fontId+1}">`)
+    .replace('</fonts>',font+'</fonts>')
+    .replace(`<cellXfs count="${xfCount}">`,`<cellXfs count="${xfCount+1}">`)
+    .replace('</cellXfs>',xf+'</cellXfs>');
 }
-window.WRITE_FACT_V10_STYLES={ensureProductionRedStyleXml,redStyleIndex:PRICE_REVIEW_STYLE};
+window.WRITE_FACT_V10_STYLES={
+  ensureProductionRedStyleXml,
+  get redStyleIndex(){return PRICE_REVIEW_STYLE;}
+};
 window.WRITE_V731_RUNTIME={
   ok:true,
   version:'7.3.1',

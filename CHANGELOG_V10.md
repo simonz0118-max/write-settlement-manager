@@ -1,3 +1,10 @@
+## V10.0.2 — Export & Production UI Hotfix
+
+- 修复 Golden FACT 样式索引硬编码：从模板真实 cellXfs count 动态追加红色审核样式。
+- 当前 Golden 模板 cellXfs=87，新增审核样式索引=87，追加后 count=88。
+- 移除生产首页 V8/V9 Shadow 调试面板；历史学习逻辑保留。
+- V10 数据质量面板仅显示在“数据质量”页。
+
 # WRITE Settlement Manager V10 — Changelog
 
 ## 10.0.1 — 2026-08-12

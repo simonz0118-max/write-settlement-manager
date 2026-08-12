@@ -1,16 +1,15 @@
-WRITE Settlement Manager V10.0 生产版
+WRITE Settlement Manager V10.0.2 最终修正版
 
-双击“一键部署V10.0生产版.command”即可：
-1. 本地执行核心合同、模板合同与 5 万单压力测试；
-2. 克隆 GitHub main 并覆盖完整 V10 文件；
-3. 提交并推送 GitHub；
-4. 部署 Cloudflare Pages；
-5. 在线确认 data-release=10.0.0。
+只需要双击：
+  一键部署V10.0.2最终修正版.command
 
-生产规则：
-- 一张 FACT 包含全部国家，按“国家 + 完整产品组合”分组；不同仓库不拆票。
-- 订单数量是包裹数；赠品专单不计；同订单不同运单分别计包裹并标红。
-- 精确重复记录去重；冲突记录保留并标红。
-- 产品正常统计；所有成本、运费、单价、金额和总金额留空并标红。
-- 未知产品保留审计原名/SKU，FACT 使用保守缩写并标红。
-- 输出固定模板 Excel、同内容 PDF 和完整 audit JSON。
+本包修复三项：
+1. 修复旧部署脚本把 V10.0.2 错误检查为 data-release="10.0.1" 的假失败。
+2. 保留 V10.0.2 FACT 导出动态 cellXfs 样式基线修复，不再硬编码 style 89。
+3. 保留生产 UI 清理，旧 V8/V9 Shadow 面板不再污染首页。
+
+脚本会自动：
+本地测试 → 版本一致性 → GitHub main → 二次测试 → Git push → Cloudflare Pages → pages.dev 与 f.neovora.co 双重线上验证。
+
+如需只检查部署包、不真正部署，可在终端运行：
+WRITE_DEPLOY_DRY_RUN=1 WRITE_NONINTERACTIVE=1 ./一键部署V10.0.2最终修正版.command

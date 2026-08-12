@@ -1,5 +1,5 @@
 /* WRITE V10 production exports: one fixed-layout FACT XLSX + matching PDF + audit JSON. */
-(function(g){'use strict';const VERSION='10.0.1';
+(function(g){'use strict';const VERSION='10.0.2';
 function blobDownload(blob,name){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000)}
 async function goldenFactForRows(workbookName,rows){if(typeof g.buildGeneratedFactWorkbook!=='function')throw new Error('GOLDEN_FACT_BUILDER_UNAVAILABLE');const oldGeneric=g.generatedGenericFactRowsForWorkbook,oldGenerated=g.generatedFactRowsForWorkbook;try{g.generatedGenericFactRowsForWorkbook=()=>rows;g.generatedFactRowsForWorkbook=g.generatedGenericFactRowsForWorkbook;return await g.buildGeneratedFactWorkbook(workbookName)}finally{g.generatedGenericFactRowsForWorkbook=oldGeneric;g.generatedFactRowsForWorkbook=oldGenerated}}
 async function artifactsForWorkbook(workbookName){

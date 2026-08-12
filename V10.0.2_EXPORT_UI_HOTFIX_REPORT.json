@@ -1,0 +1,22 @@
+{
+  "version": "10.0.2",
+  "status": "HOTFIX_READY",
+  "export": {
+    "goldenCellXfsBefore": 87,
+    "reviewStyleIndex": 87,
+    "goldenCellXfsAfter": 88,
+    "strategy": "dynamic-style-index"
+  },
+  "ui": {
+    "legacyDebugPanelsRemoved": true,
+    "qualityPanelDashboardFallbackRemoved": true
+  },
+  "rollback": "V9.0",
+  "deploymentGateHotfix": "PASS",
+  "deploymentScript": "一键部署V10.0.2最终修正版.command",
+  "fixedFalseVersionCheck": "data-release 10.0.1 -> dynamic EXPECT=10.0.2",
+  "onlineVerification": [
+    "write-settlement-manager.pages.dev",
+    "f.neovora.co"
+  ]
+}
