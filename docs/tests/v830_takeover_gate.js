@@ -1,0 +1,1 @@
+const fs=require('fs'),assert=require('assert');const m=JSON.parse(fs.readFileSync(process.argv[2],'utf8'));assert.equal(m.formalFactTakeover,false);assert.equal(m.requirements.zeroLoss,true);assert.equal(m.requirements.classificationFidelity,true);assert.equal(m.requirements.multiBatchHistoricalFidelity,false);console.log('V8.3 takeover gate PASS: formal takeover remains OFF');

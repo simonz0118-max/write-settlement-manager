@@ -1,0 +1,53 @@
+{
+  "status": "PASS",
+  "baseline": "V8.3.0",
+  "patchIdempotency": "PASS",
+  "productionFactEngine": "V7.5.9",
+  "productionFactPreserved": true,
+  "zeroLoss": {
+    "sourceRecords": 162,
+    "productRecords": 260,
+    "validQuantity": 289,
+    "lostOrders": 0,
+    "lostProducts": 0,
+    "lostQuantity": 0
+  },
+  "classificationFidelity": {
+    "countryRoleConfigurationQuantity": "49/49"
+  },
+  "traceFidelity": {
+    "factRowsSourceBacked": "49/49",
+    "billableMainOrders": 161,
+    "placeholderAuditOnlyOrders": 1,
+    "duplicateItemRoutes": 0,
+    "traceErrors": 0
+  },
+  "formalFactTakeover": false,
+  "fixtureTests": [
+    {
+      "cmd": "node --check /mnt/data/v831_patch_fixture/src/v8/semantic-core.js",
+      "exit": 0,
+      "output": ""
+    },
+    {
+      "cmd": "node --check /mnt/data/v831_patch_fixture/src/v8/trace-fidelity.js",
+      "exit": 0,
+      "output": ""
+    },
+    {
+      "cmd": "node /mnt/data/v831build/docs/tests/v820_real_batch_zero_loss.js /mnt/data/v831_patch_fixture/src/v8/semantic-core.js /mnt/data/v831build/src/v8/zero-loss-engine.js /mnt/data/v831build/docs/tests/V820_ZERO_LOSS_1001_1162_GOLDEN.json",
+      "exit": 0,
+      "output": "V8.2 REAL BATCH ZERO-LOSS PASS: orders=162 items=260 qty=289"
+    },
+    {
+      "cmd": "node /mnt/data/v831build/docs/tests/v830_classification_fidelity_golden.js /mnt/data/v831_patch_fixture/src/v8/semantic-core.js /mnt/data/v831_patch_fixture/src/v8/fidelity-evaluator.js /mnt/data/v831build/docs/tests/V820_ZERO_LOSS_1001_1162_GOLDEN.json",
+      "exit": 0,
+      "output": "V8.3 CLASSIFICATION FIDELITY GOLDEN PASS: 49/49 Country+Role+Configuration+Quantity"
+    },
+    {
+      "cmd": "node /mnt/data/v831build/docs/tests/v831_trace_fidelity_golden.js /mnt/data/v831_patch_fixture/src/v8/semantic-core.js /mnt/data/v831_patch_fixture/src/v8/trace-fidelity.js /mnt/data/v831build/docs/tests/V820_ZERO_LOSS_1001_1162_GOLDEN.json",
+      "exit": 0,
+      "output": "V8.3.1 TRACE FIDELITY GOLDEN PASS: fact=49/49 billableOrders=161 placeholder=1"
+    }
+  ]
+}

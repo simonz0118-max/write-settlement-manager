@@ -1,0 +1,55 @@
+{
+  "status": "PASS",
+  "tests": [
+    {
+      "cmd": "node --check /mnt/data/v810build/src/v8/semantic-core.js",
+      "exit": 0,
+      "output": ""
+    },
+    {
+      "cmd": "node --check /mnt/data/v810build/src/v8/historical-training.js",
+      "exit": 0,
+      "output": ""
+    },
+    {
+      "cmd": "node --check /mnt/data/v810build/src/v8/training-runtime.js",
+      "exit": 0,
+      "output": ""
+    },
+    {
+      "cmd": "node /mnt/data/v810build/docs/tests/v800_semantic_core.js /mnt/data/v810build/src/v8/semantic-core.js",
+      "exit": 0,
+      "output": "V8.0 semantic core PASS"
+    },
+    {
+      "cmd": "node /mnt/data/v810build/docs/tests/v800_rule_priority.js /mnt/data/v810build/src/v8/semantic-core.js",
+      "exit": 0,
+      "output": "V8.0 rule priority/scope/conflict PASS"
+    },
+    {
+      "cmd": "node /mnt/data/v810build/docs/tests/v800_manual_semantics.js /mnt/data/v810build/src/v8/semantic-core.js /mnt/data/v810build/docs/tests/MANUAL_FACT_1001_1162_GOLDEN.json",
+      "exit": 0,
+      "output": "V8.0 manual semantic inference PASS"
+    },
+    {
+      "cmd": "node /mnt/data/v810build/docs/tests/v810_training_gate.js /mnt/data/v810build/src/v8/historical-training.js",
+      "exit": 0,
+      "output": "V8.1 training safety gate PASS"
+    },
+    {
+      "cmd": "node /mnt/data/v810build/docs/tests/v810_candidate_conflict.js /mnt/data/v810build/src/v8/historical-training.js",
+      "exit": 0,
+      "output": "V8.1 candidate merge/conflict PASS"
+    },
+    {
+      "cmd": "node /mnt/data/v810build/docs/tests/v810_registry_contract.js /mnt/data/v810build/data/v8/historical-training-registry.json",
+      "exit": 0,
+      "output": "V8.1 historical registry contract PASS"
+    },
+    {
+      "cmd": "node /mnt/data/v810build/docs/tests/v810_seed_safety.js /mnt/data/v810build/data/v8/verified-seed-rules.json",
+      "exit": 0,
+      "output": "V8.1 verified seed safety PASS"
+    }
+  ]
+}

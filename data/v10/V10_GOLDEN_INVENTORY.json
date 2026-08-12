@@ -1,0 +1,448 @@
+{
+  "version": "10.0.0-rc1",
+  "unique": 55,
+  "complete": 52,
+  "partial": 3,
+  "items": [
+    {
+      "evidenceFile": "E001.xlsx",
+      "sha256": "2e128de74642501526ac435949c09e3e1a3595453a295fdc7797f6efb4024ded",
+      "group": "YD",
+      "originalFile": "FACT-#10392_Hugo_23-06-26(1841-2361)USD (1).xlsx",
+      "partial": false,
+      "learningAllowed": true
+    },
+    {
+      "evidenceFile": "E002.xlsx",
+      "sha256": "a656802a2b182a572dcaf2a3ef02e3bfd601a39f2da3e010d758d8c82a098f14",
+      "group": "YD",
+      "originalFile": "FACT 10386_jelly-pure_23_06_26 (1195-1466)(1).xlsx",
+      "partial": false,
+      "learningAllowed": true
+    },
+    {
+      "evidenceFile": "E003.xlsx",
+      "sha256": "d8de873a865697994edfa919852a283cc3659ae1512b37701dce22707379f79c",
+      "group": "YD",
+      "originalFile": "FACT- 10404_Ludovic_08_07_26(2210-2225)(3).xlsx",
+      "partial": false,
+      "learningAllowed": true
+    },
+    {
+      "evidenceFile": "E004.xlsx",
+      "sha256": "4300235e8fb4ee336e35a56f58f1b5f7e1717c772c05053dbdb73c24fd7ef33c",
+      "group": "YD",
+      "originalFile": "FACT- 10404_Ludovic_08_07_26(2210-2225)(1).xlsx",
+      "partial": true,
+      "learningAllowed": false
+    },
+    {
+      "evidenceFile": "E005.xlsx",
+      "sha256": "eb8ec5849991edb9b24cadf41233d6ddf9b636cc95ea398035afe5ca6ec7c74a",
+      "group": "YD",
+      "originalFile": "FACT- 10311_Melany_11_05_26 ∩╝ê10110-10126∩╝ë(1).xlsx",
+      "partial": false,
+      "learningAllowed": true
+    },
+    {
+      "evidenceFile": "E006.xlsx",
+      "sha256": "4e0eae81109cf2b45b2e53564095d07cfd50f7f3997d53b34829e14d95944ff5",
+      "group": "PENCIL",
+      "originalFile": "FACT- 10262_write-store_16_03_26(26807-27159).xlsx",
+      "partial": true,
+      "learningAllowed": false
+    },
+    {
+      "evidenceFile": "E007.xlsx",
+      "sha256": "2be970f96f131c90240ab05f41720982843c6ee94eabc3d74a5a338e5773a00e",
+      "group": "PENCIL",
+      "originalFile": "FACT- 10112_ Cmd Pro 1012.xlsx",
+      "partial": false,
+      "learningAllowed": true
+    },
+    {
+      "evidenceFile": "E008.xlsx",
+      "sha256": "0f84dd159a60e9a09b2a4314b8c1841fac13f4eeb2a892f95f5d1f0425c76dd1",
+      "group": "PENCIL",
+      "originalFile": "FACT- 10102_write-store_13_12_25(20314-24651).xlsx",
+      "partial": false,
+      "learningAllowed": true
+    },
+    {
+      "evidenceFile": "E009.xlsx",
+      "sha256": "7ea0daf24e481c8355fcbb9280cd94c61895b71b1986f3cd667d5a817dbc6669",
+      "group": "PENCIL",
+      "originalFile": "FACT- 10312_write-store_25_04_26 E╠üchantillon.xlsx",
+      "partial": true,
+      "learningAllowed": false
+    },
+    {
+      "evidenceFile": "E010.xlsx",
+      "sha256": "5a350f551f8722c75ba11100fac47bcffac659389b521fa9d39a7a7021bc3145",
+      "group": "PENCIL",
+      "originalFile": "FACT- 10305_write-store_23_03_26(27160-27445).xlsx",
+      "partial": false,
+      "learningAllowed": true
+    },
+    {
+      "evidenceFile": "E011.xlsx",
+      "sha256": "3230c616d256d94867ac2519d7e9d7324c0e393d81551bdfd884028c07152629",
+      "group": "PENCIL",
+      "originalFile": "FACT- 10359_write-store_30_05_26(27446-27637).xlsx",
+      "partial": false,
+      "learningAllowed": true
+    },
+    {
+      "evidenceFile": "E012.xlsx",
+      "sha256": "985914b533d50ac95974cf1f42631942feb1cde58191299f606ed95c1dd32649",
+      "group": "PENCIL",
+      "originalFile": "FACT- 10105_ Cmd Pro 1011_1013.xlsx",
+      "partial": false,
+      "learningAllowed": true
+    },
+    {
+      "evidenceFile": "E013.xlsx",
+      "sha256": "59de61e25c23e6c1cdda793877b7871c17872ce8636f6475022f4cf55c8fc64a",
+      "group": "PENCIL",
+      "originalFile": "FACT- 10400_write-store_05_07_26(27638-28002).xlsx",
+      "partial": false,
+      "learningAllowed": true
+    },
+    {
+      "evidenceFile": "E014.xlsx",
+      "sha256": "cb30055178e694683de083efcb74b06e3024a7881ef0f8d3155f47e944c7c981",
+      "group": "PENCIL",
+      "originalFile": "FACT- 10361_ Cmd Pro 1018-1019-1020.xlsx",
+      "partial": false,
+      "learningAllowed": true
+    },
+    {
+      "evidenceFile": "E015.xlsx",
+      "sha256": "8104d9e3c2a155ef347d01ec956ecf1dc16e38cd9f3583c486d8daa7d4a36003",
+      "group": "PENCIL",
+      "originalFile": "FACT- 10080_ Cmd Pro 1007_1008_1010.xlsx",
+      "partial": false,
+      "learningAllowed": true
+    },
+    {
+      "evidenceFile": "E016.xlsx",
+      "sha256": "d0e2a3b529ce2d96fc1ddb8cce201712fbb093c329c873ff168e1b5d9a7ae816",
+      "group": "PENCIL",
+      "originalFile": "Mise a╠Ç jour FACT- 10231_write-store_21_02_26(26533-26806).xlsx",
+      "partial": false,
+      "learningAllowed": true
+    },
+    {
+      "evidenceFile": "E017.xlsx",
+      "sha256": "2a12ae71e0e40c4fcf1cb5d2fb68d03bf3b351a70525736af70d15d75e8f13c5",
+      "group": "PENCIL",
+      "originalFile": "FACT- 10034_write-store_15_11_25(15224-17505).xlsx",
+      "partial": false,
+      "learningAllowed": true
+    },
+    {
+      "evidenceFile": "E018.xlsx",
+      "sha256": "78f02e76145404e81c8891499fa1d9343758a26ac4a003a0df4e310004740b7e",
+      "group": "PENCIL",
+      "originalFile": "FACT- 10066_ Cmd Pro 1005_28_11_25.xlsx",
+      "partial": false,
+      "learningAllowed": true
+    },
+    {
+      "evidenceFile": "E019.xlsx",
+      "sha256": "94b9451eb6b264ac9653ef8f265acaf888480b091e328257711f834112614d31",
+      "group": "PENCIL",
+      "originalFile": "FACT- 10063_write-store_27_11_25(17506-20313).xlsx",
+      "partial": false,
+      "learningAllowed": true
+    },
+    {
+      "evidenceFile": "E020.xlsx",
+      "sha256": "b1eb1adb3518ca248d539b12c7a632d6fca1af79c3d9f3943b26d2a5f0fd109f",
+      "group": "PENCIL",
+      "originalFile": "FACT- 10230_ Cmd Pro 1016.xlsx",
+      "partial": false,
+      "learningAllowed": true
+    },
+    {
+      "evidenceFile": "E021.xlsx",
+      "sha256": "38462748b18aa7361ae0bd38ad8288dd9dd56fe797f724b365c2ba1555b1b5c4",
+      "group": "PENCIL",
+      "originalFile": "FACT- 10143_write-store_10_01_26(24652-26171).xlsx",
+      "partial": false,
+      "learningAllowed": true
+    },
+    {
+      "evidenceFile": "E022.xlsx",
+      "sha256": "da4e82667efeddb9c111b8ccc192f68a57f8a0865af5ca3704c7dbbc1448c184",
+      "group": "PENCIL",
+      "originalFile": "FACT- 10320_ Cmd Pro 1017.xlsx",
+      "partial": false,
+      "learningAllowed": true
+    },
+    {
+      "evidenceFile": "E023.xlsx",
+      "sha256": "5befe6aa6099c70e17eeb9fff1169d3140469d611d7f4b895b11c809104187de",
+      "group": "PENCIL",
+      "originalFile": "FACT- 10104_write-store_14_12_25 E╠üchantillon.xlsx",
+      "partial": false,
+      "learningAllowed": true
+    },
+    {
+      "evidenceFile": "E024.xlsx",
+      "sha256": "6b59fdafaf4d494249ce096a428c7cebda5d784bacbd4e19615cbea007b21762",
+      "group": "PENCIL",
+      "originalFile": "FACT- 10192_write-store_04_02_26(26172-26532).xlsx",
+      "partial": false,
+      "learningAllowed": true
+    },
+    {
+      "evidenceFile": "E025.xlsx",
+      "sha256": "b33f03fde920f3da7dfd6b16cd8d2f5c354eaa4cbe79084951015e9baf091307",
+      "group": "PENCIL",
+      "originalFile": "FACT- 10145_ Cmd Pro 1014_1015.xlsx",
+      "partial": false,
+      "learningAllowed": true
+    },
+    {
+      "evidenceFile": "E026.xlsx",
+      "sha256": "6f297cdaafa67beba3e772e6fe90ccb4b2f340ce05fdf1133d27272e8c2015e6",
+      "group": "PENCIL",
+      "originalFile": "FACT- 10048_ Cmd Pro EDIL_18_11_25(15668-15669).xlsx",
+      "partial": false,
+      "learningAllowed": true
+    },
+    {
+      "evidenceFile": "E027.xlsx",
+      "sha256": "4e082b2d3d9cc3eb19e3c64e7a69d7c91662a438a51dc3e8f724b82d2262996e",
+      "group": "SOAP",
+      "originalFile": "FACT- 10005_Thibault_13-10-25(1082-1116).xlsx",
+      "partial": false,
+      "learningAllowed": true
+    },
+    {
+      "evidenceFile": "E028.xlsx",
+      "sha256": "5a9266189f53d6d594c4db6038a3e52b4ca2793148986c90e6805bee8b98cc5d",
+      "group": "SOAP",
+      "originalFile": "FACT- 10001_Thibault_16-09-25(1001-1038).xlsx",
+      "partial": false,
+      "learningAllowed": true
+    },
+    {
+      "evidenceFile": "E029.xlsx",
+      "sha256": "43e51b9bff7d9f4f56eb389e824cef08276d665837ad81a1f3693dd58dd935d9",
+      "group": "SOAP",
+      "originalFile": "FACT- 10384_thibault_19-06-26(13199-14062).xlsx",
+      "partial": false,
+      "learningAllowed": true
+    },
+    {
+      "evidenceFile": "E030.xlsx",
+      "sha256": "93ee4ba0cdf1d818407831fa03d912424bca1b2586d5b90e0b4d65619413d159",
+      "group": "SOAP",
+      "originalFile": "FACT- 10422+10423_thibault_20-07-26( 16669 - 17254).xlsx",
+      "partial": false,
+      "learningAllowed": true
+    },
+    {
+      "evidenceFile": "E031.xlsx",
+      "sha256": "a754533656cae600552e4670dee56a5fcc6dc213da8deca5aa869f5c38af2557",
+      "group": "SOAP",
+      "originalFile": "FACT- 10006_Thibault_18-10-25(1117-1123).xlsx",
+      "partial": false,
+      "learningAllowed": true
+    },
+    {
+      "evidenceFile": "E032.xlsx",
+      "sha256": "1aec8fa24e48b4a065848d0871568e951e6b6a1b1c6d32cb5c12ee8395bfcf0d",
+      "group": "SOAP",
+      "originalFile": "FACT- 10268_Thibault_17-03-26(2395-3005).xlsx",
+      "partial": false,
+      "learningAllowed": true
+    },
+    {
+      "evidenceFile": "E033.xlsx",
+      "sha256": "61b269e8a2e4e7ea99eccddc9b44a288b51dc4aebc5a8034b1e736fd7554a485",
+      "group": "SOAP",
+      "originalFile": "FACT- 10414_thibault_13-07-26( 15326 - 16668).xlsx",
+      "partial": false,
+      "learningAllowed": true
+    },
+    {
+      "evidenceFile": "E034.xlsx",
+      "sha256": "6f3a9df770f0139813774f2242e3bf5d87fab2dc3fa6b8e36afe61d4df43a3ce",
+      "group": "SOAP",
+      "originalFile": "FACT- 10448+10449_thibault_08-08-26( 18206 - 18722).xlsx",
+      "partial": false,
+      "learningAllowed": true
+    },
+    {
+      "evidenceFile": "E035.xlsx",
+      "sha256": "2dc46c2242224521b47438af1b6720eef2f249b484bfa5a1d939991dc58d6bb5",
+      "group": "SOAP",
+      "originalFile": "FACT- 10318_thibault_29-04-26(6399-7673).xlsx",
+      "partial": false,
+      "learningAllowed": true
+    },
+    {
+      "evidenceFile": "E036.xlsx",
+      "sha256": "3379ce13834363bd310d419db3cae1d59a5c0f3a11b5c95bc4ae138873bf4696",
+      "group": "SOAP",
+      "originalFile": "FACT- 10205_Thibault_06-02-26(1248-1411).xlsx",
+      "partial": false,
+      "learningAllowed": true
+    },
+    {
+      "evidenceFile": "E037.xlsx",
+      "sha256": "a17ac54577d02892373e9191f054480d01ebfb0e6edc290da92b11952b2be316",
+      "group": "SOAP",
+      "originalFile": "FACT- 10259_Thibault_11-03-26(1958-2394).xlsx",
+      "partial": false,
+      "learningAllowed": true
+    },
+    {
+      "evidenceFile": "E038.xlsx",
+      "sha256": "3cb78d4d7157319e39f9d899ad26a581c7a2ee01d4030424bc42de495e34ab6a",
+      "group": "SOAP",
+      "originalFile": "FACT- 10002_emirat_22-09-25(Samples).xlsx",
+      "partial": false,
+      "learningAllowed": true
+    },
+    {
+      "evidenceFile": "E039.xlsx",
+      "sha256": "e8fbffb61b91bbe25d55aed3162c7823c0b9952d85818d62bcc7bcd67deb2d63",
+      "group": "SOAP",
+      "originalFile": "FACT- 10003_Thibault_23-09-25(1039-1071).xlsx",
+      "partial": false,
+      "learningAllowed": true
+    },
+    {
+      "evidenceFile": "E040.xlsx",
+      "sha256": "03edb157cc95a85ad7c92d604e3fcacda29afd4424ebdb8528aae8eb9dd3818a",
+      "group": "SOAP",
+      "originalFile": "FACT- 10011_Thibault_03-11-25(1001-1014).xlsx",
+      "partial": false,
+      "learningAllowed": true
+    },
+    {
+      "evidenceFile": "E041.xlsx",
+      "sha256": "ffac375e6157d0c8564ebe949e34ecbf2fc8946bace212cd62742994206255c6",
+      "group": "SOAP",
+      "originalFile": "FACT- 10347_thibault_19-05-26(9185-10645).xlsx",
+      "partial": false,
+      "learningAllowed": true
+    },
+    {
+      "evidenceFile": "E042.xlsx",
+      "sha256": "144ec3f46dfe70c1e472a11b05f21341d768b54542a99b190425477ce32c26df",
+      "group": "SOAP",
+      "originalFile": "FACT- 10194_Thibault_01-02-26(1081-1247).xlsx",
+      "partial": false,
+      "learningAllowed": true
+    },
+    {
+      "evidenceFile": "E043.xlsx",
+      "sha256": "1ff156b99ff7314c292f345b8ed535530b8b249d838aded1964b9469ba6870b9",
+      "group": "SOAP",
+      "originalFile": "FACT- 10335_thibault_10-05-26(7674-9184).xlsx",
+      "partial": false,
+      "learningAllowed": true
+    },
+    {
+      "evidenceFile": "E044.xlsx",
+      "sha256": "2a4e1d1a70b95d9618827dd562affaa7ae97be5b1b41476882e088ed3115d84c",
+      "group": "SOAP",
+      "originalFile": "fact- 10301_thibault_13-04-26(4832-6398)xlsx.xlsx",
+      "partial": false,
+      "learningAllowed": true
+    },
+    {
+      "evidenceFile": "E045.xlsx",
+      "sha256": "2f76f695a4263927b0f490ac02b40ce5ccbd794e8ef2221a3b158651400f5329",
+      "group": "SOAP",
+      "originalFile": "FACT- 10399_thibault_19-06-26(13199-14062).xlsx",
+      "partial": false,
+      "learningAllowed": true
+    },
+    {
+      "evidenceFile": "E046.xlsx",
+      "sha256": "00e7f9bf2b28fd481ee70937c7fc4c489bddf2b9e7e99b1660f970219ad98d85",
+      "group": "SOAP",
+      "originalFile": "FACT- 10362_thibault_01-06-26(11287-12234).xlsx",
+      "partial": false,
+      "learningAllowed": true
+    },
+    {
+      "evidenceFile": "E047.xlsx",
+      "sha256": "7e6ce4adc7c43a5e52951d0d46e25defc3a3e8c8328a135cb59fc1775902ed45",
+      "group": "SOAP",
+      "originalFile": "FACT- 10238_Thibault_07-03-26(1618-1957).xlsx",
+      "partial": false,
+      "learningAllowed": true
+    },
+    {
+      "evidenceFile": "E048.xlsx",
+      "sha256": "c75dfe9680839cc575652199c0fa83bd2be472fc07fdc01f03bec893e64408c9",
+      "group": "SOAP",
+      "originalFile": "FACT- 10375_thibault_10-06-26(12235-13198).xlsx",
+      "partial": false,
+      "learningAllowed": true
+    },
+    {
+      "evidenceFile": "E049.xlsx",
+      "sha256": "f6377c6d57800ad2b66601e18ce7c1610eb3fadfe42507db0c83e3bc473462d7",
+      "group": "SOAP",
+      "originalFile": "FACT- 10437+10438_thibault_02-08-26( 17255 - 18205).xlsx",
+      "partial": false,
+      "learningAllowed": true
+    },
+    {
+      "evidenceFile": "E050.xlsx",
+      "sha256": "9bc39b2d50f5a89a8261652c061064fe46ac7be34b98804123dbe1e58445349c",
+      "group": "SOAP",
+      "originalFile": "FACT- 10279_Thibault_24-03-26(2006-3737).xlsx",
+      "partial": false,
+      "learningAllowed": true
+    },
+    {
+      "evidenceFile": "E051.xlsx",
+      "sha256": "7031e94ba1bbd02c3bb583b7ad170749191a716d8db495522324266fc2215191",
+      "group": "SOAP",
+      "originalFile": "FACT- 10354_thibault_25-05-26(10646-11286).xlsx",
+      "partial": false,
+      "learningAllowed": true
+    },
+    {
+      "evidenceFile": "E052.xlsx",
+      "sha256": "678dd7e93504d68f394b4a49a124f4a5b7183f7cb8db44978b067e5e6e7e1dec",
+      "group": "SOAP",
+      "originalFile": "FACT- 10004_Thibault_03-10-25(1072-1081).xlsx",
+      "partial": false,
+      "learningAllowed": true
+    },
+    {
+      "evidenceFile": "E053.xlsx",
+      "sha256": "70aa81b5f13ae07bd9bed57644a0bd84d61b6aad8604205008f7a682b2f7ae07",
+      "group": "SOAP",
+      "originalFile": "FACT- 10227_Thibault_18-02-26(1412-1617).xlsx",
+      "partial": false,
+      "learningAllowed": true
+    },
+    {
+      "evidenceFile": "E054.xlsx",
+      "sha256": "d6551a7afc4fce19a54abd0fdbe2444a7342f9e373a0762efab5cc4cc98607fd",
+      "group": "SOAP",
+      "originalFile": "FACT- 10178_Thibault_23-01-26(1002-1080).xlsx",
+      "partial": false,
+      "learningAllowed": true
+    },
+    {
+      "evidenceFile": "E055.xlsx",
+      "sha256": "b561bdf1db70b3260529d18b933d5aa4a889c2e859fe08d832200d906e1580db",
+      "group": "SOAP",
+      "originalFile": "mise a╠Ç jour FACT- 10285_Thibault_03-04-26(3738-4831).xlsx",
+      "partial": false,
+      "learningAllowed": true
+    }
+  ]
+}

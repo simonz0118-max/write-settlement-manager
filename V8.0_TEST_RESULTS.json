@@ -1,0 +1,17 @@
+{
+  "version": "8.0.0",
+  "status": "PASS",
+  "tests": [
+    "semantic-core syntax PASS",
+    "rule-store syntax PASS",
+    "shadow-runtime syntax PASS",
+    "patch syntax PASS",
+    "V8.0 semantic core PASS",
+    "V8.0 rule priority/scope/conflict PASS",
+    "V8.0 manual semantic inference PASS",
+    "V7.5.9 MANUAL FACT GOLDEN PASS: 49 rows / base45 / upsell4 / accountingQty252",
+    "patch idempotency PASS",
+    "V8.0 non-blocking production contract PASS"
+  ],
+  "productionProtection": "V7.5.9 remains formal FACT engine; V8 is shadow only"
+}

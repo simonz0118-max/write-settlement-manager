@@ -1,0 +1,188 @@
+TEST docs/tests/v100_15_semantic_scenarios.js
+evalmachine.<anonymous>:4
+const UTF8=new TextDecoder('utf-8',{fatal:false});
+           ^
+
+ReferenceError: TextDecoder is not defined
+    at evalmachine.<anonymous>:4:12
+    at evalmachine.<anonymous>:84:3
+    at Script.runInContext (node:vm:149:12)
+    at Object.runInContext (node:vm:301:6)
+    at Object.<anonymous> (/Users/simonz0118/Documents/Codex/2026-08-11/files-mentioned-by-the-user-write/work/v10-production-build/release-v10/docs/tests/v100_15_semantic_scenarios.js:2:140)
+    at Module._compile (node:internal/modules/cjs/loader:1812:14)
+    at Object..js (node:internal/modules/cjs/loader:1943:10)
+    at Module.load (node:internal/modules/cjs/loader:1533:32)
+    at Module._load (node:internal/modules/cjs/loader:1335:12)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)
+
+Node.js v24.14.0
+TEST docs/tests/v100_canary_rollback.js
+/Users/simonz0118/Documents/Codex/2026-08-11/files-mentioned-by-the-user-write/work/v10-production-build/release-v10/docs/tests/v100_canary_rollback.js:1
+const fs=require('fs'),vm=require('vm'),assert=require('assert');const s=fs.readFileSync(process.argv[2],'utf8'),store={},c={window:null,localStorage:{getItem:k=>store[k]||null,setItem:(k,v)=>store[k]=String(v)}};c.window=c;vm.createContext(c);vm.runInContext(s,c);const R=c.WRITE_V10_CANARY;R.setPercent(25);assert.equal(R.getPercent(),25);assert.equal(R.shouldUseV10({hardPass:false},'x').useV10,false);R.rollback();assert.equal(R.getPercent(),0);console.log('V10 canary rollback PASS');
+                                                                                                                                                                                                                                                                                                      ^
+
+TypeError: Cannot read properties of undefined (reading 'setPercent')
+    at Object.<anonymous> (/Users/simonz0118/Documents/Codex/2026-08-11/files-mentioned-by-the-user-write/work/v10-production-build/release-v10/docs/tests/v100_canary_rollback.js:1:295)
+    at Module._compile (node:internal/modules/cjs/loader:1812:14)
+    at Object..js (node:internal/modules/cjs/loader:1943:10)
+    at Module.load (node:internal/modules/cjs/loader:1533:32)
+    at Module._load (node:internal/modules/cjs/loader:1335:12)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)
+    at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:154:5)
+    at node:internal/main/run_main_module:33:47
+
+Node.js v24.14.0
+TEST docs/tests/v100_canonical_identity.js
+V10 CanonicalOrder fulfillment identity PASS
+TEST docs/tests/v100_compiler_outputs.js
+/Users/simonz0118/Documents/Codex/2026-08-11/files-mentioned-by-the-user-write/work/v10-production-build/release-v10/docs/tests/v100_compiler_outputs.js:1
+const fs=require('fs'),vm=require('vm'),assert=require('assert');const s=fs.readFileSync(process.argv[2],'utf8'),c={window:null,TextEncoder};c.window=c;vm.createContext(c);vm.runInContext(s,c);const C=c.WRITE_V10_COMPILER,ir={audit:{hardPass:true},invoiceLines:[{invoiceEntity:'E',origin:'CN',destinationCountry:'FRANCE',currency:'EUR',taxRegime:'T',role:'PACKAGE',description:'Savon *2',quantity:2,unitTotal:7,amount:14,atomIds:['a'],sourceOrderKeys:['o'],sourceItemKeys:['i']}]};const p=C.buildPdfSet(ir);assert.equal(p.length,1);assert(Buffer.from(p[0].bytes).toString('latin1').startsWith('%PDF-1.4'));assert.equal(C.auditJSON(ir).invoiceLines.length,1);assert(C.strictFormalStatus(ir).formal);console.log('V10 compiler PDF/audit JSON PASS');
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           ^
+
+TypeError: Cannot read properties of undefined (reading 'buildPdfSet')
+    at Object.<anonymous> (/Users/simonz0118/Documents/Codex/2026-08-11/files-mentioned-by-the-user-write/work/v10-production-build/release-v10/docs/tests/v100_compiler_outputs.js:1:492)
+    at Module._compile (node:internal/modules/cjs/loader:1812:14)
+    at Object..js (node:internal/modules/cjs/loader:1943:10)
+    at Module.load (node:internal/modules/cjs/loader:1533:32)
+    at Module._load (node:internal/modules/cjs/loader:1335:12)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)
+    at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:154:5)
+    at node:internal/main/run_main_module:33:47
+
+Node.js v24.14.0
+TEST docs/tests/v100_currency_isolation.js
+V10 P0-4 currency isolation PASS
+TEST docs/tests/v100_fivefold_conservation.js
+V10 P0-5 fivefold conservation PASS
+TEST docs/tests/v100_fr_handling_fee.js
+V10 FR handling/processing fee PASS
+TEST docs/tests/v100_governance_partial_price.js
+/Users/simonz0118/Documents/Codex/2026-08-11/files-mentioned-by-the-user-write/work/v10-production-build/release-v10/docs/tests/v100_governance_partial_price.js:1
+const fs=require('fs'),vm=require('vm'),assert=require('assert');const s=fs.readFileSync(process.argv[2],'utf8'),c={window:null};c.window=c;vm.createContext(c);vm.runInContext(s,c);const G=c.WRITE_V10_GOVERNANCE;assert(!G.eligibleForAutoLearning({partial:true,sourceClosed:true}).eligible);assert(!G.eligibleForPriceLearning({partial:false,sourceClosed:true,humanConfirmed:false,currency:'EUR',configurationFingerprint:'X'}).eligible);assert(G.eligibleForPriceLearning({partial:false,sourceClosed:true,humanConfirmed:true,currency:'EUR',configurationFingerprint:'X'}).eligible);console.log('V10 governance partial/price learning gates PASS');
+                                                                                                                                                                                                                              ^
+
+TypeError: Cannot read properties of undefined (reading 'eligibleForAutoLearning')
+    at Object.<anonymous> (/Users/simonz0118/Documents/Codex/2026-08-11/files-mentioned-by-the-user-write/work/v10-production-build/release-v10/docs/tests/v100_governance_partial_price.js:1:223)
+    at Module._compile (node:internal/modules/cjs/loader:1812:14)
+    at Object..js (node:internal/modules/cjs/loader:1943:10)
+    at Module.load (node:internal/modules/cjs/loader:1533:32)
+    at Module._load (node:internal/modules/cjs/loader:1335:12)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)
+    at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:154:5)
+    at node:internal/main/run_main_module:33:47
+
+Node.js v24.14.0
+TEST docs/tests/v100_ingestion_formats.js
+/Users/simonz0118/Documents/Codex/2026-08-11/files-mentioned-by-the-user-write/work/v10-production-build/release-v10/docs/tests/v100_ingestion_formats.js:1
+const fs=require('fs'),vm=require('vm'),assert=require('assert');const s=fs.readFileSync(process.argv[2],'utf8'),c={window:null,TextDecoder};c.window=c;vm.createContext(c);vm.runInContext(s,c);const I=c.WRITE_V10_INGESTION,E=x=>new TextEncoder().encode(x);assert.equal(I.detectFormat(E('{"orders":[{"id":1}]}'),'x.bin'),'JSON');assert.equal(I.parseDeterministic(E('Order ID,SKU,Product Name\n1,A*2,Savon'),'x.csv').records.length,1);assert.equal(I.parseDeterministic(E('<root><order><id>1</id><sku>A</sku></order></root>'),'x.xml').records[0].id,'1');assert.throws(()=>I.safeZipEntries([{name:'../evil',uncompressedSize:1,compressedSize:1}]),/PATH_TRAVERSAL/);assert.throws(()=>I.safeZipEntries([{name:'a',uncompressedSize:1000000,compressedSize:1}],{maxCompressionRatio:10}),/ZIP_BOMB_RATIO/);console.log('V10 universal ingestion deterministic formats + zip safety PASS');
+                                                                                                                                                                                                                                                                               ^
+
+TypeError: Cannot read properties of undefined (reading 'detectFormat')
+    at Object.<anonymous> (/Users/simonz0118/Documents/Codex/2026-08-11/files-mentioned-by-the-user-write/work/v10-production-build/release-v10/docs/tests/v100_ingestion_formats.js:1:272)
+    at Module._compile (node:internal/modules/cjs/loader:1812:14)
+    at Object..js (node:internal/modules/cjs/loader:1943:10)
+    at Module.load (node:internal/modules/cjs/loader:1533:32)
+    at Module._load (node:internal/modules/cjs/loader:1335:12)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)
+    at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:154:5)
+    at node:internal/main/run_main_module:33:47
+
+Node.js v24.14.0
+TEST docs/tests/v100_multi_entity_parser.js
+V10 P0-2 multi-entity BillableAtom PASS
+TEST docs/tests/v100_paid_gift_free_evidence.js
+/Users/simonz0118/Documents/Codex/2026-08-11/files-mentioned-by-the-user-write/work/v10-production-build/release-v10/docs/tests/v100_paid_gift_free_evidence.js:2
+let a=A.parseSourceItem({productName:'Coffret Cadeau Deluxe',quantity:1},{sourceItemKey:'1'})[0];assert.equal(a.family,'PAID_GIFT_BOX');assert.equal(a.role,'PACKAGE');
+        ^
+
+TypeError: Cannot read properties of undefined (reading 'parseSourceItem')
+    at Object.<anonymous> (/Users/simonz0118/Documents/Codex/2026-08-11/files-mentioned-by-the-user-write/work/v10-production-build/release-v10/docs/tests/v100_paid_gift_free_evidence.js:2:9)
+    at Module._compile (node:internal/modules/cjs/loader:1812:14)
+    at Object..js (node:internal/modules/cjs/loader:1943:10)
+    at Module.load (node:internal/modules/cjs/loader:1533:32)
+    at Module._load (node:internal/modules/cjs/loader:1335:12)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)
+    at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:154:5)
+    at node:internal/main/run_main_module:33:47
+
+Node.js v24.14.0
+TEST docs/tests/v100_pricing_waterfall.js
+/Users/simonz0118/Documents/Codex/2026-08-11/files-mentioned-by-the-user-write/work/v10-production-build/release-v10/docs/tests/v100_pricing_waterfall.js:1
+const fs=require('fs'),vm=require('vm'),assert=require('assert');const s=fs.readFileSync(process.argv[2],'utf8'),c={window:null};c.window=c;vm.createContext(c);vm.runInContext(s,c);const P=c.WRITE_V10_PRICING,line={origin:'CN',destinationCountry:'FRANCE',currency:'EUR',invoiceEntity:'DEFAULT',role:'PACKAGE',configurationFingerprint:'X'};let r=P.resolve(line,{currentContracts:[{ruleId:'C1',origin:'CN',destinationCountry:'FRANCE',currency:'EUR',configurationFingerprint:'X',unitTotal:12}]});assert.equal(r.unitTotal,12);r=P.resolve({...line,currency:'USD'},{currentContracts:[{ruleId:'C1',origin:'CN',destinationCountry:'FRANCE',currency:'EUR',configurationFingerprint:'X',unitTotal:12}]});assert.equal(r.status,'PRICE_PENDING');r=P.resolve(line,{unknownFallbacks:[{ruleId:'F1',approved:true,currency:'EUR',unitTotal:9,maxUnitTotal:10}]},P.MODE.ALWAYS_ISSUE);assert.equal(r.status,'PRICED_FALLBACK');console.log('V10 Pricing Waterfall strict currency/effective isolation PASS');
+                                                                                                                                                                                                                                                                                                                                                           ^
+
+TypeError: Cannot read properties of undefined (reading 'resolve')
+    at Object.<anonymous> (/Users/simonz0118/Documents/Codex/2026-08-11/files-mentioned-by-the-user-write/work/v10-production-build/release-v10/docs/tests/v100_pricing_waterfall.js:1:348)
+    at Module._compile (node:internal/modules/cjs/loader:1812:14)
+    at Object..js (node:internal/modules/cjs/loader:1943:10)
+    at Module.load (node:internal/modules/cjs/loader:1533:32)
+    at Module._load (node:internal/modules/cjs/loader:1335:12)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)
+    at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:154:5)
+    at node:internal/main/run_main_module:33:47
+
+Node.js v24.14.0
+TEST docs/tests/v100_production_contract.js
+V10 production contract PASS
+TEST docs/tests/v100_seeded_stress.js
+node:assert:152
+  throw new AssertionError(obj);
+  ^
+
+AssertionError [ERR_ASSERTION]: 0 == NaN
+    at Object.<anonymous> (/Users/simonz0118/Documents/Codex/2026-08-11/files-mentioned-by-the-user-write/work/v10-production-build/release-v10/docs/tests/v100_seeded_stress.js:9:33)
+    at Module._compile (node:internal/modules/cjs/loader:1812:14)
+    at Object..js (node:internal/modules/cjs/loader:1943:10)
+    at Module.load (node:internal/modules/cjs/loader:1533:32)
+    at Module._load (node:internal/modules/cjs/loader:1335:12)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)
+    at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:154:5)
+    at node:internal/main/run_main_module:33:47 {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: 0,
+  expected: NaN,
+  operator: '==',
+  diff: 'simple'
+}
+
+Node.js v24.14.0
+TEST docs/tests/v100_service_fee_rows.js
+V10 P0-3 SERVICE/FEE independent rows PASS
+TEST docs/tests/v100_stress_accuracy.js
+{
+  "status": "PASS",
+  "seed": "0x10c0ffee",
+  "inputRecords": 50085,
+  "parcels": 46011,
+  "giftOnlyExcluded": 4023,
+  "deduplicated": 51,
+  "splitOrders": 34,
+  "rows": 3182,
+  "elapsedMs": 1032,
+  "deterministic": true,
+  "missingSourceItems": 0
+}
+TEST docs/tests/v100_template_production_contract.js
+node:internal/assert/utils:77
+    throw err;
+    ^
+
+AssertionError [ERR_ASSERTION]: FACT patcher must write parcel total
+    at Object.<anonymous> (/Users/simonz0118/Documents/Codex/2026-08-11/files-mentioned-by-the-user-write/work/v10-production-build/release-v10/docs/tests/v100_template_production_contract.js:5:1)
+    at Module._compile (node:internal/modules/cjs/loader:1812:14)
+    at Object..js (node:internal/modules/cjs/loader:1943:10)
+    at Module.load (node:internal/modules/cjs/loader:1533:32)
+    at Module._load (node:internal/modules/cjs/loader:1335:12)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)
+    at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:154:5)
+    at node:internal/main/run_main_module:33:47 {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: false,
+  expected: true,
+  operator: '==',
+  diff: 'simple'
+}
+
+Node.js v24.14.0

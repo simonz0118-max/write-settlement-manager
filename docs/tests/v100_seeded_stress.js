@@ -1,0 +1,10 @@
+const fs=require('fs'),vm=require('vm'),assert=require('assert'),{performance}=require('perf_hooks');
+const files=process.argv.slice(2,5).map(p=>fs.readFileSync(p,'utf8')),count=Number(process.argv[5]||1000);let seed=Number(process.argv[6]||539363346);const c={window:null};c.window=c;vm.createContext(c);for(const s of files)vm.runInContext(s,c);
+function rnd(){seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296}
+const products=['Savon *2 + Baume *1','Coffret Cadeau Deluxe *1','Gravure personnalisée *1',"Frais d'importation *1",'Échantillon offert *1','Unknown Ω Product *3','Savon *1 + Serviette *1 + Ongles *1'];
+const currencies=['EUR','USD','GBP'],countries=['FRANCE','BELGIUM','GERMANY','SPAIN'],origins=['CN','FR'];
+const orders=[];let records=0,qty=0;
+for(let i=0;i<count;i++){const n=1+(rnd()<.2?1:0),lineItems=[];for(let j=0;j<n;j++){const productName=products[Math.floor(rnd()*products.length)];lineItems.push({productName});records++;const atoms=c.WRITE_V10_ATOMS.parseSourceItem({productName},{sourceItemKey:`${i}:${j}`});qty+=atoms.reduce((s,a)=>s+a.multiplicity,0)}orders.push({recordKey:`O${i}`,trackingNumber:`T${i}`,country:countries[Math.floor(rnd()*countries.length)],currency:currencies[Math.floor(rnd()*currencies.length)],fulfillmentOrigin:origins[Math.floor(rnd()*origins.length)],lineItems})}
+const t0=performance.now(),x=c.WRITE_V10_ACCOUNTING_IR.buildIR(orders),ms=performance.now()-t0;
+assert(x.audit.hardPass);assert.equal(x.audit.sourceOrders,count);assert.equal(x.audit.sourceItems,records);assert.equal(x.audit.sourceAtomicQuantity,qty);
+console.log(JSON.stringify({seed:539363346,orders:count,productRecords:records,atomicQuantity:qty,ms:+ms.toFixed(3),throughput:+(count/(ms/1000)).toFixed(1),hardPass:x.audit.hardPass,invoiceLines:x.invoiceLines.length}));

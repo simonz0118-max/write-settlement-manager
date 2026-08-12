@@ -1,0 +1,11 @@
+const fs=require('fs'),assert=require('assert');
+const s=fs.readFileSync(process.argv[2],'utf8');
+assert(/const V759_VERSION='7\.5\.9'/.test(s));
+assert(/v759LearnedManualRowsForWorkbook/.test(s));
+assert(/baseQuantity:'MATCHING_ORDER_COUNT'/.test(s));
+assert(/upsellQuantity:'ACTUAL_UPSELL_UNITS'/.test(s));
+assert(/Colliers de serrage x100 - pergola/.test(s));
+assert(/Cordes à cliquets réglables - Lot de 4/.test(s));
+assert(/Kit de fixation complet - Suspendu/.test(s));
+assert(/import\.worker\.v758\.js\?v=7\.5\.9-001/.test(s));
+console.log('V7.5.9 contract PASS');

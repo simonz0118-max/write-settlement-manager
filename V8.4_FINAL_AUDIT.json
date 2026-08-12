@@ -1,0 +1,54 @@
+{
+  "status": "PASS",
+  "patchFrom": "8.3.1",
+  "patchIdempotency": "PASS",
+  "unifiedSources": [
+    "YD",
+    "ARCHIVE",
+    "PENCIL",
+    "SOAP"
+  ],
+  "evidenceFirst": "PASS",
+  "zeroLoss": "PASS",
+  "classificationFidelity": "49/49",
+  "traceFidelity": "49/49",
+  "productionFactEngine": "V7.5.9",
+  "formalFactTakeover": false,
+  "generatedRepoTests": [
+    {
+      "cmd": "node --check /mnt/data/v840_patch_fixture/src/v8/human-workflow.js",
+      "exit": 0,
+      "output": ""
+    },
+    {
+      "cmd": "node --check /mnt/data/v840_patch_fixture/src/v8/evidence-gate.js",
+      "exit": 0,
+      "output": ""
+    },
+    {
+      "cmd": "node /mnt/data/v840build/docs/tests/v840_cross_dataset_roles.js /mnt/data/v840_patch_fixture/src/v8/human-workflow.js",
+      "exit": 0,
+      "output": "V8.4 cross-dataset role learning PASS"
+    },
+    {
+      "cmd": "node /mnt/data/v840build/docs/tests/v840_evidence_gate.js /mnt/data/v840_patch_fixture/src/v8/evidence-gate.js",
+      "exit": 0,
+      "output": "V8.4 evidence-first training gate PASS"
+    },
+    {
+      "cmd": "node /mnt/data/v840build/docs/tests/v820_real_batch_zero_loss.js /mnt/data/v840_patch_fixture/src/v8/semantic-core.js /mnt/data/v840build/src/v8/zero-loss-engine.js /mnt/data/v840build/docs/tests/V820_ZERO_LOSS_1001_1162_GOLDEN.json",
+      "exit": 0,
+      "output": "V8.2 REAL BATCH ZERO-LOSS PASS: orders=162 items=260 qty=289"
+    },
+    {
+      "cmd": "node /mnt/data/v840build/docs/tests/v830_classification_fidelity_golden.js /mnt/data/v840_patch_fixture/src/v8/semantic-core.js /mnt/data/v840_patch_fixture/src/v8/fidelity-evaluator.js /mnt/data/v840build/docs/tests/V820_ZERO_LOSS_1001_1162_GOLDEN.json",
+      "exit": 0,
+      "output": "V8.3 CLASSIFICATION FIDELITY GOLDEN PASS: 49/49 Country+Role+Configuration+Quantity"
+    },
+    {
+      "cmd": "node /mnt/data/v840build/docs/tests/v831_trace_fidelity_golden.js /mnt/data/v840_patch_fixture/src/v8/semantic-core.js /mnt/data/v840_patch_fixture/src/v8/trace-fidelity.js /mnt/data/v840build/docs/tests/V820_ZERO_LOSS_1001_1162_GOLDEN.json",
+      "exit": 0,
+      "output": "V8.3.1 TRACE FIDELITY GOLDEN PASS: fact=49/49 billableOrders=161 placeholder=1"
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "version": "8.1.1",
+  "type": "DEPLOYMENT_HOTFIX",
+  "businessLogicChanged": false,
+  "fix": "Pass src/universal-source-v759.js to v800_nonblocking_contract.js",
+  "productionFactEngine": "V7.5.9",
+  "trainingEngine": "V8.1",
+  "nonBlocking": true
+}

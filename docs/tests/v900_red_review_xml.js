@@ -1,0 +1,1 @@
+const fs=require('fs'),assert=require('assert');const s=fs.readFileSync(process.argv[2],'utf8');assert(/FFFF0000/.test(s));assert(/RED_DESCRIPTION_ONLY/.test(s));console.log('V9 red review style PASS');

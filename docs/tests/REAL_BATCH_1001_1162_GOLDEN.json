@@ -1,0 +1,23 @@
+{
+  "batch": "1001-1162",
+  "sourceRowsRetained": 162,
+  "validOrderRows": 160,
+  "formalFactCountedRows": 160,
+  "quantityPerValidOrder": 1,
+  "factQuantityTotal": 160,
+  "uniqueSourceOrderKeys": 160,
+  "orderRowsByCountry": {
+    "FRANCE": 158,
+    "BELGIUM": 1,
+    "GREECE": 1
+  },
+  "unknownQuantitySourceRows": 2,
+  "merchandiseKnownQuantityAudit": 288,
+  "rules": [
+    "一个有效源订单必须对应一条独立FACT行",
+    "相同Description也禁止跨订单合并",
+    "每条有效FACT订单行Quantity固定为1",
+    "有效FACT行数=Quantity合计=唯一sourceOrderKey数=160",
+    "288商品件数仅做后台审计，不得改变订单行数"
+  ]
+}

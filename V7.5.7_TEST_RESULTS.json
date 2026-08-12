@@ -1,0 +1,51 @@
+{
+  "version": "7.5.7",
+  "status": "PASS",
+  "tests": [
+    {
+      "cmd": "node --check /mnt/data/v757_work/patch-v757.js",
+      "exit": 0,
+      "output": ""
+    },
+    {
+      "cmd": "node --check /mnt/data/v757_work/src/universal-source-v757.js",
+      "exit": 0,
+      "output": ""
+    },
+    {
+      "cmd": "node --check /mnt/data/v757_work/src/workers/import.worker.v757.js",
+      "exit": 0,
+      "output": ""
+    },
+    {
+      "cmd": "node /mnt/data/v757_work/docs/tests/v757_contract.js /mnt/data/v757_work/src/universal-source-v757.js /mnt/data/v757_work/src/workers/import.worker.v757.js",
+      "exit": 0,
+      "output": "V7.5.7 static contract PASS"
+    },
+    {
+      "cmd": "node /mnt/data/v757_work/docs/tests/v757_one_order_one_row.js /mnt/data/v757_work/src/universal-source-v757.js",
+      "exit": 0,
+      "output": "V7.5.7 ONE ORDER = ONE FACT ROW runtime PASS"
+    },
+    {
+      "cmd": "node /mnt/data/v757_work/docs/tests/v757_historical_per_order.js /mnt/data/v757_work/src/universal-source-v757.js",
+      "exit": 0,
+      "output": "V7.5.7 historical per-order parity PASS"
+    },
+    {
+      "cmd": "node /mnt/data/v757_work/docs/tests/v757_description_standard.js /mnt/data/v757_work/src/universal-source-v757.js",
+      "exit": 0,
+      "output": "V7.5.7 description standard PASS"
+    },
+    {
+      "cmd": "node /mnt/data/v757_work/docs/tests/v757_blank_template_contract.js /mnt/data/v757_work/src/runtime-v740.js /mnt/data/v757_work/src/universal-source-v757.js /mnt/data/v757_work/assets/FACT_TEMPLATE_UNIFIED_V2.xlsx",
+      "exit": 0,
+      "output": "V7.5.7 blank price + clean template PASS"
+    },
+    {
+      "cmd": "node /mnt/data/v757_work/docs/tests/v757_worker_runtime.js /mnt/data/v757_work/src/workers/import.worker.v757.js",
+      "exit": 0,
+      "output": "V7.5.7 worker all-column PASS"
+    }
+  ]
+}

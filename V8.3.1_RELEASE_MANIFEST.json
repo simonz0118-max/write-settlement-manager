@@ -1,0 +1,21 @@
+{
+  "version": "8.3.1",
+  "stage": "CLASSIFICATION_FIDELITY_TRACE_HARDENING",
+  "productionFactEngine": "V7.5.9",
+  "formalFactTakeover": false,
+  "requirements": {
+    "zeroLoss": true,
+    "classificationExact": true,
+    "traceExact": true,
+    "multiBatchHistoricalFidelity": false
+  },
+  "golden": {
+    "batch": "1001-1162",
+    "sourceRecords": 162,
+    "validProductQuantity": 289,
+    "classification": "49/49",
+    "factRowsSourceBacked": "49/49",
+    "billableMainOrders": 161,
+    "placeholderAuditOnlyOrders": 1
+  }
+}

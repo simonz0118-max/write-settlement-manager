@@ -1,0 +1,21 @@
+{
+  "status": "PASS",
+  "githubBaseline": "8.2.0",
+  "syntheticPatchIdempotency": "PASS",
+  "zeroLoss": {
+    "sourceRecords": 162,
+    "productRecords": 260,
+    "validProductQuantity": 289,
+    "lostOrders": 0,
+    "lostProducts": 0,
+    "lostQuantity": 0
+  },
+  "classificationFidelity": {
+    "countryRole": "49/49",
+    "configuration": "49/49",
+    "full": "49/49",
+    "rate": 1.0
+  },
+  "formalFactTakeover": false,
+  "productionFactEngine": "V7.5.9"
+}

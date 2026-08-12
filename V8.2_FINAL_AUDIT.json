@@ -1,0 +1,42 @@
+{
+  "status": "PASS",
+  "patchFrom": "8.1.2",
+  "patchIdempotency": "PASS",
+  "productionFactEngine": "V7.5.9",
+  "productionFactPreserved": true,
+  "golden": {
+    "sourceRecords": 162,
+    "rawProductRecords": 260,
+    "validProductQuantity": 289,
+    "lostOrders": 0,
+    "lostProducts": 0,
+    "lostQuantity": 0
+  },
+  "generatedRepoTests": [
+    {
+      "cmd": "node --check /mnt/data/v820_exact_repo/src/v8/semantic-core.js",
+      "exit": 0,
+      "output": ""
+    },
+    {
+      "cmd": "node --check /mnt/data/v820_exact_repo/src/v8/zero-loss-engine.js",
+      "exit": 0,
+      "output": ""
+    },
+    {
+      "cmd": "node /mnt/data/v820build/docs/tests/v820_real_batch_zero_loss.js /mnt/data/v820_exact_repo/src/v8/semantic-core.js /mnt/data/v820_exact_repo/src/v8/zero-loss-engine.js /mnt/data/v820build/docs/tests/V820_ZERO_LOSS_1001_1162_GOLDEN.json",
+      "exit": 0,
+      "output": "V8.2 REAL BATCH ZERO-LOSS PASS: orders=162 items=260 qty=289"
+    },
+    {
+      "cmd": "node /mnt/data/v820build/docs/tests/v820_real_batch_critical_semantics.js /mnt/data/v820_exact_repo/src/v8/semantic-core.js /mnt/data/v820build/docs/tests/V820_ZERO_LOSS_1001_1162_GOLDEN.json",
+      "exit": 0,
+      "output": "V8.2 REAL BATCH critical semantics PASS"
+    },
+    {
+      "cmd": "node /mnt/data/v820build/docs/tests/v800_nonblocking_contract.js /mnt/data/v820_exact_repo/src/v8/shadow-runtime.js /mnt/data/v820_exact_repo/index.html /mnt/data/v820_exact_repo/src/universal-source-v759.js",
+      "exit": 0,
+      "output": "V8.1.2 non-blocking production contract PASS"
+    }
+  ]
+}

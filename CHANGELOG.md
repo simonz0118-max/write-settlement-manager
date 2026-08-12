@@ -1,3 +1,12 @@
+## v10.0.0-rc1 — 2026-08-12 13:27 (Europe/Paris)
+- V10 Universal Order-to-Invoice Compiler 候选版：新增 CanonicalOrder、BillableAtom、Accounting IR、Pricing Waterfall、Invoice Compiler、Learning Governance 与 Canary Router。
+- 修复 P0：cadeau 不能单独判免费；多实体组合拆分；SERVICE/FEE 独立落账；currency 聚合隔离；五重守恒替代 V9 三重 hardPass。
+- 新增 FR handling/processing fee、STRICT_FORMAL / ALWAYS_ISSUE、MANUAL_ONLY 审计入口。
+- 新增 CSV/TSV/JSON/XML 确定性导入、XLS BIFF8/OLE2 本地解析器、PDF 文本抽取、图片本地 OCR 适配接口、ZIP 安全门。
+- 新增商业 PDF 与 audit JSON 编译器；FACT XLSX 继续复用唯一 Golden 模板。
+- 新增固定 seed 539363346 压测与 15 类确定性语义场景。
+- RC1 默认 canary=0%，V9.0 保持正式生产与回滚引擎，等待 Codex 独立验收后再推进 5%→25%→50%→100%。
+
 ## v9.0.0 — 2026-08-11 22:40 (Europe/Paris)
 - Autonomous Human-Like FACT Engine：未来生产输入默认只有订单，不要求FACT页。
 - 订单是唯一事实来源；历史模板数据不得凭空进入新FACT。

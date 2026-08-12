@@ -1,0 +1,65 @@
+{
+  "status": "PASS",
+  "tests": [
+    {
+      "cmd": "node --check /mnt/data/v870build/src/v8/historical-closure-analyzer.js",
+      "exit": 0,
+      "output": ""
+    },
+    {
+      "cmd": "node --check /mnt/data/v870build/src/v8/verified-explanation-resolver.js",
+      "exit": 0,
+      "output": ""
+    },
+    {
+      "cmd": "node --check /mnt/data/v870build/src/v8/closure-promotion.js",
+      "exit": 0,
+      "output": ""
+    },
+    {
+      "cmd": "node /mnt/data/v870build/docs/tests/v870_closure_states.js /mnt/data/v870build/src/v8/historical-closure-analyzer.js",
+      "exit": 0,
+      "output": "V8.7 closure state machine PASS"
+    },
+    {
+      "cmd": "node /mnt/data/v870build/docs/tests/v870_no_partial_learning.js /mnt/data/v870build/src/v8/historical-closure-analyzer.js",
+      "exit": 0,
+      "output": "V8.7 8-vs-10 partial learning forbidden PASS"
+    },
+    {
+      "cmd": "node /mnt/data/v870build/docs/tests/v870_verified_explanation.js /mnt/data/v870build/src/v8/historical-closure-analyzer.js /mnt/data/v870build/src/v8/verified-explanation-resolver.js",
+      "exit": 0,
+      "output": "V8.7 verified explanation requires exact historical evidence PASS"
+    },
+    {
+      "cmd": "node /mnt/data/v870build/docs/tests/v870_promotion_controller.js /mnt/data/v870build/src/v8/historical-closure-analyzer.js /mnt/data/v870build/src/v8/historical-batch-scorer.js /mnt/data/v870build/src/v8/training-router.js /mnt/data/v870build/src/v8/closure-promotion.js",
+      "exit": 0,
+      "output": "V8.7 closure promotion controller PASS"
+    },
+    {
+      "cmd": "node /mnt/data/v870build/docs/tests/v860_batch_scorer.js /mnt/data/v870build/src/v8/historical-batch-scorer.js",
+      "exit": 0,
+      "output": "V8.6 historical batch scorer PASS"
+    },
+    {
+      "cmd": "node /mnt/data/v870build/docs/tests/v850_cross_dataset_regression.js /mnt/data/v870build/src/v8/human-workflow.js /mnt/data/v870build/src/v8/evidence-gate.js",
+      "exit": 0,
+      "output": "V8.5 cross-dataset regression firewall PASS"
+    },
+    {
+      "cmd": "node /mnt/data/v870build/docs/tests/v820_real_batch_zero_loss.js /mnt/data/v870build/src/v8/semantic-core.js /mnt/data/v870build/src/v8/zero-loss-engine.js /mnt/data/v870build/docs/tests/V820_ZERO_LOSS_1001_1162_GOLDEN.json",
+      "exit": 0,
+      "output": "V8.2 REAL BATCH ZERO-LOSS PASS: orders=162 items=260 qty=289"
+    },
+    {
+      "cmd": "node /mnt/data/v870build/docs/tests/v830_classification_fidelity_golden.js /mnt/data/v870build/src/v8/semantic-core.js /mnt/data/v870build/src/v8/fidelity-evaluator.js /mnt/data/v870build/docs/tests/V820_ZERO_LOSS_1001_1162_GOLDEN.json",
+      "exit": 0,
+      "output": "V8.3 CLASSIFICATION FIDELITY GOLDEN PASS: 49/49 Country+Role+Configuration+Quantity"
+    },
+    {
+      "cmd": "node /mnt/data/v870build/docs/tests/v831_trace_fidelity_golden.js /mnt/data/v870build/src/v8/semantic-core.js /mnt/data/v870build/src/v8/trace-fidelity.js /mnt/data/v870build/docs/tests/V820_ZERO_LOSS_1001_1162_GOLDEN.json",
+      "exit": 0,
+      "output": "V8.3.1 TRACE FIDELITY GOLDEN PASS: fact=49/49 billableOrders=161 placeholder=1"
+    }
+  ]
+}

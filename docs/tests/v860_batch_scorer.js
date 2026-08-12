@@ -1,0 +1,10 @@
+const fs=require('fs'),vm=require('vm'),assert=require('assert');const src=fs.readFileSync(process.argv[2],'utf8'),c={window:null};c.window=c;vm.createContext(c);vm.runInContext(src,c);const S=c.WRITE_BATCH_SCORER_V86;
+let x=S.scoreBatch({batchId:'EXACT',sourceBacked:true,sourceCoverage:1,quantityClosure:1,configurationClosure:1,traceability:1,humanConsistency:1,observations:1});
+assert.equal(x.decisions.classification.status,'TRAINABLE');assert.equal(x.decisions.quantity.status,'TRAINABLE');assert.equal(x.decisions.price.status,'REFERENCE_ONLY');
+x=S.scoreBatch({batchId:'8vs10',sourceBacked:true,sourceCoverage:1,quantityClosure:.8,configurationClosure:1,traceability:1,humanConsistency:1,unresolvedCount:1});
+assert(!x.decisions.quantity.trainable);assert.equal(x.decisions.quantity.reason,'UNEXPLAINED_QUANTITY_DIFFERENCE');
+x=S.scoreBatch({batchId:'explained',sourceBacked:true,sourceCoverage:1,quantityClosure:1,configurationClosure:1,traceability:1,humanConsistency:1,verifiedExplanation:true});
+assert(x.decisions.quantity.trainable);assert.equal(x.decisions.quantity.status,'EXPLAINED');
+x=S.scoreBatch({batchId:'price',sourceBacked:true,sourceCoverage:1,quantityClosure:null,configurationClosure:null,traceability:.95,humanConsistency:null,priceConsistency:1,observations:9});
+assert(x.decisions.price.trainable);assert(!x.decisions.classification.trainable);
+console.log('V8.6 historical batch scorer PASS');

@@ -1,0 +1,19 @@
+{
+  "version": "8.6.0",
+  "stage": "HISTORICAL_BATCH_SCORING_SHADOW",
+  "productionFactEngine": "V7.5.9",
+  "formalFactTakeover": false,
+  "principles": [
+    "Each historical workbook is scored independently.",
+    "Classification, quantity and price eligibility are independent.",
+    "Unknown evidence never promotes a batch.",
+    "FACT-only manual rows never train.",
+    "Unexplained partial differences never partially train.",
+    "Verified explanations may promote only the fully explained domain.",
+    "Missing price never blocks FACT export."
+  ],
+  "currentHardGoldens": {
+    "Thomas": "Zero-Loss + 49/49 Classification + 49/49 Trace"
+  },
+  "historicalDefault": "REFERENCE_ONLY_UNTIL_CLOSED"
+}

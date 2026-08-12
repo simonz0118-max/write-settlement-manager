@@ -1,0 +1,10 @@
+const fs=require('fs'),assert=require('assert');
+const prod=fs.readFileSync(process.argv[2],'utf8'),shadow=fs.readFileSync(process.argv[3],'utf8');
+assert(/window\.WRITE_V8_SOURCE_BRIDGE\s*=\s*function/.test(prod));
+assert(/snapshotOrders=\(classified\?\.orders\|\|\[\]\)\.map/.test(prod));
+assert(/lineItems:\(o\?\.lineItems\|\|\[\]\)\.map\(cloneItem\)/.test(prod));
+assert(/bridgeMode:'READ_ONLY_SNAPSHOT'/.test(prod));
+assert(/WRITE_V8_SOURCE_BRIDGE\?\.\(\)/.test(shadow));
+const at=prod.indexOf('window.WRITE_V8_SOURCE_BRIDGE');
+assert(at>=0&&!/window\.generatedGenericFactRowsForWorkbook\s*=/.test(prod.slice(at)));
+console.log('V8.1.2 READ-ONLY SOURCE BRIDGE PASS');

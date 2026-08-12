@@ -27,12 +27,12 @@
 <link href="./src/v8/v8.css?v=9.0.0-001" rel="stylesheet"/>
 <link href="./src/v9/v9.css?v=9.0.0-001" rel="stylesheet"/>
 </head>
-<body data-release="9.0.0">
+<body data-release="10.0.1">
 <div class="app-shell">
 <aside class="sidebar">
 <div class="brand">
 <img class="brand-logo brand-logo-c" src="./assets/panda-logo-c-image2.png" alt="WRITE 熊猫简笔画 Logo"/>
-<div class="brand-copy"><strong>WRITE</strong><span>Settlement Manager</span><small>v9.0</small></div>
+<div class="brand-copy"><strong>WRITE</strong><span>Settlement Manager</span><small>v10.0 Production</small></div>
 </div>
 <nav class="side-nav" id="sideNav">
 <button class="nav-item active" data-view="dashboard"><span>⌂</span>首页</button>
@@ -47,7 +47,7 @@
 <button class="nav-item" data-view="history"><span>↺</span>历史更新</button>
 <button class="nav-item theme-cycle" id="themeToggleButton" type="button" title="切换主题：自动 / 浅色 / 深色"><span id="themeIcon">◐</span><span class="theme-label" id="themeLabel">主题：自动</span></button>
 </nav>
-<div class="side-tip"><b>使用提示</b><ol><li>支持 Excel / ZIP</li><li>自动识别订单 / FACT</li><li>无 FACT 时自动生成 FACT</li></ol></div>
+<div class="side-tip"><b>使用提示</b><ol><li>支持 XLSX/XLS/CSV/TSV/JSON/XML/ZIP/PDF/OCR</li><li>自动识别订单 / FACT</li><li>无 FACT 时自动生成 FACT</li></ol></div>
 <div class="side-status">
 <div><i></i><b id="systemStatus">等待导入</b></div>
 <small id="lastImportText">本地处理 · 数据不上传</small>
@@ -71,7 +71,7 @@
 <h1>智能订单分类<br/><em>结算系统</em></h1>
 <p>导入 Excel 或 ZIP，自动识别真实订单、并把分类同步写入专业会计报表。</p>
 <div class="dropzone" id="dropzone">
-<input accept=".xlsx,.zip" hidden="" id="fileInput" multiple="" type="file"/>
+<input accept=".xlsx,.zip,.csv,.tsv,.json,.xml,.xls,.pdf,.png,.jpg,.jpeg" hidden="" id="fileInput" multiple="" type="file"/>
 <div class="landing-actions" id="idleState">
 <button class="primary-hero" id="chooseButton"><span>⇧</span><div><b>开始导入订单</b><small>支持 Excel / ZIP 格式</small></div></button>
 <div class="privacy">文件仅在本机浏览器处理，不上传服务器</div>
@@ -215,10 +215,10 @@
 <section class="view" data-view-panel="history">
   <div class="page-head history-page-head">
     <div><span class="eyebrow">VERSION HISTORY</span><h1>历史更新</h1><p>从首个可追溯正式版本到当前版本的发布时间与主要变更。</p></div>
-    <div class="history-current"><span>当前版本</span><strong id="historyCurrentVersion">v9.0</strong></div>
+    <div class="history-current"><span>当前版本</span><strong id="historyCurrentVersion">v10.0</strong></div>
   </div>
   <section class="panel history-panel">
-    <div class="history-toolbar"><div><b>WRITE Settlement Manager</b><p>自 v6.5.7 起，发布时间精确记录到分钟；早期无法可靠还原分钟的版本标记为“时间未记录”。</p></div><span id="historyCount">20 个版本</span></div>
+    <div class="history-toolbar"><div><b>WRITE Settlement Manager</b><p>自 v6.5.7 起，发布时间精确记录到分钟；早期无法可靠还原分钟的版本标记为“时间未记录”。</p></div><span id="historyCount">21 个版本</span></div>
     <div class="release-history" id="releaseHistory"></div>
   </section>
 </section>
@@ -234,7 +234,7 @@
 <script src="./src/schema-learning.js?v=9.0.0-001"></script>
 <script src="./src/historical-rules-v730.js?v=9.0.0-001"></script>
 <script defer src="./src/app.bundle.js?v=9.0.0-001"></script>
-<script defer src="./src/runtime-v740.js?v=9.0.0-001"></script>
+<script defer src="./src/runtime-v740.js?v=10.0.1"></script>
 <script>
 window.__WRITE_APP_READY__ = false;
 setTimeout(function(){
@@ -250,8 +250,20 @@ setTimeout(function(){
 <script defer src="./src/learning-engine-v740.js?v=9.0.0-001"></script>
 <script defer src="./src/universal-source-v759.js?v=9.0.0-001"></script>
 <script src="./src/release-v900.js?v=9.0.0-001"></script>
+<script src="./src/release-v1000.js?v=10.0.0"></script>
+<script src="./src/release-v100.js?v=10.0.0"></script>
 <script defer src="./src/v9/learning-store.js?v=9.0.0-001"></script>
 <script defer src="./src/v8/human-workflow.js?v=9.0.0-001"></script>
+<script src="./src/v10/canonical-order.js?v=10.0.0"></script>
+<script src="./src/v10/billable-atom.js?v=10.0.0"></script>
+<script src="./src/v10/accounting-ir.js?v=10.0.0"></script>
+<script src="./src/v10/pricing-waterfall.js?v=10.0.0"></script>
+<script src="./src/v10/invoice-compiler.js?v=10.0.0"></script>
+<script src="./src/v10/governance.js?v=10.0.0"></script>
+<script src="./src/v10/canary-router.js?v=10.0.0"></script>
+<script src="./src/v10/manual-adjustments.js?v=10.0.0"></script>
+<script src="./src/v10/universal-ingestion.js?v=10.0.0"></script>
+<script src="./src/v10/xls-biff.js?v=10.0.0"></script>
 <script defer src="./src/v9/autonomous-fact-engine.js?v=9.0.0-001"></script>
 <script defer src="./src/v9/golden-template-runtime.js?v=9.0.0-001"></script>
 <script defer src="./src/v9/review-runtime.js?v=9.0.0-001"></script>
@@ -277,4 +289,10 @@ setTimeout(function(){
 <script defer src="./src/v8/shadow-runtime.js?v=9.0.0-001"></script>
 <script defer src="./src/v8/training-runtime.js?v=9.0.0-001"></script>
 <script defer src="./src/v8/zero-loss-runtime.js?v=9.0.0-001"></script>
+<script src="./src/v10/production-core.js?v=10.0.0"></script>
+<script src="./src/v10/pdf-renderer.js?v=10.0.1"></script>
+<script>window.WRITE_V10_SETTINGS={mode:'PRODUCTION',rolloutPercent:100,pricingMode:'BLANK_RED_HUMAN'};</script>
+<script defer src="./src/v10/production-adapter.js?v=10.0.0"></script>
+<script defer src="./src/v10/export-runtime.js?v=10.0.1"></script>
+<script defer src="./src/v10/runtime.js?v=10.0.1"></script>
 </body></html>

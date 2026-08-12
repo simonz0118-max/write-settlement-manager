@@ -1,0 +1,22 @@
+{
+  "version": "7.5.5",
+  "base": "7.5.4",
+  "title": "Standardized Description + Visible Wrangler Deploy",
+  "descriptionStandard": {
+    "formalSkuVisible": false,
+    "camouflagePattern": "Le Filet de camouflage / SIZE",
+    "genericPolicy": "core product name + key dimension/length/lot/subtype; conservative simplification"
+  },
+  "invariants": {
+    "confirmedParcels": 160,
+    "knownMerchandiseQuantity": 288,
+    "knownGroups": 82,
+    "historicalPricing": "V7.4.1 parity",
+    "unknownPrice": "blank"
+  },
+  "deploy": {
+    "wranglerOutput": "visible",
+    "npxYes": true,
+    "timeoutGuard": true
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "status": "PASS",
+  "state": {
+    "ready": true,
+    "release": "10.0.0",
+    "mode": "PRODUCTION",
+    "records": 3020,
+    "parcels": 2365,
+    "giftOnly": 646,
+    "dedup": 9,
+    "split": 11,
+    "conflicts": 11,
+    "rows": 523,
+    "hardPass": true,
+    "missing": 0,
+    "allPricesBlank": true,
+    "unknownRed": true,
+    "originsMerged": true
+  },
+  "errors": [],
+  "responses": []
+}

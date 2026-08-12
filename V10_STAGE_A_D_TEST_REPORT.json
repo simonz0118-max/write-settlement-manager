@@ -1,0 +1,14 @@
+{
+  "generatedAt": "2026-08-12",
+  "status": "PASS",
+  "version": "10.0.0",
+  "productionTakeover": true,
+  "rolloutPercent": 100,
+  "historicalHumanFactCorpus": {"rawFiles": 60, "uniqueFiles": 55, "completedFactFiles": 52, "ignoredIncomplete": 3, "activeFactRows": 1806, "uniqueDescriptions": 269},
+  "humanFormatIndustryE2E": {"status": "PASS", "inputRecords": 3020, "industries": 10, "invoiceRows": 523, "missingSourceItems": 0},
+  "deterministicStress": {"status": "PASS", "inputRecords": 50085, "parcelCount": 46011, "giftOnlyExcluded": 4023, "deduplicated": 51, "splitOrders": 34, "missingSourceItems": 0},
+  "templateInvariance": {"status": "PASS", "zipEntries": 25, "unchangedEntries": 23, "changedEntries": ["xl/styles.xml", "xl/worksheets/sheet1.xml"], "logoPreserved": true, "bankInformationPreserved": true},
+  "exports": {"xlsx": "PASS", "pdf": "PASS", "auditJson": "PASS"},
+  "githubWrite": "PACKAGED_NOT_EXECUTED",
+  "cloudflareDeploy": "PACKAGED_NOT_EXECUTED"
+}

@@ -1,0 +1,31 @@
+{
+  "seed": "0x10C0FFEE",
+  "sheets": {
+    "人工标准订单": 1812,
+    "法国仓后期添加列": 806,
+    "跨行业混合长文本": 402
+  },
+  "industries": {
+    "个护": 299,
+    "家居": 286,
+    "电子配件": 292,
+    "宠物": 341,
+    "服饰": 310,
+    "文具": 325,
+    "厨具": 273,
+    "未知新品": 284,
+    "户外": 282,
+    "汽车用品": 308
+  },
+  "rows": 3020,
+  "giftOnlyRows": 73,
+  "splitShipmentRows": 11,
+  "duplicateRows": 9,
+  "priceVariants": [
+    "number",
+    "zero",
+    "blank",
+    "text",
+    "negative"
+  ]
+}

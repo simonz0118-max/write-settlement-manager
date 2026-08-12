@@ -1,0 +1,19 @@
+{
+  "version": "8.1.1",
+  "status": "PASS",
+  "businessLogicChanged": false,
+  "rootCause": "V8.1 deployer omitted argv[4] production runtime path when invoking v800_nonblocking_contract.js",
+  "fix": "Pass src/universal-source-v759.js and enforce deploy test-harness argument contract",
+  "checks": [
+    "semantic core",
+    "rule priority/scope/conflict",
+    "manual semantic inference",
+    "training safety",
+    "candidate conflict",
+    "registry",
+    "seed safety",
+    "test harness arg contract",
+    "patch idempotency",
+    "production non-blocking"
+  ]
+}

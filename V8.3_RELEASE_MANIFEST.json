@@ -1,0 +1,16 @@
+{
+  "version": "8.3.0",
+  "stage": "CLASSIFICATION_FIDELITY_SHADOW",
+  "productionFactEngine": "V7.5.9",
+  "formalFactTakeover": false,
+  "requirements": {
+    "zeroLoss": true,
+    "classificationFidelity": true,
+    "multiBatchHistoricalFidelity": false
+  },
+  "currentGolden": {
+    "batch": "1001-1162",
+    "expectedRows": 49,
+    "targetMatch": 49
+  }
+}

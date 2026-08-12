@@ -1,0 +1,25 @@
+{
+  "app": {
+    "factRows": 162,
+    "quantitySum": 288.0,
+    "mode": "ONE_ORDER_ONE_ROW_TRUE_PRODUCT_QUANTITY"
+  },
+  "manual": {
+    "factRows": 49,
+    "quantitySum": 252.0,
+    "baseGroups": 45,
+    "baseQuantity": 161,
+    "upsellGroups": 4,
+    "upsellQuantity": 91
+  },
+  "learnedRules": [
+    "主商品按国家+订单主商品配置聚合，Quantity=匹配订单数",
+    "UPSell独立汇总，Quantity=实际件数",
+    "伪装网颜色/premium/renforcé统一到核心名称+尺寸",
+    "三角网保留三边尺寸",
+    "多主商品保留组合描述",
+    "Colliers/Cordes à cliquets/Kit Suspendu在含伪装网订单中拆为UPSell",
+    "单主商品x2且无UPSell时不显示*2；x3+或多主商品/含UPSell时保留倍率",
+    "源记录完整保留；人工FACT未计入的占位/无可计商品记录只留后台审计"
+  ]
+}

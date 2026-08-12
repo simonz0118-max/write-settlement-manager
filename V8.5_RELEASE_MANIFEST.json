@@ -1,0 +1,26 @@
+{
+  "version": "8.5.0",
+  "stage": "MULTI_DATASET_GOLDEN_SHADOW",
+  "productionFactEngine": "V7.5.9",
+  "formalFactTakeover": false,
+  "releaseGates": {
+    "ThomasZeroLoss": true,
+    "ThomasClassification49of49": true,
+    "ThomasTrace49of49": true,
+    "YDArchiveSemanticRegression": true,
+    "PencilSemanticRegression": true,
+    "SoapSemanticRegression": true,
+    "EvidenceFingerprintDedup": true,
+    "CrossDatasetRegressionFirewall": true
+  },
+  "sourceEvidence": {
+    "rawWorkbookCopies": 60,
+    "uniqueEvidenceWorkbooks": 55,
+    "YD": 5,
+    "Archive": 5,
+    "Pencil": 21,
+    "Soap": 29,
+    "YDArchiveDuplicateEvidenceGroups": 5
+  },
+  "takeover": "NOT_ENABLED"
+}

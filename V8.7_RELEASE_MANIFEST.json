@@ -1,0 +1,21 @@
+{
+  "version": "8.7.0",
+  "stage": "AUTOMATIC_HISTORICAL_CLOSURE_SHADOW",
+  "productionFactEngine": "V7.5.9",
+  "formalFactTakeover": false,
+  "states": {
+    "EXACT_CLOSED": "eligible",
+    "EXPLAINED_CLOSED": "eligible only with verified full explanation",
+    "TEMPLATE_ONLY": "reference / price template only",
+    "FACT_ONLY_MANUAL": "never trains",
+    "PARTIAL_UNEXPLAINED": "never partially trains",
+    "SOURCE_ONLY": "review"
+  },
+  "preservedGates": [
+    "V8.5 cross-dataset regression",
+    "V8.6 batch/domain scoring",
+    "Thomas Zero-Loss",
+    "Thomas 49/49 Classification",
+    "Thomas 49/49 Trace"
+  ]
+}

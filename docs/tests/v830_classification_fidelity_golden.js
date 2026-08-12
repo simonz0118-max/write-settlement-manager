@@ -1,0 +1,7 @@
+const fs=require('fs'),vm=require('vm'),assert=require('assert');
+const core=fs.readFileSync(process.argv[2],'utf8'),fid=fs.readFileSync(process.argv[3],'utf8'),g=JSON.parse(fs.readFileSync(process.argv[4],'utf8'));
+const c={console,window:null,globalThis:null};c.window=c;c.globalThis=c;vm.createContext(c);vm.runInContext(core,c);vm.runInContext(fid,c);
+const q=s=>{const m=String(s||'').match(/\*(\d+(?:\.\d+)?)\s*$/);return m?Number(m[1]):1};
+const orders=g.orders.map(o=>{const n=String(o.productNames||'').split(/\n/),s=String(o.skuLines||'').split(/\n/),L=Math.max(n.length,s.length),lineItems=[];while(n.length<L)n.push('');while(s.length<L)s.push('');for(let i=0;i<L;i++)if(String(n[i]||'').trim())lineItems.push({productName:n[i],sku:s[i],quantity:q(s[i])});return{recordKey:o.orderKey,country:o.country,lineItems}});
+const sem=orders.map(o=>c.WRITE_SEMANTIC_V8.semanticizeOrder(o,[])),rows=c.WRITE_SEMANTIC_V8.aggregateSemanticOrders(sem),r=c.WRITE_FIDELITY_V83.compare(rows,g.manualFact);
+assert.equal(rows.length,49);assert.equal(g.manualFact.length,49);assert.equal(r.countryRole.matched,49);assert.equal(r.configuration.matched,49);assert.equal(r.full.matched,49);assert(r.exact);console.log('V8.3 CLASSIFICATION FIDELITY GOLDEN PASS: 49/49 Country+Role+Configuration+Quantity');

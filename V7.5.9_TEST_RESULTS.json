@@ -1,0 +1,25 @@
+{
+  "status": "PASS",
+  "tests": [
+    {
+      "cmd": "node --check /mnt/data/v759_work/patch-v759.js",
+      "exit": 0,
+      "output": ""
+    },
+    {
+      "cmd": "node --check /mnt/data/v759_work/src/universal-source-v759.js",
+      "exit": 0,
+      "output": ""
+    },
+    {
+      "cmd": "node /mnt/data/v759_work/docs/tests/v759_contract.js /mnt/data/v759_work/src/universal-source-v759.js",
+      "exit": 0,
+      "output": "V7.5.9 contract PASS"
+    },
+    {
+      "cmd": "node /mnt/data/v759_work/docs/tests/v759_manual_fact_golden.js /mnt/data/v759_work/src/universal-source-v759.js /mnt/data/v759_work/docs/tests/MANUAL_FACT_1001_1162_GOLDEN.json",
+      "exit": 0,
+      "output": "V7.5.9 MANUAL FACT GOLDEN PASS: 49 rows / base45 / upsell4 / accountingQty252"
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "version": "7.5.6",
+  "title": "Order Count Immutable",
+  "base": "7.5.5",
+  "hardInvariants": {
+    "oneValidSourceOrderEqualsOneFactQuantityUnit": true,
+    "realBatchOrderCount": 160,
+    "countryOrderCount": {
+      "FRANCE": 158,
+      "BELGIUM": 1,
+      "GREECE": 1
+    },
+    "merchandiseQuantityAudit": 288,
+    "descriptionStandardized": true,
+    "unknownPriceBlank": true
+  }
+}

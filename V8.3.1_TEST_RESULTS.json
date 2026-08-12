@@ -1,0 +1,79 @@
+{
+  "status": "PASS",
+  "tests": [
+    {
+      "cmd": "node --check /mnt/data/v831build/src/v8/semantic-core.js",
+      "exit": 0,
+      "output": ""
+    },
+    {
+      "cmd": "node --check /mnt/data/v831build/src/v8/trace-fidelity.js",
+      "exit": 0,
+      "output": ""
+    },
+    {
+      "cmd": "node --check /mnt/data/v831build/src/v8/trace-fidelity-runtime.js",
+      "exit": 0,
+      "output": ""
+    },
+    {
+      "cmd": "node /mnt/data/v831build/docs/tests/v820_real_batch_zero_loss.js /mnt/data/v831build/src/v8/semantic-core.js /mnt/data/v831build/src/v8/zero-loss-engine.js /mnt/data/v831build/docs/tests/V820_ZERO_LOSS_1001_1162_GOLDEN.json",
+      "exit": 0,
+      "output": "V8.2 REAL BATCH ZERO-LOSS PASS: orders=162 items=260 qty=289"
+    },
+    {
+      "cmd": "node /mnt/data/v831build/docs/tests/v830_classification_fidelity_golden.js /mnt/data/v831build/src/v8/semantic-core.js /mnt/data/v831build/src/v8/fidelity-evaluator.js /mnt/data/v831build/docs/tests/V820_ZERO_LOSS_1001_1162_GOLDEN.json",
+      "exit": 0,
+      "output": "V8.3 CLASSIFICATION FIDELITY GOLDEN PASS: 49/49 Country+Role+Configuration+Quantity"
+    },
+    {
+      "cmd": "node /mnt/data/v831build/docs/tests/v831_trace_fidelity_golden.js /mnt/data/v831build/src/v8/semantic-core.js /mnt/data/v831build/src/v8/trace-fidelity.js /mnt/data/v831build/docs/tests/V820_ZERO_LOSS_1001_1162_GOLDEN.json",
+      "exit": 0,
+      "output": "V8.3.1 TRACE FIDELITY GOLDEN PASS: fact=49/49 billableOrders=161 placeholder=1"
+    },
+    {
+      "cmd": "node /mnt/data/v831build/docs/tests/v831_trace_failure_detection.js /mnt/data/v831build/src/v8/semantic-core.js /mnt/data/v831build/src/v8/trace-fidelity.js",
+      "exit": 0,
+      "output": "V8.3.1 trace failure detection PASS"
+    },
+    {
+      "cmd": "node /mnt/data/v831build/docs/tests/v831_combined_takeover_gate.js /mnt/data/v831build/src/v8/trace-fidelity.js /mnt/data/v831build/V8.3.1_RELEASE_MANIFEST.json",
+      "exit": 0,
+      "output": "V8.3.1 combined takeover gate PASS: production takeover remains OFF"
+    },
+    {
+      "cmd": "node /mnt/data/v831build/docs/tests/v830_quantity_configuration_rules.js /mnt/data/v831build/src/v8/semantic-core.js",
+      "exit": 0,
+      "output": "V8.3 quantity/configuration rules PASS"
+    },
+    {
+      "cmd": "node /mnt/data/v831build/docs/tests/v830_context_role_rules.js /mnt/data/v831build/src/v8/semantic-core.js",
+      "exit": 0,
+      "output": "V8.3 context role rules PASS"
+    },
+    {
+      "cmd": "node /mnt/data/v831build/docs/tests/v830_rope_description.js /mnt/data/v831build/src/v8/semantic-core.js",
+      "exit": 0,
+      "output": "V8.3 rope description PASS"
+    },
+    {
+      "cmd": "node /mnt/data/v831build/docs/tests/v800_rule_priority.js /mnt/data/v831build/src/v8/semantic-core.js",
+      "exit": 0,
+      "output": "V8.0 rule priority/scope/conflict PASS"
+    },
+    {
+      "cmd": "node /mnt/data/v831build/docs/tests/v810_training_gate.js /mnt/data/v831build/src/v8/historical-training.js",
+      "exit": 0,
+      "output": "V8.1 training safety gate PASS"
+    }
+  ],
+  "golden": {
+    "sourceRecords": 162,
+    "validProductQuantity": 289,
+    "classification": "49/49",
+    "traceBackedFactRows": "49/49",
+    "billableMainOrders": 161,
+    "placeholderAuditOnlyOrders": 1,
+    "formalFactTakeover": false
+  }
+}

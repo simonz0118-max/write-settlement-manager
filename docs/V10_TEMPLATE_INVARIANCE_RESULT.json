@@ -1,0 +1,13 @@
+{
+  "status": "PASS",
+  "entryCount": 25,
+  "changedEntries": [
+    "xl/styles.xml",
+    "xl/worksheets/sheet1.xml"
+  ],
+  "unchangedEntries": 23,
+  "logoPreserved": true,
+  "bankAndFixedLayoutPreserved": true,
+  "redBlankPriceStyle": 87,
+  "parcelTotalPresent": true
+}

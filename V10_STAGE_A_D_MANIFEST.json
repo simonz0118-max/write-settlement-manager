@@ -1,0 +1,36 @@
+{
+  "version": "10.0.0-a1",
+  "stage": "DEVELOPMENT_SHADOW",
+  "formalProductionEngine": "V9.0",
+  "v10ProductionTakeover": false,
+  "completed": {
+    "P0_paidGiftVsFreeGift": true,
+    "P0_multiEntityBillableAtom": true,
+    "P0_serviceFeeIndependentRows": true,
+    "P0_currencyIsolation": true,
+    "P0_fivefoldConservation": true,
+    "FR_handlingFeeRole": true,
+    "CanonicalOrderFoundation": true,
+    "PricingWaterfallFoundation": true,
+    "UniversalIngestionDeterministicFoundation": [
+      "CSV",
+      "TSV",
+      "JSON",
+      "XML",
+      "signature detection",
+      "ZIP safety checks"
+    ]
+  },
+  "notYetComplete": [
+    "52 completed human FACT goldens full V10 replay",
+    "113 soap configurations exhaustive test",
+    "PDF table parser",
+    "OCR image/scanned PDF path",
+    "formal PDF invoice compiler",
+    "STRICT_FORMAL/ALWAYS_ISSUE end-to-end UI/config",
+    "1000/10000/50000 fixed-seed V10 semantic stress",
+    "browser E2E + canary",
+    "GitHub push and Cloudflare deploy"
+  ],
+  "acceptanceStatus": "NEEDS WORK"
+}

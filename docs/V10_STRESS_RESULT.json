@@ -1,0 +1,13 @@
+{
+  "status": "PASS",
+  "seed": "0x10c0ffee",
+  "inputRecords": 50085,
+  "parcels": 46011,
+  "giftOnlyExcluded": 4023,
+  "deduplicated": 51,
+  "splitOrders": 34,
+  "rows": 3182,
+  "elapsedMs": 1057,
+  "deterministic": true,
+  "missingSourceItems": 0
+}

@@ -1,0 +1,34 @@
+{
+  "version": "8.4.0",
+  "stage": "UNIFIED_HUMAN_WORKFLOW_SHADOW",
+  "productionFactEngine": "V7.5.9",
+  "formalFactTakeover": false,
+  "learnedSources": [
+    "YD_CAMOUFLAGE",
+    "ARCHIVE_MULTI_FAMILY",
+    "PENCIL_WRITE_STORE",
+    "SOAP_HISTORY"
+  ],
+  "workflow": [
+    "retain every source fulfillment record",
+    "derive fulfillment record identity without order-id-only dedupe",
+    "resolve fulfillment origin when source evidence exists",
+    "map raw products to accounting families/aliases",
+    "classify component role: PACKAGE_COMPONENT / SEPARATE_UPSELL / FREE_GIFT / SERVICE / FEE / UNKNOWN",
+    "merge same-family package components inside one fulfillment record",
+    "form one package configuration per billed fulfillment record",
+    "group by fulfillment origin + destination country + configuration",
+    "count package configurations by matching fulfillment records",
+    "count separate upsells by actual units",
+    "apply only source-backed historical pricing; otherwise leave blank",
+    "retain unresolved/manual-only data for audit, never silently drop",
+    "never learn unresolved partial FACT differences"
+  ],
+  "trainingGate": {
+    "EXACT_CLOSED": "train",
+    "EXPLAINED_CLOSED": "train only if historical evidence fully explains difference",
+    "PARTIAL_UNEXPLAINED": "ignore for learning",
+    "FACT_ONLY_MANUAL": "ignore for learning",
+    "TEMPLATE_ONLY": "ignore for classification learning"
+  }
+}

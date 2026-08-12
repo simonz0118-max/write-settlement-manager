@@ -1,5 +1,7 @@
 /* WRITE Import Worker v7.2.0 build 20260809-1825 */
 /* WRITE Settlement Manager v5.3.3 - standalone import worker */
+try{importScripts('../v10/universal-ingestion.js?v=10.0.0-rc1')}catch(e){/* V9 fallback remains */}
+try{importScripts('../v10/xls-biff.js?v=10.0.0-rc1')}catch(e){/* XLS adapter optional */}
 const EOCD_SIG = 0x06054b50;
 const CEN_SIG = 0x02014b50;
 const LOC_SIG = 0x04034b50;
@@ -716,7 +718,50 @@ async function parseUploadedZip(file, overallCb) {
   return { results, workbooks };
 }
 
+
+function parseDelimitedV10(text,sep=','){
+  const rows=[];let row=[],cell='',q=false;
+  for(let i=0;i<text.length;i++){const ch=text[i],nx=text[i+1];if(ch==='"'){if(q&&nx==='"'){cell+='"';i++}else q=!q}else if(ch===sep&&!q){row.push(cell);cell=''}else if((ch==='\n'||ch==='\r')&&!q){if(ch==='\r'&&nx==='\n')i++;row.push(cell);cell='';if(row.some(x=>String(x).trim()))rows.push(row);row=[]}else cell+=ch}
+  row.push(cell);if(row.some(x=>String(x).trim()))rows.push(row);return rows;
+}
+function recordsToOrdersV10(records,sourceFile,sheetName='DATA'){
+  const orders=[];
+  for(let i=0;i<records.length;i++){
+    const rec=records[i]||{},order={sourceFile,sourceSheet:sheetName,sourceRow:i+2};
+    for(const [k,v] of Object.entries(rec)){const key=keyForHeader(k);if(key)order[key]=String(v??'').trim()}
+    if(!order.orderId)continue;
+    order.orderAmount=normalizeNumber(order.orderAmount);order.productCount=deriveCount(order);order.currency=inferCurrency(sourceFile,order.currency);
+    if(isPlausibleOrderData(order,Object.values(rec)))orders.push(order);
+  }
+  return orders;
+}
+async function parseTextInputV10(file){
+  const name=String(file.name||''),ext=(name.split('.').pop()||'').toLowerCase(),text=await file.text();let records=[];
+  if(ext==='csv'||ext==='tsv'){
+    const rows=parseDelimitedV10(text,ext==='tsv'?'\t':',');if(!rows.length)return{results:[],workbooks:[]};
+    let best=0,bestScore=-1;for(let r=0;r<Math.min(10,rows.length);r++){const score=rows[r].map(keyForHeader).filter(Boolean).length;if(score>bestScore){bestScore=score;best=r}}
+    const headers=rows[best].map((x,i)=>String(x||`COL_${i+1}`).trim());records=rows.slice(best+1).filter(r=>r.some(x=>String(x).trim())).map(r=>Object.fromEntries(headers.map((h,i)=>[h,r[i]??''])));
+  } else if(ext==='json'){
+    const x=JSON.parse(text);records=Array.isArray(x)?x:Array.isArray(x.orders)?x.orders:Array.isArray(x.data)?x.data:[x];
+  } else if(ext==='xml'){
+    const re=/<(?:order|commande|record|row)\b[^>]*>([\s\S]*?)<\/(?:order|commande|record|row)>/gi;let m;while((m=re.exec(text))){const o={};m[1].replace(/<([\w:-]+)[^>]*>([\s\S]*?)<\/\1>/g,(_,k,v)=>{o[k.replace(/^.*:/,'')]=String(v).replace(/<[^>]+>/g,'').trim();return''});records.push(o)}
+  }
+  const orders=recordsToOrdersV10(records,name,'DATA');return{results:[{sourceFile:name,sheetName:'DATA',status:'imported',orderCount:orders.length,orders,inflatedBytes:file.size||0,reason:`V10 ${ext.toUpperCase()} deterministic import`}],workbooks:[{name,blob:file}]};
+}
+
+
+async function parseExtendedInputV10(file){
+  if(!self.WRITE_V10_INGESTION)throw new Error('V10_INGESTION_ENGINE_UNAVAILABLE');
+  const buf=await file.arrayBuffer();
+  const parsed=await self.WRITE_V10_INGESTION.parseExtended(buf,file.name,file.type||'');
+  const records=parsed.records||[];
+  const orders=recordsToOrdersV10(records,file.name,parsed.format||'DATA');
+  return{results:[{sourceFile:file.name,sheetName:parsed.format||'DATA',status:'imported',orderCount:orders.length,orders,inflatedBytes:file.size||0,reason:`V10 ${parsed.format||'extended'} local import`}],workbooks:[{name:file.name,blob:file}]};
+}
+
 async function parseInput(file, progressCb) {
+  if (/\.(csv|tsv|json|xml)$/i.test(file.name)) return parseTextInputV10(file);
+  if (/\.(xls|pdf|png|jpe?g)$/i.test(file.name)) return parseExtendedInputV10(file);
   if (/\.zip$/i.test(file.name)) return parseUploadedZip(file, progressCb);
   if (/\.xlsx$/i.test(file.name)) {
     const results = await parseXlsxBlob(file, file.name, (p, sheetName, phase) => progressCb?.(p, `${file.name} · ${sheetName}`, phase));

@@ -1,0 +1,13 @@
+const fs=require('fs'),assert=require('assert');
+const r=fs.readFileSync(process.argv[2],'utf8'),w=fs.readFileSync(process.argv[3],'utf8');
+assert(/const V758_VERSION='7\.5\.8'/.test(r));
+assert(/trueProductQuantityForOrder/.test(r));
+assert(/PRODUCT_QUANTITY_INVARIANT_FAILED/.test(r));
+assert(/ORDER_ROW_INVARIANT_FAILED/.test(r));
+assert(/quantity:trueQty/.test(r));
+assert(!/quantity:1,quantityKnown:true/.test(r));
+assert(/active\.length/.test(r));
+assert(/totalQty:merchandiseQty/.test(r));
+assert(/sourceProductCountValue/.test(w));
+assert(/sourceFidelityVersion:'7\.5\.8'/.test(w));
+console.log('V7.5.8 static contract PASS');

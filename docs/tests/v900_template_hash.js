@@ -1,0 +1,1 @@
+const fs=require('fs'),crypto=require('crypto'),assert=require('assert');const sha=crypto.createHash('sha256').update(fs.readFileSync(process.argv[2])).digest('hex');assert.equal(sha,process.argv[3]);console.log('V9 Golden template hash PASS:',sha);

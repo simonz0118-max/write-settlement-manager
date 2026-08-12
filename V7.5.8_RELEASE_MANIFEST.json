@@ -1,0 +1,16 @@
+{
+  "version": "7.5.8",
+  "title": "One Order One Row + True Product Quantity",
+  "hardInvariants": {
+    "factRows": 160,
+    "quantitySum": 288,
+    "countryRows": {
+      "FRANCE": 158,
+      "BELGIUM": 1,
+      "GREECE": 1
+    }
+  },
+  "pricing": "package total -> per-unit display; amount preserved",
+  "description": "concise package contents",
+  "unknownPrice": "blank"
+}

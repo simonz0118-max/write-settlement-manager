@@ -1,8 +1,0 @@
-WRITE Settlement Manager V7.5.8
-One Order One Row + True Product Quantity
-
-ORDER ROWS -> immutable source orders
-QUANTITY -> true products in each source order
-CROSS-ORDER AGGREGATION -> forbidden
-HISTORICAL PACKAGE TOTAL -> preserved
-UNKNOWN PRICE -> blank

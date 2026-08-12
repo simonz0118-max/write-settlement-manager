@@ -1,0 +1,4 @@
+const fs=require('fs'),vm=require('vm'),assert=require('assert');const h=fs.readFileSync(process.argv[2],'utf8'),a=fs.readFileSync(process.argv[3],'utf8'),ir=fs.readFileSync(process.argv[4],'utf8'),c={window:null};c.window=c;vm.createContext(c);vm.runInContext(h,c);vm.runInContext(a,c);vm.runInContext(ir,c);
+const orders=[{recordKey:'O1',country:'FRANCE',currency:'EUR',fulfillmentOrigin:'FR',lineItems:[{productName:'Coffret cadeau *1'},{productName:'Savon *2 + Baume *1'},{productName:'Gravure *1'},{productName:'Échantillon offert *1'}]}];
+const x=c.WRITE_V10_ACCOUNTING_IR.buildIR(orders);const q=x.audit;assert(q.orderConservation);assert(q.itemConservation);assert(q.quantityConservation);assert(q.semanticConservation);assert(q.moneyCurrencyConservation);assert(q.hardPass);assert.equal(x.freeAtoms.length,1);assert.equal(x.serviceRows.length,1);
+console.log('V10 P0-5 fivefold conservation PASS');

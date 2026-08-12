@@ -1,0 +1,3 @@
+const fs=require('fs'),vm=require('vm'),assert=require('assert');const src=fs.readFileSync(process.argv[2],'utf8'),c={window:null};c.window=c;vm.createContext(c);vm.runInContext(src,c);const S=c.WRITE_BATCH_SCORER_V86;
+for(const domain of ['classification','quantity','price']){const x=S.scoreBatch({sourceBacked:true});assert(!x.decisions[domain].trainable)}
+console.log('V8.6 unknown metrics cannot promote training PASS');

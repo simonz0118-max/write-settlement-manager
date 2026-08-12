@@ -1,0 +1,10 @@
+{
+  "version": "8.1.0",
+  "stage": "HISTORICAL_TRAINING_SHADOW",
+  "productionFactEngine": "V7.5.9",
+  "training": "COMPLETE_ONLY",
+  "partialIsolation": true,
+  "deduplication": true,
+  "conflictDetection": true,
+  "automaticProductionSwitch": false
+}

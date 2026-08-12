@@ -1,0 +1,16 @@
+{
+  "version": "8.2.0",
+  "stage": "ZERO_LOSS_SHADOW",
+  "productionFactEngine": "V7.5.9",
+  "golden": {
+    "sourceRecords": 162,
+    "validProductQuantity": 289
+  },
+  "hard": {
+    "lostOrder": 0,
+    "lostProduct": 0,
+    "lostQuantity": 0
+  },
+  "unknownBlocks": false,
+  "missingPriceBlocks": false
+}

@@ -1,0 +1,15 @@
+{
+  "version": "8.3.0",
+  "batch": "1001-1162",
+  "expectedRows": 49,
+  "matched": 49,
+  "countryRoleRate": 1.0,
+  "configurationRate": 1.0,
+  "fullRate": 1.0,
+  "exact": true,
+  "zeroLoss": true,
+  "sourceRecords": 162,
+  "sourceProductRecords": 260,
+  "validProductQuantity": 289,
+  "formalFactTakeover": false
+}

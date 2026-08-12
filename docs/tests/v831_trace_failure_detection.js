@@ -1,0 +1,10 @@
+const fs=require('fs'),vm=require('vm'),assert=require('assert');
+const core=fs.readFileSync(process.argv[2],'utf8'),trace=fs.readFileSync(process.argv[3],'utf8');
+const c={console,window:null,globalThis:null};c.window=c;c.globalThis=c;vm.createContext(c);vm.runInContext(core,c);vm.runInContext(trace,c);
+const O=[{recordKey:'A',country:'FRANCE',lineItems:[{productName:'Le Filet de camouflage / 3x4',sku:'N',quantity:1}]}];
+const S=O.map(o=>c.WRITE_SEMANTIC_V8.semanticizeOrder(o,[])),R=c.WRITE_SEMANTIC_V8.aggregateSemanticOrders(S);
+assert(c.WRITE_TRACE_FIDELITY_V831.audit(S,R).exactTracePass);
+const broken=JSON.parse(JSON.stringify(R));broken[0].sourceItemKeys=[];
+const a=c.WRITE_TRACE_FIDELITY_V831.audit(S,broken);
+assert(!a.exactTracePass);assert(a.errors.some(x=>x.code==='FACT_WITHOUT_SOURCE_ITEM'||x.code==='BILLABLE_ITEM_ROUTE_COUNT'));
+console.log('V8.3.1 trace failure detection PASS');

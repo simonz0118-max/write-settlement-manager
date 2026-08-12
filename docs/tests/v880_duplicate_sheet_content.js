@@ -1,0 +1,3 @@
+const fs=require('fs'),vm=require('vm'),assert=require('assert');const s=fs.readFileSync(process.argv[2],'utf8'),c={window:null};c.window=c;vm.createContext(c);vm.runInContext(s,c);const E=c.WRITE_HISTORICAL_EXTRACTOR_V88;
+const rows=[['Order ID','SKU','Product Name','Country'],['1','X*1','Savon','FRANCE']];
+const x=E.extractWorkbook({sheets:[{name:'100-200',rows},{name:'backup 100-200',rows}]});assert.equal(x.orderRecords.length,1);assert.equal(x.duplicates.length,1);console.log('V8.8 duplicate sheet content dedup PASS');

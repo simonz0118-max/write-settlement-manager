@@ -1,0 +1,45 @@
+{
+  "status": "PASS",
+  "tests": [
+    {
+      "cmd": "node --check /mnt/data/v7581_work/patch-v7581.js",
+      "exit": 0,
+      "output": ""
+    },
+    {
+      "cmd": "node --check /mnt/data/v7581_work/src/universal-source-v758.js",
+      "exit": 0,
+      "output": ""
+    },
+    {
+      "cmd": "node --check /mnt/data/v7581_work/src/workers/import.worker.v758.js",
+      "exit": 0,
+      "output": ""
+    },
+    {
+      "cmd": "node /mnt/data/v7581_work/docs/tests/v7581_worker_wiring.js /mnt/data/v7581_work/src/universal-source-v758.js /mnt/data/v7581_work/src/workers/import.worker.v758.js",
+      "exit": 0,
+      "output": "V7.5.8.1 WORKER WIRING PASS"
+    },
+    {
+      "cmd": "node /mnt/data/v7581_work/docs/tests/v758_dual_invariant.js /mnt/data/v7581_work/src/universal-source-v758.js",
+      "exit": 0,
+      "output": "V7.5.8 DUAL INVARIANT PASS: 160 rows + 288 quantity"
+    },
+    {
+      "cmd": "node /mnt/data/v7581_work/docs/tests/v758_multi_product_order.js /mnt/data/v7581_work/src/universal-source-v758.js",
+      "exit": 0,
+      "output": "V7.5.8 multi-product order description PASS"
+    },
+    {
+      "cmd": "node /mnt/data/v7581_work/docs/tests/v758_historical_total.js /mnt/data/v7581_work/src/universal-source-v758.js",
+      "exit": 0,
+      "output": "V7.5.8 historical package total preserved PASS"
+    },
+    {
+      "cmd": "node /mnt/data/v7581_work/docs/tests/v758_blank_template.js /mnt/data/v7581_work/src/runtime-v740.js /mnt/data/v7581_work/src/universal-source-v758.js /mnt/data/v7581_work/assets/FACT_TEMPLATE_UNIFIED_V2.xlsx",
+      "exit": 0,
+      "output": "V7.5.8 blank price + clean template PASS"
+    }
+  ]
+}

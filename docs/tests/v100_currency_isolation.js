@@ -1,0 +1,4 @@
+const fs=require('fs'),vm=require('vm'),assert=require('assert');const h=fs.readFileSync(process.argv[2],'utf8'),a=fs.readFileSync(process.argv[3],'utf8'),ir=fs.readFileSync(process.argv[4],'utf8'),c={window:null};c.window=c;vm.createContext(c);vm.runInContext(h,c);vm.runInContext(a,c);vm.runInContext(ir,c);
+const mk=(id,cur)=>({recordKey:id,country:'FRANCE',currency:cur,fulfillmentOrigin:'CN',lineItems:[{productName:'Savon *2'}]});
+const x=c.WRITE_V10_ACCOUNTING_IR.buildIR([mk('E','EUR'),mk('U','USD'),mk('G','GBP')]);assert.equal(x.packageRows.length,3);assert.deepEqual(new Set(x.packageRows.map(r=>r.currency)),new Set(['EUR','USD','GBP']));assert(x.audit.currencyIsolation);assert(x.audit.hardPass);
+console.log('V10 P0-4 currency isolation PASS');

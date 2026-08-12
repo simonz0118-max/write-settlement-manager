@@ -968,10 +968,10 @@ window.addEventListener('unhandledrejection',event=>{
 
 async function startImport(fileList){
   clearExportDownloadLink();
-  const files=[...fileList].filter(f=>/\.(xlsx|zip)$/i.test(f.name)); if(!files.length||busy)return;
+  const files=[...fileList].filter(f=>/\.(xlsx|xls|zip|csv|tsv|json|xml|pdf|png|jpe?g)$/i.test(f.name)); if(!files.length||busy)return;
   await window.WRITE_KB?.init?.().catch(()=>{});
   const schemaRules=window.WRITE_SCHEMA?.getRules?.()||[];
-  worker?.terminate(); worker=new Worker('./src/workers/import.worker.bundle.js?v=7.2.3-20260810-0045'); importStartedAt=performance.now(); importedFileNames=files.map(f=>f.name);
+  worker?.terminate(); worker=new Worker('./src/workers/import.worker.bundle.js?v=10.0.0-rc1'); importStartedAt=performance.now(); importedFileNames=files.map(f=>f.name);
   setBusy(true); hideError(); els.importLanding.hidden=false; els.appViews.hidden=true; els.topActions.hidden=true;
   els.currentFile.textContent='准备读取…'; els.progressFill.style.width='0%'; els.progressText.textContent='0% · 自适应识别订单结构';
   worker.onmessage=async ({data})=>{

@@ -122,6 +122,11 @@ assignGlobalFunction('generatedGenericFactRowsForWorkbook',function(workbookName
 });
 
 /* ---------- 5. FACT unified renderer: styles copied from the user's historical FACT ---------- */
+// FACT_TEMPLATE_UNIFIED_V2 currently has 89 cellXfs (0..88). The appended
+// production review format is therefore style 89. Keep this explicit so blank
+// price cells are emitted as real, fully bordered cells instead of falling
+// back to one of the template's sparse placeholder formats.
+const PRICE_REVIEW_STYLE=89;
 function unifiedFactCountryRow(r,rowNo){
   const country=String(r?.country||'').trim()||'GLOBAL';
   return `<row r="${rowNo}" s="7" customFormat="1" ht="15" customHeight="1" spans="1:11"><c r="A${rowNo}" s="43"/>${xmlTextCell(`B${rowNo}`,44,country)}<c r="C${rowNo}" s="44"/><c r="D${rowNo}" s="45"/><c r="E${rowNo}" s="44"/><c r="F${rowNo}" s="44"/><c r="G${rowNo}" s="44"/><c r="H${rowNo}" s="44"/></row>`;
@@ -137,35 +142,23 @@ function unifiedFactDataRow(r,rowNo,index){
   const c=priceNum(r?.cogs);
   const s=priceNum(r?.shipping);
   const u=priceNum(r?.unitTotal);
+  const reviewStyle=r?.needsReview?PRICE_REVIEW_STYLE:47;
+  const priceBlank=true;
   const cells=[
     `<c r="A${rowNo}" s="43"/>`,
     xmlNumberCell(`B${rowNo}`,46,index),
-    xmlTextCell(`C${rowNo}`,47,desc),
+    xmlTextCell(`C${rowNo}`,reviewStyle,desc),
     q===null?`<c r="D${rowNo}" s="48"/>`:xmlNumberCell(`D${rowNo}`,48,q),
-    c===null?`<c r="E${rowNo}" s="47"/>`:xmlNumberCell(`E${rowNo}`,47,c),
-    s===null?`<c r="F${rowNo}" s="49"/>`:xmlNumberCell(`F${rowNo}`,49,s)
+    `<c r="E${rowNo}" s="${PRICE_REVIEW_STYLE}"/>`,
+    `<c r="F${rowNo}" s="${PRICE_REVIEW_STYLE}"/>`
   ];
-  if(u!==null){
-    cells.push(xmlNumberCell(`G${rowNo}`,47,u));
-    cells.push(xmlFormulaCell(`H${rowNo}`,47,`G${rowNo}*D${rowNo}`));
-  }else if(c!==null&&s!==null){
-    cells.push(xmlFormulaCell(`G${rowNo}`,47,`E${rowNo}+F${rowNo}`));
-    cells.push(xmlFormulaCell(`H${rowNo}`,47,`G${rowNo}*D${rowNo}`));
-  }else if(c!==null){
-    cells.push(`<c r="G${rowNo}" s="47"/>`);
-    cells.push(xmlFormulaCell(`H${rowNo}`,47,`E${rowNo}*D${rowNo}`));
-  }else if(s!==null){
-    cells.push(`<c r="G${rowNo}" s="47"/>`);
-    cells.push(xmlFormulaCell(`H${rowNo}`,47,`F${rowNo}*D${rowNo}`));
-  }else{
-    // Price is legitimately unknown: leave all price/amount cells visually blank.
-    cells.push(`<c r="G${rowNo}" s="47"/>`);
-    cells.push(`<c r="H${rowNo}" s="47"/>`);
-  }
+  // Production contract: cost is always human-entered. Keep price and amount
+  // cells blank and red without changing the fixed FACT template around them.
+  if(priceBlank){cells.push(`<c r="G${rowNo}" s="${PRICE_REVIEW_STYLE}"/>`);cells.push(`<c r="H${rowNo}" s="${PRICE_REVIEW_STYLE}"/>`)}
   return `<row r="${rowNo}" s="7" customFormat="1" ht="27.75" customHeight="1" spans="1:11">${cells.join('')}</row>`;
 }
 function patchUnifiedFactTemplateSheetXml(xml,data,workbookName){
-  const raw=Array.isArray(data)?[...data]:[{country:'GLOBAL',description:'Article',sku:'',quantity:0,cogs:null,shipping:null,unitTotal:null}];
+  const raw=(Array.isArray(data)&&data.length)?[...data]:[{country:'GLOBAL',description:'Article',sku:'',quantity:0,cogs:null,shipping:null,unitTotal:null}];
 
   const preferred=['FRANCE','BELGIUM','CANADA','SWITZERLAND','LUXEMBOURG','GERMANY','SPAIN','ITALY','NETHERLANDS','AUSTRIA','PORTUGAL','REUNION ISLAND'];
   const rank=c=>{const i=preferred.indexOf(String(c||'').toUpperCase());return i<0?999:i};
@@ -206,7 +199,10 @@ function patchUnifiedFactTemplateSheetXml(xml,data,workbookName){
     return unifiedFactDataRow(r,rowNo,r.no);
   }).join('');
 
-  const totalXml=`<row r="${totalRow}" ht="32.25" customHeight="1" spans="1:8"><c r="A${totalRow}" s="20"/><c r="B${totalRow}" s="50"/><c r="C${totalRow}" s="50"/><c r="D${totalRow}" s="51"/><c r="E${totalRow}" s="50"/><c r="F${totalRow}" s="52"/><c r="G${totalRow}" s="52"/><c r="H${totalRow}" s="52"><f>SUM(H${firstDynamic}:H${totalRow-1})</f></c></row>`;
+  const parcelCount=Number(data?.parcelCount??data?.meta?.parcelCount??data?.[0]?.parcelCount??0)||0;
+  const parcelReview=!!(data?.parcelNeedsReview??data?.meta?.parcelNeedsReview??data?.[0]?.parcelNeedsReview);
+  const parcelStyle=parcelReview?PRICE_REVIEW_STYLE:50;
+  const totalXml=`<row r="${totalRow}" ht="32.25" customHeight="1" spans="1:8"><c r="A${totalRow}" s="20"/>${xmlTextCell(`B${totalRow}`,parcelStyle,'Total colis')}${xmlTextCell(`C${totalRow}`,parcelStyle,'')}${xmlNumberCell(`D${totalRow}`,parcelStyle,parcelCount)}<c r="E${totalRow}" s="${PRICE_REVIEW_STYLE}"/><c r="F${totalRow}" s="${PRICE_REVIEW_STYLE}"/><c r="G${totalRow}" s="${PRICE_REVIEW_STYLE}"/><c r="H${totalRow}" s="${PRICE_REVIEW_STYLE}"/></row>`;
   const blankXml=`<row r="${totalRow+1}" ht="15" customHeight="1" spans="1:8"><c r="A${totalRow+1}" s="20"/></row>`;
 
   const sheetData=xml.match(/<sheetData>[\s\S]*?<\/sheetData>/)?.[0];
@@ -249,6 +245,18 @@ function patchUnifiedFactTemplateSheetXml(xml,data,workbookName){
 
 /* V7.3.1 runtime state */
 window.WRITE_FACT_V731={patchSheet:patchUnifiedFactTemplateSheetXml};
+
+function ensureProductionRedStyleXml(xml){
+  if(/WRITE_V10_PRICE_REVIEW/.test(xml))return xml;
+  const fontMatch=/<fonts count="(\d+)">/.exec(xml),xfMatch=/<cellXfs count="(\d+)">/.exec(xml);
+  if(!fontMatch||!xfMatch)throw new Error('统一 FACT 样式表结构异常');
+  const fontId=Number(fontMatch[1]),xfIndex=Number(xfMatch[1]);
+  if(xfIndex!==PRICE_REVIEW_STYLE)throw new Error(`统一 FACT 样式基线不符：期望 ${PRICE_REVIEW_STYLE}，实际 ${xfIndex}`);
+  const font='<font><name val="Aptos Narrow"/><sz val="10"/><color rgb="FF9C0006"/><family val="2"/><scheme val="minor"/></font><!-- WRITE_V10_PRICE_REVIEW -->';
+  const xf=`<xf numFmtId="177" fontId="${fontId}" fillId="13" borderId="9" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf>`;
+  return xml.replace(`<fonts count="${fontId}">`,`<fonts count="${fontId+1}">`).replace('</fonts>',font+'</fonts>').replace(`<cellXfs count="${xfIndex}">`,`<cellXfs count="${xfIndex+1}">`).replace('</cellXfs>',xf+'</cellXfs>');
+}
+window.WRITE_FACT_V10_STYLES={ensureProductionRedStyleXml,redStyleIndex:PRICE_REVIEW_STYLE};
 window.WRITE_V731_RUNTIME={
   ok:true,
   version:'7.3.1',
@@ -273,7 +281,7 @@ try{
     // Universal rule: classification/learning is never a prerequisite for export.
     // Every workbook uses the canonical FACT template; unknown price stays blank.
     const data=generatedFactRowsForWorkbook(workbookName);
-    const resp=await fetch('./assets/FACT_TEMPLATE_UNIFIED_V2.xlsx?v=7.5.9-001',{cache:'no-store'});
+    const resp=await fetch('./assets/FACT_TEMPLATE_UNIFIED_V2.xlsx?v=7.5.8-001',{cache:'no-store'});
     if(!resp.ok)throw new Error(`无法读取统一 FACT 标准模板（HTTP ${resp.status}）`);
     const templateBlob=await resp.blob();
     if(!templateBlob?.size)throw new Error('统一 FACT 标准模板为空');
@@ -281,10 +289,15 @@ try{
     const sheetPath='xl/worksheets/sheet1.xml';
     if(!archive.get(sheetPath))throw new Error('统一 FACT 标准模板缺少 sheet1.xml');
     const xml=await archive.text(sheetPath,16*1024*1024);
+    const stylesPath='xl/styles.xml';
+    const styles=await archive.text(stylesPath,16*1024*1024);
+    const styled=ensureProductionRedStyleXml(styles);
+    const styledBlob=await rebuildArchiveReplacingEntry(archive,stylesPath,enc.encode(styled));
+    const styledArchive=await PreserveZipArchive.open(styledBlob);
     const patcher=window.WRITE_FACT_V731?.patchSheet;
     if(typeof patcher!=='function')throw new Error('统一 FACT 格式引擎未加载');
     const patched=patcher(xml,data,workbookName);
-    const rebuilt=await rebuildArchiveReplacingEntry(archive,sheetPath,enc.encode(patched));
+    const rebuilt=await rebuildArchiveReplacingEntry(styledArchive,sheetPath,enc.encode(patched));
     if(!rebuilt?.size)throw new Error('统一 FACT Excel 生成结果为空');
     return rebuilt;
   };

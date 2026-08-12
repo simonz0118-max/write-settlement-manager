@@ -1,0 +1,31 @@
+{
+  "version": "8.8.0",
+  "stage": "HISTORICAL_AUTO_EXTRACTION_SHADOW",
+  "productionFactEngine": "V7.5.9",
+  "formalFactTakeover": false,
+  "pipeline": [
+    "Raw Excel/SheetJS workbook",
+    "Sheet Role Detection",
+    "Order/FACT Extraction",
+    "Human Workflow Configuration",
+    "V8.7 Closure",
+    "V8.6 Batch Scoring",
+    "Domain Training Router"
+  ],
+  "guards": {
+    "extractionEqualsTraining": false,
+    "unknownSheetTrains": false,
+    "duplicateSheetCountsTwice": false,
+    "orderIdOnlyDedupe": false,
+    "factOnlyManualTrains": false,
+    "partialUnexplainedTrains": false
+  },
+  "preserved": [
+    "V8.5 Multi-Dataset Firewall",
+    "V8.6 Domain Scoring",
+    "V8.7 Closure States",
+    "Thomas Zero-Loss",
+    "49/49 Classification",
+    "49/49 Trace"
+  ]
+}

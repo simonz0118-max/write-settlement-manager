@@ -1,47 +1,53 @@
 {
   "current": {
-    "version": "9.0.0",
-    "time": "2026-08-11 22:40",
-    "title": "Autonomous Human-Like FACT Engine",
+    "version": "10.0.0-rc1",
+    "time": "2026-08-12 13:27",
+    "title": "Universal Order-to-Invoice Compiler RC1",
     "sections": [
       {
-        "label": "正式生产模式",
+        "label": "Accounting Core",
         "items": [
-          "未来新订单默认只有订单数据，不要求FACT页。",
-          "订单是唯一事实来源。"
+          "BillableAtom 多实体拆分与严格免费证据。",
+          "PACKAGE / UPSELL / SERVICE / FEE / FREE_GIFT / MANUAL_ONLY 六角色。",
+          "五重守恒成为 V10 硬门。"
         ]
       },
       {
-        "label": "唯一Golden模板",
+        "label": "Pricing & Invoice",
         "items": [
-          "固定使用唯一FACT模板，只按实际数据微调动态行。",
-          "历史模板数据行不能进入新订单FACT。"
+          "STRICT_FORMAL / ALWAYS_ISSUE 价格模式。",
+          "商业 PDF、audit JSON 与 Golden FACT XLSX 输出链。"
         ]
       },
       {
-        "label": "红字审核",
+        "label": "Universal Input",
         "items": [
-          "未知/低置信商品仍必须输出，Description红字。",
-          "人工确认/修改后自动学习并转黑。"
+          "CSV/TSV/JSON/XML/XLS 本地解析。",
+          "PDF 文本抽取与本地 OCR adapter；ZIP 安全限制。"
         ]
       },
       {
-        "label": "全自动学习",
+        "label": "Release Safety",
         "items": [
-          "所有订单观察自动记录。",
-          "人工修改无需二次选择是否学习。"
-        ]
-      },
-      {
-        "label": "生产保障",
-        "items": [
-          "缺价格留空不阻断。",
-          "V9正式接管，V7.5.9保留回滚。"
+          "V10 RC1 canary 默认 0%。",
+          "V9.0 保持正式生产和一键回滚，Codex 验收后逐级 canary。"
         ]
       }
     ]
   },
   "history": [
+    {
+      "version": "10.0.0-rc1",
+      "time": "2026-08-12 13:27",
+      "title": "Universal Order-to-Invoice Compiler RC1",
+      "items": [
+        "CanonicalOrder → BillableAtom → Accounting IR → Pricing → Invoice Compiler 分层架构。",
+        "修复 paid cadeau/free gift、多实体组合、SERVICE/FEE、currency 隔离和五重守恒五个 P0。",
+        "新增 STRICT_FORMAL / ALWAYS_ISSUE、MANUAL_ONLY 审计入口与 V9 回滚。",
+        "输入扩展到 CSV/TSV/JSON/XML/XLS，并提供 PDF 文本与本地 OCR 适配路径。",
+        "RC1 默认 canary 0%，等待独立生产验收后再逐级接管。"
+      ]
+    },
     {
       "version": "9.0.0",
       "time": "2026-08-11 22:40",

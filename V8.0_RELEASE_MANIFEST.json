@@ -1,0 +1,10 @@
+{
+  "version": "8.0.0",
+  "stage": "SEMANTIC_CORE_SHADOW",
+  "productionFactEngine": "7.5.9",
+  "semanticModules": ["ProductFamily", "Role", "Configuration", "QuantityStrategy", "DescriptionStrategy", "RulePriority", "TrainingSafetyGate"],
+  "roles": ["MAIN", "UPSELL", "SERVICE", "FEE", "FREE_GIFT", "STOCK", "UNKNOWN"],
+  "ruleScopes": ["CURRENT_ORDER", "EXACT_SKU", "EXACT_PRODUCT", "PRODUCT_FAMILY", "ORDER_CONTEXT", "GLOBAL_PATTERN"],
+  "unknownNeverBlocksFact": true,
+  "uiChange": "dashboard semantic audit only"
+}

@@ -1,0 +1,40 @@
+{
+  "version": "10.0.0",
+  "productionStatus": "PRODUCTION_ACCEPTED",
+  "formalEngineBeforeAcceptance": "V9.0",
+  "architecture": [
+    "UniversalIngestion",
+    "CanonicalOrder",
+    "BillableAtom",
+    "AccountingIR",
+    "PricingWaterfall",
+    "InvoiceCompiler",
+    "LearningGovernance",
+    "CanaryRouter"
+  ],
+  "pricingModes": ["BLANK_RED_HUMAN"],
+  "defaultPricingMode": "BLANK_RED_HUMAN",
+  "roles": [
+    "PACKAGE",
+    "UPSELL",
+    "SERVICE",
+    "FEE",
+    "FREE_GIFT",
+    "MANUAL_ONLY"
+  ],
+  "fivefold": [
+    "ORDER",
+    "SOURCE_ITEM",
+    "ATOMIC_QUANTITY",
+    "BILLING_SEMANTIC",
+    "MONEY_CURRENCY"
+  ],
+  "unknown": {
+    "retained": true,
+    "priceInvented": false
+  },
+  "partialFactLearning": false,
+  "unclosedPriceLearning": false,
+  "canarySequence": [100],
+  "rollbackEngine": "V9.0"
+}

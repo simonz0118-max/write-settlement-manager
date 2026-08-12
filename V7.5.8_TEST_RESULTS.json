@@ -1,0 +1,51 @@
+{
+  "version": "7.5.8",
+  "status": "PASS",
+  "tests": [
+    {
+      "command": "node --check /mnt/data/v758_work/patch-v758.js",
+      "exit": 0,
+      "output": ""
+    },
+    {
+      "command": "node --check /mnt/data/v758_work/src/universal-source-v758.js",
+      "exit": 0,
+      "output": ""
+    },
+    {
+      "command": "node --check /mnt/data/v758_work/src/workers/import.worker.v758.js",
+      "exit": 0,
+      "output": ""
+    },
+    {
+      "command": "node /mnt/data/v758_work/docs/tests/v758_contract.js /mnt/data/v758_work/src/universal-source-v758.js /mnt/data/v758_work/src/workers/import.worker.v758.js",
+      "exit": 0,
+      "output": "V7.5.8 static contract PASS"
+    },
+    {
+      "command": "node /mnt/data/v758_work/docs/tests/v758_dual_invariant.js /mnt/data/v758_work/src/universal-source-v758.js",
+      "exit": 0,
+      "output": "V7.5.8 DUAL INVARIANT PASS: 160 rows + 288 quantity"
+    },
+    {
+      "command": "node /mnt/data/v758_work/docs/tests/v758_multi_product_order.js /mnt/data/v758_work/src/universal-source-v758.js",
+      "exit": 0,
+      "output": "V7.5.8 multi-product order description PASS"
+    },
+    {
+      "command": "node /mnt/data/v758_work/docs/tests/v758_historical_total.js /mnt/data/v758_work/src/universal-source-v758.js",
+      "exit": 0,
+      "output": "V7.5.8 historical package total preserved PASS"
+    },
+    {
+      "command": "node /mnt/data/v758_work/docs/tests/v758_worker.js /mnt/data/v758_work/src/workers/import.worker.v758.js",
+      "exit": 0,
+      "output": "V7.5.8 worker source quantity PASS"
+    },
+    {
+      "command": "node /mnt/data/v758_work/docs/tests/v758_blank_template.js /mnt/data/v758_work/src/runtime-v740.js /mnt/data/v758_work/src/universal-source-v758.js /mnt/data/v758_work/assets/FACT_TEMPLATE_UNIFIED_V2.xlsx",
+      "exit": 0,
+      "output": "V7.5.8 blank price + clean template PASS"
+    }
+  ]
+}

@@ -1,0 +1,2 @@
+const fs=require('fs'),vm=require('vm'),assert=require('assert');const s=fs.readFileSync(process.argv[2],'utf8'),c={window:null};c.window=c;vm.createContext(c);vm.runInContext(s,c);const E=c.WRITE_HISTORICAL_EXTRACTOR_V88;
+const x=E.extractWorkbook({sheets:[{name:'Notes',rows:[['hello'],['world']]}]});assert.equal(x.unknownSheets.length,1);assert.equal(x.orderRecords.length,0);assert.equal(x.factRows.length,0);console.log('V8.8 unknown sheet remains reference-only PASS');

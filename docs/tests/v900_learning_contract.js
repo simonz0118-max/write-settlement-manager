@@ -1,0 +1,1 @@
+const fs=require('fs'),assert=require('assert');const s=fs.readFileSync(process.argv[2],'utf8');assert(/observeMany/.test(s));assert(/confirmCorrection/.test(s));assert(/HUMAN_CORRECTION/.test(s));assert(/WRITE_RULE_STORE_V8/.test(s));console.log('V9 automatic learning contract PASS');

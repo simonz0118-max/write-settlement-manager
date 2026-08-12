@@ -1,0 +1,28 @@
+{
+  "version": "10.0.1",
+  "generatedAt": "2026-08-12",
+  "status": "PASS",
+  "defect": "Blank price cells referenced a pre-existing sparse template style instead of the appended production review style.",
+  "fix": {
+    "reviewStyleIndex": 89,
+    "redFillId": 13,
+    "fourSidedBorderId": 9,
+    "explicitPriceCells": ["E", "F", "G", "H"],
+    "totalRowPriceCells": "complete red fill and four-sided grid"
+  },
+  "preserved": ["logo", "invoice header", "bank information", "template layout outside generated data rows"],
+  "verification": {
+    "templateContract": "PASS",
+    "productionContract": "PASS",
+    "developmentRegression": "PASS",
+    "stressAccuracy": {
+      "status": "PASS",
+      "inputRecords": 50085,
+      "parcels": 46011,
+      "giftOnlyExcluded": 4023,
+      "deduplicated": 51,
+      "splitOrders": 34,
+      "missingSourceItems": 0
+    }
+  }
+}

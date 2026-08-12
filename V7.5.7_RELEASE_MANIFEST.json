@@ -1,0 +1,19 @@
+{
+  "version": "7.5.7",
+  "title": "One Order = One FACT Row",
+  "base": "7.5.6",
+  "hardInvariants": {
+    "validSourceOrders": 160,
+    "formalFactCountedRows": 160,
+    "factQuantityTotal": 160,
+    "uniqueSourceOrderKeys": 160,
+    "quantityPerValidOrder": 1,
+    "crossOrderAggregation": false,
+    "countryRows": {
+      "FRANCE": 158,
+      "BELGIUM": 1,
+      "GREECE": 1
+    },
+    "merchandiseQuantityAudit": 288
+  }
+}

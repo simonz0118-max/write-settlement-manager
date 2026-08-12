@@ -1,0 +1,10 @@
+const fs=require('fs'),vm=require('vm'),assert=require('assert');
+const core=fs.readFileSync(process.argv[2],'utf8'),trace=fs.readFileSync(process.argv[3],'utf8'),g=JSON.parse(fs.readFileSync(process.argv[4],'utf8'));
+const c={console,window:null,globalThis:null};c.window=c;c.globalThis=c;vm.createContext(c);vm.runInContext(core,c);vm.runInContext(trace,c);
+const q=s=>{const m=String(s||'').match(/\*(\d+(?:\.\d+)?)\s*$/);return m?Number(m[1]):1};
+const O=g.orders.map(o=>{const n=String(o.productNames||'').split(/\n/),s=String(o.skuLines||'').split(/\n/),L=Math.max(n.length,s.length),lineItems=[];while(n.length<L)n.push('');while(s.length<L)s.push('');for(let i=0;i<L;i++)if(String(n[i]||'').trim())lineItems.push({productName:n[i],sku:s[i],quantity:q(s[i])});return{recordKey:o.orderKey,country:o.country,lineItems}});
+const S=O.map(o=>c.WRITE_SEMANTIC_V8.semanticizeOrder(o,[])),R=c.WRITE_SEMANTIC_V8.aggregateSemanticOrders(S),a=c.WRITE_TRACE_FIDELITY_V831.audit(S,R);
+assert.equal(a.sourceOrders,162);assert.equal(a.billableOrders,161);assert.equal(a.placeholderOnlyOrders,1);
+assert.equal(a.factRows,49);assert.equal(a.factRowsWithSource,49);
+assert.equal(a.errors.length,0);assert.equal(a.duplicateItems.length,0);assert.equal(a.duplicateFactOrders.length,0);assert(a.exactTracePass);
+console.log(`V8.3.1 TRACE FIDELITY GOLDEN PASS: fact=${a.factRowsWithSource}/${a.factRows} billableOrders=${a.billableOrders} placeholder=${a.placeholderOnlyOrders}`);

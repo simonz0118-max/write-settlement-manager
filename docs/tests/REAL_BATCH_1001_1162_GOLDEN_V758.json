@@ -1,0 +1,22 @@
+{
+  "batch": "1001-1162",
+  "sourceRowsRetained": 162,
+  "validOrderRows": 160,
+  "factActiveRows": 160,
+  "quantitySum": 288,
+  "orderCountByCountry": {
+    "FRANCE": 158,
+    "BELGIUM": 1,
+    "GREECE": 1
+  },
+  "unknownQuantitySourceRows": 2,
+  "rules": [
+    "一个有效源订单必须对应一条独立FACT行",
+    "Quantity必须等于该订单真实商品总数，优先使用源表产品总数",
+    "160条有效FACT行的Quantity合计必须等于288",
+    "跨订单聚合禁止",
+    "多商品订单Description必须简洁但能表达主要商品组合",
+    "历史整单成本必须折算为单位成本，Quantity×UnitTotal保持整单总额",
+    "未知价格留空"
+  ]
+}

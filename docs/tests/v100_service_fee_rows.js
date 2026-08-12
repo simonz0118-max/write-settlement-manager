@@ -1,0 +1,4 @@
+const fs=require('fs'),vm=require('vm'),assert=require('assert');const h=fs.readFileSync(process.argv[2],'utf8'),a=fs.readFileSync(process.argv[3],'utf8'),ir=fs.readFileSync(process.argv[4],'utf8'),c={window:null};c.window=c;vm.createContext(c);vm.runInContext(h,c);vm.runInContext(a,c);vm.runInContext(ir,c);
+const orders=[{recordKey:'O1',country:'FRANCE',currency:'EUR',fulfillmentOrigin:'CN',lineItems:[{productName:'Savon *2'},{productName:'Gravure personnalisée *1'},{productName:"Frais d'importation *1"}]}];
+const x=c.WRITE_V10_ACCOUNTING_IR.buildIR(orders);assert.equal(x.packageRows.length,1);assert.equal(x.serviceRows.length,1);assert.equal(x.feeRows.length,1);assert(x.audit.hardPass);
+console.log('V10 P0-3 SERVICE/FEE independent rows PASS');

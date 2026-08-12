@@ -1,0 +1,14 @@
+{
+  "status": "PASS",
+  "bridgeMigration": [
+    "none",
+    "legacy",
+    "safe"
+  ],
+  "packageTests": 10,
+  "exactStep7Tests": 4,
+  "patchIdempotency": "PASS",
+  "productionFactEngine": "V7.5.9",
+  "productionGeneratorReplaced": false,
+  "productionExportReplaced": false
+}

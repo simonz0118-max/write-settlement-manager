@@ -1,0 +1,4 @@
+const fs=require('fs'),assert=require('assert');const r=JSON.parse(fs.readFileSync(process.argv[2],'utf8'));
+assert.equal(r.policy.default,'REFERENCE_ONLY');assert.equal(r.policy.unknownMetricBlocksPromotion,true);assert.equal(r.policy.classificationQuantityPriceAreIndependent,true);assert.equal(r.policy.formalFactTakeover,false);assert.equal(r.exactGoldens[0].expected.classification,'TRAINABLE');assert.equal(r.exactGoldens[0].expected.price,'REFERENCE_ONLY');
+for(const b of r.historicalBatches){assert.equal(b.evidenceState,'REFERENCE_ONLY_UNTIL_CLOSED');assert.equal(b.sourceBacked,false)}
+console.log(`V8.6 batch registry PASS: ${r.historicalBatches.length} independent historical batches default to REFERENCE_ONLY`);

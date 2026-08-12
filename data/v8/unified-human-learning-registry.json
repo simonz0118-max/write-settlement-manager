@@ -1,0 +1,59 @@
+{
+  "version": "8.4.0",
+  "principle": "Human behavior is learned only when FACT output can be traced back to corresponding order source and the transformation is reproducible.",
+  "datasets": [
+    {
+      "id": "YD_CAMOUFLAGE",
+      "scope": "multi-main configuration + separate upsell",
+      "learned": [
+        "multiple MAIN/package components stay together in one configuration",
+        "net accessories can be separate upsells only in verified net context",
+        "size/triangle dimensions are accounting-relevant"
+      ],
+      "training": "COMPLETE_SOURCE_BACKED_ONLY"
+    },
+    {
+      "id": "ARCHIVE_MULTI_FAMILY",
+      "scope": "jelly/gilet/chemise + completeness safety",
+      "learned": [
+        "family-specific description schemas",
+        "flavor/color/size may be ignored only where history proves they are non-accounting variants",
+        "partial FACT never trains"
+      ],
+      "training": "COMPLETE_SOURCE_BACKED_ONLY"
+    },
+    {
+      "id": "PENCIL_WRITE_STORE",
+      "scope": "main quantity tiers + separate refill upsell + historical pricing",
+      "learned": [
+        "main pencil configuration counts orders/packages",
+        "refill/mines can be separately counted upsells",
+        "pricing learns from stable historical normal FACT values",
+        "ambiguous fulfillment promotions require evidence/human confirmation"
+      ],
+      "training": "SOURCE_BACKED_COMPLETE_FACT_AND_CONFIRMED_RULES"
+    },
+    {
+      "id": "SOAP_HISTORY",
+      "scope": "package-component behavior + origin + fulfillment disposition",
+      "learned": [
+        "Savon/Baume/Ongles/Serviette form one package configuration",
+        "gift pouch is audit-only/non-billable",
+        "fulfillment origin CN/FR precedes destination-country grouping",
+        "same order id must not be blindly deduplicated",
+        "fact-only manual lines do not train",
+        "unexplained quantity/configuration mismatch does not partially train"
+      ],
+      "training": "SOURCE_BACKED_CLOSED_OR_VERIFIED_EXPLAINED_ONLY"
+    }
+  ],
+  "global_guards": {
+    "lostSourceRecord": 0,
+    "lostSourceItem": 0,
+    "unresolvedMayBeReviewed": true,
+    "unresolvedMayTrain": false,
+    "factOnlyManualMayTrain": false,
+    "missingPriceBlocksExport": false,
+    "formalFactTakeover": false
+  }
+}

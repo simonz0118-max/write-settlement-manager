@@ -1,0 +1,6 @@
+const fs=require('fs'),vm=require('vm'),assert=require('assert');const a=fs.readFileSync(process.argv[2],'utf8'),s=fs.readFileSync(process.argv[3],'utf8'),r=fs.readFileSync(process.argv[4],'utf8'),p=fs.readFileSync(process.argv[5],'utf8'),c={window:null};c.window=c;vm.createContext(c);vm.runInContext(a,c);vm.runInContext(s,c);vm.runInContext(r,c);vm.runInContext(p,c);const A=c.WRITE_CLOSURE_ANALYZER_V87,P=c.WRITE_CLOSURE_PROMOTION_V87;
+let rep=A.analyze([{origin:'CN',country:'FRANCE',configuration:'X',quantity:10,sourceOrderKeys:['1']}],[{origin:'CN',country:'FRANCE',description:'X',quantity:10}]);
+let x=P.evaluate(rep,{batchId:'B',traceability:1,humanConsistency:1});assert(x.promotions.classification);assert(x.promotions.quantity);assert(!x.promotions.price);
+rep=A.analyze([{origin:'CN',country:'FRANCE',configuration:'X',quantity:8}],[{origin:'CN',country:'FRANCE',description:'X',quantity:10}]);
+x=P.evaluate(rep,{batchId:'B',traceability:1,humanConsistency:1});assert(!x.promotions.classification);assert(!x.promotions.quantity);
+console.log('V8.7 closure promotion controller PASS');
