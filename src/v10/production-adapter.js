@@ -1,5 +1,5 @@
 /* WRITE V10 production adapter. V9 remains available only as an explicit rollback snapshot. */
-(function(g){'use strict';const VERSION='10.0.0';
+(function(g){'use strict';const VERSION='10.0.3';
 const v9Generic=g.generatedGenericFactRowsForWorkbook,v9Generated=g.generatedFactRowsForWorkbook,v9All=g.allGeneratedFactRows;
 function sourceOrders(workbookName){
  const b=g.WRITE_V8_SOURCE_BRIDGE?.(),all=b?.orders||[];

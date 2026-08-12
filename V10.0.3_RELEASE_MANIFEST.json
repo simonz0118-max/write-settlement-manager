@@ -1,0 +1,12 @@
+{
+  "version": "10.0.3",
+  "title": "Accounting Golden Compiler Hotfix",
+  "status": "PRODUCTION_HOTFIX_CANDIDATE",
+  "formalFactRule": "invoiceEntity + origin + country + currency + taxRegime + role + complete accounting configuration",
+  "skuInFinalAggregationKey": false,
+  "serviceFeeIndependent": true,
+  "marketingFragmentsBillable": false,
+  "duplicateFinalRowsHardFail": true,
+  "goldenTemplateLocked": true,
+  "rollback": "V9.0"
+}

@@ -1,5 +1,5 @@
 /* WRITE V10 production statistics contract: orders -> country + full package composition -> one FACT. */
-(function(g){'use strict';const VERSION='10.0.0';
+(function(g){'use strict';const VERSION='10.0.3';
 const clean=v=>String(v??'').replace(/\r/g,' ').replace(/\s+/g,' ').trim();
 const norm=v=>clean(v).toUpperCase();
 function tracking(o={}){return clean(o.trackingNumber||o.tracking||o.waybill||o.parcelId||o.packageId)}
@@ -8,6 +8,7 @@ function stableString(x){if(Array.isArray(x))return`[${x.map(stableString).join(
 function duplicateKey(o={},i=0){return[orderId(o,i),tracking(o),norm(o.destinationCountry||o.country),stableString((o.lineItems||[]).map(x=>({sku:clean(x.sku),productName:clean(x.productName||x.description),quantity:x.quantity,amount:x.amount??x.lineTotal??x.unitPrice,discount:x.discount??x.discountPercent})))].join('\u0001')}
 function shortenDescription(raw='',sku=''){
  let s=clean(raw).replace(/[🔥⭐✨✅🎁🧪™®©]/gu,' ')
+  .replace(/(?:^|\s*(?:\+|\||•|;|,)\s*)(?:\d{1,3}\s*%\s*(?:d['’]économie|de\s+réduction|off|discount)|économisez\s+\d{1,3}\s*%|save\s+\d{1,3}\s*%)(?=\s*(?:\+|\||•|;|,|$))/giu,' ')
   .replace(/\b(?:offre\s+exclusive|boutique\s+write|livraison\s+gratuite|best\s*seller|nouveau|premium|promotion|promo|hot\s*sale|free\s*shipping)\b/gi,' ')
   .replace(/\b([\p{L}\p{N}-]+)(?:\s+\1\b)+/giu,'$1').replace(/\s*[-–—|]\s*[-–—|]+/g,' - ').replace(/\s+/g,' ').trim();
  s=s.replace(/^\s*[-–—|:]+\s*/,'').trim();
@@ -34,31 +35,81 @@ function freeDecision(item={}){
  return{free:(textFree||financialFree)&&!conflict,conflict,textFree,financialFree,amount,discount};
 }
 function packageKey(o){return`${o.__orderId}\u0001${o.__tracking||'(NO_TRACKING)'}`}
+function isMarketingOnly(text=''){const s=clean(text);return /^(?:\d{1,3}\s*%\s*(?:d['’]économie|de\s+réduction|off|discount)|économisez\s+\d{1,3}\s*%|save\s+\d{1,3}\s*%)\s*(?:\*\s*\d+(?:[.,]\d+)?)?$/iu.test(s)}
 function build(input=[]){
- const {orders,duplicates}=canonicalOrders(input),{splitOrderIds,conflictOrderIds}=orderConflicts(orders),reviewOrders=new Set(conflictOrderIds),groups=new Map(),freeAtoms=[],sourceItems=[],sourceByKey=new Map(),representedItems=[];
- const packages=new Map();for(const o of orders){const key=packageKey(o);if(!packages.has(key))packages.set(key,[]);packages.get(key).push(o)}
+ const {orders,duplicates}=canonicalOrders(input),{splitOrderIds,conflictOrderIds}=orderConflicts(orders),reviewOrders=new Set(conflictOrderIds);
+ const packageGroups=new Map(),separateGroups=new Map(),freeAtoms=[],sourceItems=[],represented=new Set(),packages=new Map();
+ for(const o of orders){const key=packageKey(o);if(!packages.has(key))packages.set(key,[]);packages.get(key).push(o)}
  let parcelCount=0,giftOnlyExcludedParcels=0;
- for(const records of packages.values()){
-  const primary=records[0],country=norm(primary.destinationCountry||primary.country)||'GLOBAL',oid=primary.__orderId,atoms=[];let packageConflict=reviewOrders.has(oid);
-  if(new Set(records.map(o=>norm(o.destinationCountry||o.country)||'GLOBAL')).size>1)packageConflict=true;
-  for(const o of records)(o.lineItems||[]).forEach((item,ii)=>{
-    const sourceItemKey=clean(item.sourceItemKey)||`${oid}::${o.__tracking}::${o.__sourceIndex}::${ii}`,free=freeDecision(item),parsed=g.WRITE_V10_ATOMS.parseSourceItem(item,{sourceItemKey,orderKey:oid,origin:norm(o.fulfillmentOrigin)||'UNKNOWN',currency:norm(o.currency)||'UNKNOWN',destinationCountry:country,invoiceEntity:o.invoiceEntity||'DEFAULT',taxRegime:o.taxRegime||'UNSPECIFIED',sourceFile:o.sourceFile,sourceSheet:o.sourceSheet,sourceRow:o.sourceRow});
-    if(free.free)parsed.forEach(a=>{a.role=g.WRITE_V10_ATOMS.ROLES.FREE_GIFT;a.needsReview=false});
-    if(free.conflict){packageConflict=true;parsed.forEach(a=>{if(a.role===g.WRITE_V10_ATOMS.ROLES.FREE_GIFT)a.role=g.WRITE_V10_ATOMS.ROLES.PACKAGE;a.needsReview=true})}
-    const sourceRecord={sourceItemKey,orderId:oid,trackingNumber:o.__tracking,rawProductName:clean(item.productName||item.description),sku:clean(item.sku),freeDecision:free,atomIds:parsed.map(a=>a.atomId)};sourceItems.push(sourceRecord);sourceByKey.set(sourceItemKey,sourceRecord);atoms.push(...parsed)
-  });
-  const billed=atoms.filter(a=>a.role!==g.WRITE_V10_ATOMS.ROLES.FREE_GIFT&&a.role!==g.WRITE_V10_ATOMS.ROLES.MANUAL_ONLY);freeAtoms.push(...atoms.filter(a=>a.role===g.WRITE_V10_ATOMS.ROLES.FREE_GIFT));
-  if(!billed.length){giftOnlyExcludedParcels++;continue}parcelCount++;
-  const parts=billed.map(a=>{const source=sourceByKey.get(a.sourceItemKey),unknown=String(a.family).startsWith('NEW:'),desc=(unknown?shortenDescription(a.sourceSegment,source?.sku):clean(a.normalizedDescription)).replace(/\s*\*\s*\d+(?:[.,]\d+)?\s*$/,'').trim()||'Article';return{...a,description:desc,sku:source?.sku||'',needsReview:a.needsReview||unknown||packageConflict}}).sort((a,b)=>a.description.localeCompare(b.description,'fr',{numeric:true,sensitivity:'base'})||a.sku.localeCompare(b.sku));
-  const display=parts.map(a=>`${a.description} *${a.multiplicity}`).join(' + '),identity=parts.map(a=>`${a.description}\u0002${a.sku}\u0002${a.multiplicity}`).join('\u0003'),key=[country,identity].join('\u0001');let row=groups.get(key);
-  if(!row){row={country,description:display,quantity:0,cogs:null,shipping:null,handling:null,unitTotal:null,amount:null,priceBlank:true,needsReview:false,sourceOrderKeys:[],sourceItemKeys:[],trackingNumbers:[],rawEvidence:[],splitShipmentReview:false};groups.set(key,row)}
-  row.quantity+=1;row.sourceOrderKeys.push(oid);row.trackingNumbers.push(primary.__tracking);row.sourceItemKeys.push(...parts.map(a=>a.sourceItemKey));row.needsReview||=parts.some(a=>a.needsReview);row.splitShipmentReview||=splitOrderIds.includes(oid);row.rawEvidence.push(...parts.map(a=>({orderId:oid,trackingNumber:primary.__tracking,sourceItemKey:a.sourceItemKey,rawProductName:a.sourceText,sku:a.sku,shortDescription:a.description,multiplicity:a.multiplicity,role:a.role,family:a.family,needsReview:a.needsReview})));
-  representedItems.push(...parts.map(a=>a.sourceItemKey));
+ const R=g.WRITE_V10_ATOMS.ROLES;
+ function dims(o,country){return{
+   invoiceEntity:clean(o.invoiceEntity)||'DEFAULT',
+   origin:norm(o.fulfillmentOrigin||g.WRITE_HUMAN_WORKFLOW_V84?.fulfillmentOrigin?.(o)?.origin)||'UNKNOWN',
+   country,
+   currency:norm(o.currency||o.orderCurrency||o.paymentCurrency)||'UNKNOWN',
+   taxRegime:clean(o.taxRegime)||'UNSPECIFIED'
+ }}
+ function addSeparate(a,source,d,oid,trackingNumber,packageConflict){
+   const unknown=String(a.family).startsWith('NEW:'),rawDesc=unknown?a.sourceSegment:a.normalizedDescription;
+   const desc=shortenDescription(rawDesc,source?.sku).replace(/\s*\*\s*\d+(?:[.,]\d+)?\s*$/,'').trim()||'Article';
+   const key=[d.invoiceEntity,d.origin,d.country,d.currency,d.taxRegime,a.role,desc].join('\u0001');
+   let row=separateGroups.get(key);
+   if(!row){row={...d,role:a.role,configurationFingerprint:`${a.role}:${desc}`,description:desc,quantity:0,cogs:null,shipping:null,handling:null,unitTotal:null,amount:null,priceBlank:true,needsReview:false,sourceOrderKeys:[],sourceItemKeys:[],trackingNumbers:[],rawEvidence:[],splitShipmentReview:false};separateGroups.set(key,row)}
+   row.quantity+=Number(a.multiplicity)||0;row.sourceOrderKeys.push(oid);row.sourceItemKeys.push(a.sourceItemKey);row.trackingNumbers.push(trackingNumber);
+   row.needsReview||=a.needsReview||unknown||packageConflict;row.splitShipmentReview||=splitOrderIds.includes(oid);
+   row.rawEvidence.push({orderId:oid,trackingNumber,sourceItemKey:a.sourceItemKey,rawProductName:a.sourceText,sku:source?.sku||'',shortDescription:desc,multiplicity:a.multiplicity,role:a.role,family:a.family,needsReview:row.needsReview});
+   represented.add(a.sourceItemKey);
  }
- const rows=[...groups.values()].sort((a,b)=>a.country.localeCompare(b.country,'en')||a.description.localeCompare(b.description,'fr',{numeric:true,sensitivity:'base'}));rows.forEach((r,i)=>{r.no=i+1;r.parcelCount=parcelCount;r.parcelNeedsReview=conflictOrderIds.length>0});rows.parcelCount=parcelCount;rows.parcelNeedsReview=conflictOrderIds.length>0;
- const billedSourceItems=new Set(rows.flatMap(r=>r.sourceItemKeys)),freeSourceItems=new Set(freeAtoms.map(a=>a.sourceItemKey)),allSourceItems=new Set(sourceItems.map(x=>x.sourceItemKey),representedItems);const missing=[...allSourceItems].filter(k=>!billedSourceItems.has(k)&&!freeSourceItems.has(k));
- const audit={version:VERSION,inputRecords:input.length,uniqueRecords:orders.length,deduplicatedRecords:duplicates.length,duplicates,packageRecords:packages.size,parcelCount,giftOnlyExcludedParcels,splitOrderIds,conflictOrderIds,sourceItems:sourceItems.length,representedItems:billedSourceItems.size,freeItems:freeSourceItems.size,missingSourceItems:missing,hardPass:missing.length===0};
- return{version:VERSION,rows,parcelCount,audit,freeAtoms,sourceItems};
+ for(const records of packages.values()){
+  const primary=records[0],country=norm(primary.destinationCountry||primary.country)||'GLOBAL',oid=primary.__orderId,d=dims(primary,country),pkg=[],sources=new Map();let packageConflict=reviewOrders.has(oid);
+  if(new Set(records.map(o=>norm(o.destinationCountry||o.country)||'GLOBAL')).size>1)packageConflict=true;
+  if(new Set(records.map(o=>dims(o,country).origin)).size>1||new Set(records.map(o=>dims(o,country).currency)).size>1)packageConflict=true;
+  for(const o of records)(o.lineItems||[]).forEach((item,ii)=>{
+    const sourceItemKey=clean(item.sourceItemKey)||`${oid}::${o.__tracking}::${o.__sourceIndex}::${ii}`,free=freeDecision(item);
+    const parsed=g.WRITE_V10_ATOMS.parseSourceItem(item,{sourceItemKey,orderKey:oid,origin:d.origin,currency:d.currency,destinationCountry:country,invoiceEntity:d.invoiceEntity,taxRegime:d.taxRegime,sourceFile:o.sourceFile,sourceSheet:o.sourceSheet,sourceRow:o.sourceRow});
+    if(free.free)parsed.forEach(a=>{a.role=R.FREE_GIFT;a.needsReview=false});
+    if(free.conflict){packageConflict=true;parsed.forEach(a=>{if(a.role===R.FREE_GIFT)a.role=R.PACKAGE;a.needsReview=true})}
+    const sourceRecord={sourceItemKey,orderId:oid,trackingNumber:o.__tracking,rawProductName:clean(item.productName||item.description),sku:clean(item.sku),freeDecision:free,atomIds:parsed.map(a=>a.atomId)};
+    sourceItems.push(sourceRecord);sources.set(sourceItemKey,sourceRecord);
+    for(const a of parsed){
+      if(isMarketingOnly(a.sourceSegment)){represented.add(a.sourceItemKey);continue}
+      if(a.role===R.FREE_GIFT){freeAtoms.push(a);represented.add(a.sourceItemKey);continue}
+      if(a.role===R.MANUAL_ONLY){represented.add(a.sourceItemKey);continue}
+      if(a.role===R.SERVICE||a.role===R.FEE||a.role===R.UPSELL){addSeparate(a,sourceRecord,d,oid,primary.__tracking,packageConflict);continue}
+      pkg.push(a)
+    }
+  });
+  if(!pkg.length){
+    const hasSeparate=[...separateGroups.values()].some(r=>r.sourceOrderKeys.includes(oid));
+    if(!hasSeparate)giftOnlyExcludedParcels++; else parcelCount++;
+    continue
+  }
+  parcelCount++;
+  const parts=pkg.map(a=>{
+    const source=sources.get(a.sourceItemKey),unknown=String(a.family).startsWith('NEW:'),rawDesc=unknown?a.sourceSegment:a.normalizedDescription;
+    const desc=shortenDescription(rawDesc,source?.sku).replace(/\s*\*\s*\d+(?:[.,]\d+)?\s*$/,'').trim()||'Article';
+    return{...a,description:desc,sku:source?.sku||'',needsReview:a.needsReview||unknown||packageConflict}
+  }).sort((a,b)=>a.description.localeCompare(b.description,'fr',{numeric:true,sensitivity:'base'})||Number(a.multiplicity)-Number(b.multiplicity));
+  // Human FACT identity is accounting description + multiplicity, NOT raw SKU.
+  const components=new Map();
+  for(const a of parts){const k=a.description;let c=components.get(k);if(!c){c={description:k,multiplicity:0,atoms:[]};components.set(k,c)}c.multiplicity+=Number(a.multiplicity)||0;c.atoms.push(a)}
+  const comps=[...components.values()].sort((a,b)=>a.description.localeCompare(b.description,'fr',{numeric:true,sensitivity:'base'}));
+  const display=comps.map(c=>`${c.description}${c.multiplicity!==1?` *${c.multiplicity}`:''}`).join(' + ');
+  const identity=comps.map(c=>`${c.description}\u0002${c.multiplicity}`).join('\u0003');
+  const key=[d.invoiceEntity,d.origin,d.country,d.currency,d.taxRegime,'PACKAGE',identity].join('\u0001');
+  let row=packageGroups.get(key);
+  if(!row){row={...d,role:'PACKAGE',configurationFingerprint:identity,description:display,quantity:0,cogs:null,shipping:null,handling:null,unitTotal:null,amount:null,priceBlank:true,needsReview:false,sourceOrderKeys:[],sourceItemKeys:[],trackingNumbers:[],rawEvidence:[],splitShipmentReview:false};packageGroups.set(key,row)}
+  row.quantity+=1;row.sourceOrderKeys.push(oid);row.trackingNumbers.push(primary.__tracking);row.sourceItemKeys.push(...new Set(parts.map(a=>a.sourceItemKey)));
+  row.needsReview||=parts.some(a=>a.needsReview);row.splitShipmentReview||=splitOrderIds.includes(oid);
+  for(const a of parts){represented.add(a.sourceItemKey);row.rawEvidence.push({orderId:oid,trackingNumber:primary.__tracking,sourceItemKey:a.sourceItemKey,rawProductName:a.sourceText,sku:a.sku,shortDescription:a.description,multiplicity:a.multiplicity,role:a.role,family:a.family,needsReview:a.needsReview})}
+ }
+ const rows=[...packageGroups.values(),...separateGroups.values()].sort((a,b)=>a.country.localeCompare(b.country,'en')||a.origin.localeCompare(b.origin,'en')||a.currency.localeCompare(b.currency,'en')||a.role.localeCompare(b.role,'en')||a.description.localeCompare(b.description,'fr',{numeric:true,sensitivity:'base'}));
+ rows.forEach((r,i)=>{r.no=i+1;r.parcelCount=parcelCount;r.parcelNeedsReview=conflictOrderIds.length>0});rows.parcelCount=parcelCount;rows.parcelNeedsReview=conflictOrderIds.length>0;
+ const allSourceItems=new Set(sourceItems.map(x=>x.sourceItemKey)),missing=[...allSourceItems].filter(k=>!represented.has(k));
+ const finalKeys=new Set(),duplicateFinalRows=[];
+ for(const r of rows){const k=[r.invoiceEntity,r.origin,r.country,r.currency,r.taxRegime,r.role,r.configurationFingerprint].join('\u0001');if(finalKeys.has(k))duplicateFinalRows.push(k);finalKeys.add(k)}
+ const audit={version:'10.0.3',inputRecords:input.length,uniqueRecords:orders.length,deduplicatedRecords:duplicates.length,duplicates,packageRecords:packages.size,parcelCount,giftOnlyExcludedParcels,splitOrderIds,conflictOrderIds,sourceItems:sourceItems.length,representedItems:represented.size,freeItems:new Set(freeAtoms.map(a=>a.sourceItemKey)).size,missingSourceItems:missing,duplicateFinalRows,finalAggregationPass:duplicateFinalRows.length===0,hardPass:missing.length===0&&duplicateFinalRows.length===0};
+ return{version:'10.0.3',rows,parcelCount,audit,freeAtoms,sourceItems};
 }
 g.WRITE_V10_PRODUCTION={VERSION,shortenDescription,duplicateKey,canonicalOrders,orderConflicts,freeDecision,build};
 })(window);

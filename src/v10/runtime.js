@@ -1,5 +1,5 @@
 /* WRITE V10 production runtime: quality state + one-click XLSX/PDF/audit export. */
-(function(g){'use strict';const VERSION='10.0.2';
+(function(g){'use strict';const VERSION='10.0.3';
 function build(){const b=g.WRITE_V8_SOURCE_BRIDGE?.();if(!b?.orders)return null;const all=g.WRITE_V10_PRODUCTION.build(b.orders),result={version:VERSION,...all,mode:'PRODUCTION',rolloutPercent:100};g.WRITE_V10_LAST=result;return result}
 function removeLegacyDebugPanels(){for(const id of ['v85MultiDatasetPanel','v86BatchScorePanel','v87ClosurePanel','v88AutoExtractPanel','v9ProductionPanel','v8ShadowPanel','v8TrainingPanel','v8ZeroLossPanel'])document.getElementById(id)?.remove()}
 function installUi(){removeLegacyDebugPanels();const p=document.querySelector('[data-view-panel="quality"]');if(!p||document.getElementById('v10QualityPanel'))return;const e=document.createElement('section');e.id='v10QualityPanel';e.className='panel wide v10-quality-panel';e.innerHTML='<div class="panel-head"><div><h2>V10 数据质量</h2><p>订单完整性、FACT统计和异常审核</p></div><span id="v10Mode">PRODUCTION</span></div><div class="v8-audit-grid" id="v10Metrics"></div><div id="v10Gate"></div>';p.appendChild(e)}
