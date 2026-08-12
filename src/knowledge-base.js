@@ -200,6 +200,40 @@ async function learnSchema(schema={},manual=true){
 
 
 function payloadSignature(v){try{const stable=x=>Array.isArray(x)?x.map(stable):x&&typeof x==='object'?Object.fromEntries(Object.keys(x).sort().map(k=>[k,stable(x[k])])):x;return JSON.stringify(stable(v))}catch{return String(v)}}
+
+function parseBusinessDateFromText(v=''){
+  const t=String(v||'');
+  const m=t.match(/(?:^|[_\-\s])(\d{1,2})[-_.](\d{1,2})[-_.](\d{2,4})(?:[_\-\s.]|$)/);
+  if(m){
+    let y=Number(m[3]);if(y<100)y+=2000;
+    const d=new Date(Date.UTC(y,Number(m[2])-1,Number(m[1])));
+    if(!Number.isNaN(d.getTime()))return d.toISOString().slice(0,10);
+  }
+  const ymd=t.match(/(?:^|[_\-\s])(\d{4})[-_.](\d{1,2})[-_.](\d{1,2})(?:[_\-\s.]|$)/);
+  if(ymd){
+    const d=new Date(Date.UTC(Number(ymd[1]),Number(ymd[2])-1,Number(ymd[3])));
+    if(!Number.isNaN(d.getTime()))return d.toISOString().slice(0,10);
+  }
+  return '';
+}
+function maxOrderNumberFromText(v=''){
+  const nums=String(v||'').match(/\d{4,}/g)||[];
+  return nums.reduce((m,x)=>Math.max(m,Number(x)||0),0);
+}
+function ruleBusinessRank(payload={}){
+  const source=String(payload.sourceFile||payload.sourceFactDescription||'');
+  const date=String(payload.businessDate||parseBusinessDateFromText(source)||'');
+  const order=Math.max(Number(payload.latestOrderNumber)||0,maxOrderNumberFromText(source));
+  return {date,order};
+}
+function compareBusinessRank(a={},b={}){
+  const A=ruleBusinessRank(a),B=ruleBusinessRank(b);
+  if(A.date&&B.date&&A.date!==B.date)return A.date>B.date?1:-1;
+  if(A.date&&!B.date)return 1;
+  if(!A.date&&B.date)return -1;
+  if(A.order!==B.order)return A.order>B.order?1:-1;
+  return 0;
+}
 function semanticPayloadSignature(type,payload={}){
   const p={...payload};
   delete p.sourceFile;delete p.quantity;delete p.amount;delete p.confidence;delete p.sourceFactDescription;
@@ -240,6 +274,14 @@ async function learnCostModel(spec={},manual=true){
   const existing=find('COST_MODEL',lookupKey);
   if(existing?.confirmed&&sameSemanticPayload('COST_MODEL',existing.payload,payload))return learnedNoop(existing);
   if(existing?.confirmed){
+    const rank=compareBusinessRank(payload,existing.payload);
+    if(rank>0){
+      const rule=await upsert({type:'COST_MODEL',lookupKey,payload,confidenceLevel:'MANUAL_CONFIRMED',confirmed:true,source:'LATEST_BUSINESS_DATA'});
+      return {rule,updatedByLatest:true,ruleId:rule?.ruleId||'',syncState:rule?.syncState||''};
+    }
+    if(rank<0)return {rule:existing,unchanged:true,alreadyLearned:true,olderIgnored:true,ruleId:existing.ruleId||'',syncState:existing.syncState||''};
+  }
+  if(existing?.confirmed){
     const conflict=await recordConflict('COST_MODEL',lookupKey,existing.payload,payload,manual?'MANUAL':'AUTO');return {conflict:true,rule:existing,conflictRule:conflict};
   }
   const rule=await upsert({type:'COST_MODEL',lookupKey,payload,confidenceLevel:manual?'MANUAL_CONFIRMED':'AUTO_INFERRED',confirmed:!!manual,source:manual?'MANUAL_COST':'FACT_LEARNING'});
@@ -274,6 +316,14 @@ async function learnReviewedProduct(spec={},manual=true){
   const lookupKey=keys[0],payload={productName:String(spec.productName||''),sku:String(spec.sku||''),family:String(spec.family||''),role:String(spec.role||''),normalizedDescription:String(spec.normalizedDescription||''),approvedFactDescription:String(spec.approvedFactDescription||''),country:country(spec.country),origin:country(spec.origin),currency:String(spec.currency||'').toUpperCase(),configurationFingerprint:String(spec.configurationFingerprint||''),sourceFile:String(spec.sourceFile||'')};
   const existing=find('REVIEWED_PRODUCT',lookupKey);
   if(existing?.confirmed&&sameSemanticPayload('REVIEWED_PRODUCT',existing.payload,payload))return learnedNoop(existing);
+  if(existing?.confirmed){
+    const rank=compareBusinessRank(payload,existing.payload);
+    if(rank>0){
+      const rule=await upsert({type:'REVIEWED_PRODUCT',lookupKey,payload,confidenceLevel:'MANUAL_CONFIRMED',confirmed:true,source:'LATEST_BUSINESS_DATA'});
+      return {rule,updatedByLatest:true,ruleId:rule?.ruleId||'',syncState:rule?.syncState||''};
+    }
+    if(rank<0)return {rule:existing,unchanged:true,alreadyLearned:true,olderIgnored:true,ruleId:existing.ruleId||'',syncState:existing.syncState||''};
+  }
   if(existing?.confirmed){const c=await recordConflict('REVIEWED_PRODUCT',lookupKey,existing.payload,payload,'MANUAL');return{conflict:true,rule:existing,conflictRule:c}}
   const rule=await upsert({type:'REVIEWED_PRODUCT',lookupKey,payload,confidenceLevel:'MANUAL_CONFIRMED',confirmed:true,source:'REVIEWED_WORKBOOK'});
   return {rule,created:true,ruleId:rule?.ruleId||'',syncState:rule?.syncState||''};
@@ -285,6 +335,14 @@ async function learnReviewedFact(spec={},manual=true){
   if(!payload.configurationFingerprint)throw new Error('审核 FACT 规则缺少 Configuration');
   const existing=find('REVIEWED_FACT',lookupKey);
   if(existing?.confirmed&&sameSemanticPayload('REVIEWED_FACT',existing.payload,payload))return learnedNoop(existing);
+  if(existing?.confirmed){
+    const rank=compareBusinessRank(payload,existing.payload);
+    if(rank>0){
+      const rule=await upsert({type:'REVIEWED_FACT',lookupKey,payload,confidenceLevel:'MANUAL_CONFIRMED',confirmed:true,source:'LATEST_BUSINESS_DATA'});
+      return {rule,updatedByLatest:true,ruleId:rule?.ruleId||'',syncState:rule?.syncState||''};
+    }
+    if(rank<0)return {rule:existing,unchanged:true,alreadyLearned:true,olderIgnored:true,ruleId:existing.ruleId||'',syncState:existing.syncState||''};
+  }
   if(existing?.confirmed){const c=await recordConflict('REVIEWED_FACT',lookupKey,existing.payload,payload,'MANUAL');return{conflict:true,rule:existing,conflictRule:c}}
   const rule=await upsert({type:'REVIEWED_FACT',lookupKey,payload,confidenceLevel:'MANUAL_CONFIRMED',confirmed:true,source:'REVIEWED_WORKBOOK'});
   return {rule,created:true,ruleId:rule?.ruleId||'',syncState:rule?.syncState||''};
