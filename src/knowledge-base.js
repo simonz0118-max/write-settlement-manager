@@ -247,6 +247,30 @@ async function learnFactModel(model={},manual=false){
   const lookupKey=String(model.sourceFile||'FACT')+'\\u0001'+String(model.sheetName||'FACT');
   return upsert({type:'FACT_MODEL',lookupKey,payload:model,confidenceLevel:manual?'MANUAL_CONFIRMED':'AUTO_INFERRED',confirmed:!!manual,source:manual?'MANUAL_FACT':'HISTORICAL_FACT'});
 }
+function reviewedProductLookupKeys(spec={}){
+  const sku=norm(spec.sku),name=norm(spec.productName),c=country(spec.country),o=country(spec.origin),cur=String(spec.currency||'').toUpperCase(),keys=[];
+  if(sku){if(c&&o&&cur)keys.push('sku:'+sku+'\\u0001'+c+'\\u0001'+o+'\\u0001'+cur);keys.push('sku:'+sku)}
+  if(name){if(c&&o&&cur)keys.push('name:'+name+'\\u0001'+c+'\\u0001'+o+'\\u0001'+cur);keys.push('name:'+name)}
+  return keys;
+}
+function reviewedProduct(spec={}){for(const k of reviewedProductLookupKeys(spec)){const r=find('REVIEWED_PRODUCT',k);if(r)return r}return null}
+async function learnReviewedProduct(spec={},manual=true){
+  const keys=reviewedProductLookupKeys(spec);if(!keys.length)throw new Error('审核商品规则缺少 SKU/产品名');
+  const lookupKey=keys[0],payload={productName:String(spec.productName||''),sku:String(spec.sku||''),family:String(spec.family||''),role:String(spec.role||''),normalizedDescription:String(spec.normalizedDescription||''),approvedFactDescription:String(spec.approvedFactDescription||''),country:country(spec.country),origin:country(spec.origin),currency:String(spec.currency||'').toUpperCase(),configurationFingerprint:String(spec.configurationFingerprint||''),sourceFile:String(spec.sourceFile||'')};
+  const existing=find('REVIEWED_PRODUCT',lookupKey);
+  if(existing?.confirmed&&payloadSignature(existing.payload)!==payloadSignature(payload)){const c=await recordConflict('REVIEWED_PRODUCT',lookupKey,existing.payload,payload,'MANUAL');return{conflict:true,rule:existing,conflictRule:c}}
+  return upsert({type:'REVIEWED_PRODUCT',lookupKey,payload,confidenceLevel:'MANUAL_CONFIRMED',confirmed:true,source:'REVIEWED_WORKBOOK'});
+}
+function reviewedFactLookupKey(spec={}){return[String(spec.invoiceEntity||'DEFAULT'),country(spec.origin),country(spec.country),String(spec.currency||'').toUpperCase(),String(spec.taxRegime||'UNSPECIFIED'),String(spec.role||''),String(spec.configurationFingerprint||'')].join('\\u0001')}
+function reviewedFact(spec={}){return find('REVIEWED_FACT',reviewedFactLookupKey(spec))||null}
+async function learnReviewedFact(spec={},manual=true){
+  const lookupKey=reviewedFactLookupKey(spec),payload={invoiceEntity:String(spec.invoiceEntity||'DEFAULT'),origin:country(spec.origin),country:country(spec.country),currency:String(spec.currency||'').toUpperCase(),taxRegime:String(spec.taxRegime||'UNSPECIFIED'),role:String(spec.role||''),configurationFingerprint:String(spec.configurationFingerprint||''),description:String(spec.description||''),cogs:spec.cogs,shipping:spec.shipping,unitTotal:spec.unitTotal,amount:spec.amount,quantity:spec.quantity,sourceFile:String(spec.sourceFile||'')};
+  if(!payload.configurationFingerprint)throw new Error('审核 FACT 规则缺少 Configuration');
+  const existing=find('REVIEWED_FACT',lookupKey);
+  if(existing?.confirmed&&payloadSignature(existing.payload)!==payloadSignature(payload)){const c=await recordConflict('REVIEWED_FACT',lookupKey,existing.payload,payload,'MANUAL');return{conflict:true,rule:existing,conflictRule:c}}
+  return upsert({type:'REVIEWED_FACT',lookupKey,payload,confidenceLevel:'MANUAL_CONFIRMED',confirmed:true,source:'REVIEWED_WORKBOOK'});
+}
+
 function conflicts(){return [...cache.values()].filter(r=>r.type==='RULE_CONFLICT'&&!r.deleted&&r.payload?.status!=='RESOLVED')}
 
 async function migrateLegacy(){
@@ -392,7 +416,7 @@ setInterval(()=>{if(navigator.onLine)sync().catch(()=>{})},5*60*1000);
 
 
 window.WRITE_KB={
-  init,sync,stats,list,productCategory,factPrice,learnProduct,learnPrice,learnSchema,schemaRules,schemaFor,costModel,calculateCost,learnCostModel,currencyPolicy,learnCurrencyPolicy,taxPolicy,learnTaxPolicy,learnFactModel,conflicts,exportBackup,importBackup,renderStatus,
+  init,sync,stats,list,productCategory,factPrice,learnProduct,learnPrice,learnSchema,schemaRules,schemaFor,costModel,calculateCost,learnCostModel,currencyPolicy,learnCurrencyPolicy,taxPolicy,learnTaxPolicy,learnFactModel,reviewedProduct,learnReviewedProduct,reviewedFact,learnReviewedFact,conflicts,exportBackup,importBackup,renderStatus,
   priority:PRIORITY
 };
 })();

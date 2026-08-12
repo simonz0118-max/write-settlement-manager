@@ -1,3 +1,14 @@
+## v10.1.0 — 2026-08-12 21:54 (Europe/Paris)
+- 正式交付改为单一 XLSX：FACT 永远第一张 Sheet，会计结算与统计明细嵌入同一工作簿。
+- 新增隐藏 WRITE_LEARNING_SOURCE 溯源 Sheet，将 FACT 行与 SKU、原产品名、订单、运单、Country、Origin、Currency、Role、Configuration 建立可逆映射。
+- 规则学习页新增“导入人工审核表”；人工审核/补成本后直接上传同一个 XLSX，无需重新打包 ZIP。
+- 自动学习 SKU、产品名、人工 Description、family、role、完整 Configuration，以及可闭环的 COGs、Shipping、Unit Total、Amount。
+- 新增 REVIEWED_PRODUCT 与 REVIEWED_FACT 人工确认知识；相同已审核 Configuration 下次自动复用并取消红字。
+- 知识继续 Local-first 保存 IndexedDB，并沿现有 /api/rules/sync 链路同步 Cloudflare D1。
+
+## v10.0.7 — 2026-08-12 20:27 (Europe/Paris)
+- 修复长页面切回首页的视觉错位。
+
 ## v10.0.9 — 2026-08-12 20:55 (Europe/Paris)
 - 修复左下角“使用提示”只剩标题条、正文被裁切的问题。
 - 根因是固定高度侧栏中的 flex-shrink 与 V10.0.8 overflow:hidden 叠加，较矮窗口会把 side-tip 压缩。

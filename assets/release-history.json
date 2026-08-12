@@ -1,35 +1,57 @@
 {
   "current": {
-    "version": "10.0.9",
-    "time": "2026-08-12 20:55",
-    "title": "Sidebar Footer Integrity Hotfix",
+    "version": "10.1.0",
+    "time": "2026-08-12 21:54",
+    "title": "Unified Reviewed-Learning Workbook",
     "sections": [
       {
-        "label": "侧栏UI",
+        "label": "统一结算工作簿",
         "items": [
-          "使用提示正文不再被压缩裁切。",
-          "使用提示和状态卡在矮窗口中完整保留，必要时侧栏内部滚动。"
+          "FACT 固定第一张；会计统计和全部明细同一个 XLSX。"
         ]
       },
       {
-        "label": "业务逻辑",
+        "label": "人工审核学习",
         "items": [
-          "未修改订单、FACT、会计统计、ZIP导出和规则学习。"
+          "规则学习页直接上传人工审核后的统一 XLSX。",
+          "自动学习 SKU、产品名、Description、角色、Configuration 和有证据成本。"
+        ]
+      },
+      {
+        "label": "下次自动开票",
+        "items": [
+          "同一人工审核 Configuration 自动复用并取消红字；新配置/冲突/缺价格仍安全复核。"
+        ]
+      },
+      {
+        "label": "知识库",
+        "items": [
+          "继续 IndexedDB + Cloudflare D1 同步。"
         ]
       }
     ]
   },
   "history": [
     {
+      "version": "10.1.0",
+      "time": "2026-08-12 21:54",
+      "title": "Unified Reviewed-Learning Workbook",
+      "items": [
+        "正式交付改为单一 XLSX：FACT 永远第一张 Sheet，会计结算与统计明细嵌入同一工作簿。",
+        "新增隐藏 WRITE_LEARNING_SOURCE 溯源 Sheet，将 FACT 行与 SKU、原产品名、订单、运单、Country、Origin、Currency、Role、Configuration 建立可逆映射。",
+        "规则学习页新增“导入人工审核表”；人工审核/补成本后直接上传同一个 XLSX，无需重新打包 ZIP。",
+        "自动学习 SKU、产品名、人工 Description、family、role、完整 Configuration，以及可闭环的 COGs、Shipping、Unit Total、Amount。",
+        "新增 REVIEWED_PRODUCT 与 REVIEWED_FACT 人工确认知识；相同已审核 Configuration 下次自动复用并取消红字。",
+        "知识继续 Local-first 保存 IndexedDB，并沿现有 /api/rules/sync 链路同步 Cloudflare D1。"
+      ]
+    },
+    {
       "version": "10.0.9",
       "time": "2026-08-12 20:55",
       "title": "Sidebar Footer Integrity Hotfix",
       "items": [
-        "修复左下角“使用提示”只剩标题条、正文被裁切的问题。",
-        "根因是固定高度侧栏中的 flex-shrink 与 V10.0.8 overflow:hidden 叠加，较矮窗口会把 side-tip 压缩。",
-        "side-tip 与状态卡改为不可压缩；侧栏自身允许纵向滚动，内容过高时滚动而不是裁掉。",
-        "长格式列表继续在卡片内部自动换行；较矮窗口只压缩间距，不压缩内容高度。",
-        "不修改订单统计、FACT、会计报表、ZIP导出和学习规则。"
+        "修复使用提示正文被 flex-shrink 压缩裁切。",
+        "侧栏内容过高时内部滚动。"
       ]
     },
     {
@@ -37,10 +59,15 @@
       "time": "2026-08-12 20:32",
       "title": "Sidebar Usage Tip Overflow Hotfix",
       "items": [
-        "修复左下角“使用提示”中的长格式列表文字越过卡片边框的问题。",
-        "对 side-tip 列表启用 overflow-wrap:anywhere 与 word-break:break-word，长字符串自动在卡片内部换行。",
-        "保持左侧导航宽度和整体 UI 结构不变，仅修复使用提示卡片内部排版。",
-        "针对较矮窗口同步缩小使用提示内边距与行距，避免底部内容被裁切。"
+        "修复使用提示长字符串越框。"
+      ]
+    },
+    {
+      "version": "10.0.7",
+      "time": "2026-08-12 20:27",
+      "title": "Dashboard UI Alignment Hotfix",
+      "items": [
+        "修复长页面切回首页的视觉错位。"
       ]
     },
     {
@@ -48,11 +75,7 @@
       "time": "2026-08-12 18:10",
       "title": "FACT Grid Integrity Hotfix",
       "items": [
-        "修复 FACT 数据区 E:H 列缺少底色和表格边框的根因。",
-        "Golden FACT 模板 cellXfs 声明数为 87，但实际物理 xf 数为 89；旧逻辑按声明数追加样式，错误引用了无边框 style 87/88。",
-        "V10.0.6 改为扫描 cellXfs 实际物理 xf 数，红字样式从真实 style 47/49 克隆并追加到正确索引。",
-        "新生成 E:H 单元格保留 Golden FACT 原始灰色底色、thin 边框、字体、对齐和数字格式。",
-        "保留 V10.0.5 单一 ZIP 导出、会计统计表和完整更新日志。"
+        "修复 FACT E:H 底色与边框缺失。"
       ]
     },
     {
@@ -60,11 +83,7 @@
       "time": "2026-08-12 17:40",
       "title": "Golden FACT Fidelity + Single ZIP Delivery",
       "items": [
-        "修复动态 FACT 数据行缺少底色、表格边框和字体继承：红字样式从 Golden FACT 原始 style 47/49 克隆，仅修改字体颜色。",
-        "Total colis 行恢复 Golden 模板原生 50/51/52 样式。",
-        "正式导出改为一次下载一个 ZIP，包含专业会计结算 Excel 与每个订单工作簿对应的 Golden FACT Excel。",
-        "内部 audit JSON 不再作为用户下载文件。",
-        "补齐 V10.0.3 / V10.0.4 / V10.0.5 的 GitHub CHANGELOG、WebApp 历史更新与 release-meta。"
+        "恢复 Golden FACT 动态行格式与会计统计。"
       ]
     },
     {
@@ -72,10 +91,7 @@
       "time": "2026-08-12 17:10",
       "title": "Accounting Export Recovery",
       "items": [
-        "恢复专业会计结算 Excel 导出链路。",
-        "FACT 继续使用唯一 Golden XLSX 模板。",
-        "停止默认下载内部 audit JSON。",
-        "关闭存在版式/字体失真的 Canvas PDF 正式输出，避免交付错误文件。"
+        "恢复专业会计结算 Excel；停止默认下载 audit JSON。"
       ]
     },
     {
@@ -83,10 +99,7 @@
       "time": "2026-08-12 16:40",
       "title": "Accounting Golden Final Aggregation",
       "items": [
-        "最终 FACT 按 invoiceEntity + origin + country + currency + taxRegime + role + 完整会计 Configuration 唯一归并。",
-        "SKU 只保留在审计/溯源层，不再导致同一人工会计配置被拆成多行。",
-        "PACKAGE、UPSELL、SERVICE、FEE 保持独立会计语义。",
-        "新增 duplicateFinalRows 硬门，禁止相同最终会计键重复输出。"
+        "最终 FACT 按完整人工会计 Configuration 唯一归并。"
       ]
     },
     {

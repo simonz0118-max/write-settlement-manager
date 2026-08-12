@@ -1,5 +1,5 @@
 /* WRITE V10 production statistics contract: orders -> country + full package composition -> one FACT. */
-(function(g){'use strict';const VERSION='10.0.3';
+(function(g){'use strict';const VERSION='10.1.0';
 const clean=v=>String(v??'').replace(/\r/g,' ').replace(/\s+/g,' ').trim();
 const norm=v=>clean(v).toUpperCase();
 function tracking(o={}){return clean(o.trackingNumber||o.tracking||o.waybill||o.parcelId||o.packageId)}
@@ -86,9 +86,10 @@ function build(input=[]){
   }
   parcelCount++;
   const parts=pkg.map(a=>{
-    const source=sources.get(a.sourceItemKey),unknown=String(a.family).startsWith('NEW:'),rawDesc=unknown?a.sourceSegment:a.normalizedDescription;
+    const source=sources.get(a.sourceItemKey),learned=g.WRITE_KB?.reviewedProduct?.({productName:source?.rawProductName||a.sourceText,sku:source?.sku||'',country:d.country,origin:d.origin,currency:d.currency});
+    const unknown=String(a.family).startsWith('NEW:'),rawDesc=learned?.payload?.normalizedDescription||(unknown?a.sourceSegment:a.normalizedDescription);
     const desc=shortenDescription(rawDesc,source?.sku).replace(/\s*\*\s*\d+(?:[.,]\d+)?\s*$/,'').trim()||'Article';
-    return{...a,description:desc,sku:source?.sku||'',needsReview:a.needsReview||unknown||packageConflict}
+    return{...a,family:learned?.payload?.family||a.family,role:learned?.payload?.role||a.role,description:desc,sku:source?.sku||'',needsReview:learned?packageConflict:(a.needsReview||unknown||packageConflict)}
   }).sort((a,b)=>a.description.localeCompare(b.description,'fr',{numeric:true,sensitivity:'base'})||Number(a.multiplicity)-Number(b.multiplicity));
   // Human FACT identity is accounting description + multiplicity, NOT raw SKU.
   const components=new Map();
@@ -104,12 +105,21 @@ function build(input=[]){
   for(const a of parts){represented.add(a.sourceItemKey);row.rawEvidence.push({orderId:oid,trackingNumber:primary.__tracking,sourceItemKey:a.sourceItemKey,rawProductName:a.sourceText,sku:a.sku,shortDescription:a.description,multiplicity:a.multiplicity,role:a.role,family:a.family,needsReview:a.needsReview})}
  }
  const rows=[...packageGroups.values(),...separateGroups.values()].sort((a,b)=>a.country.localeCompare(b.country,'en')||a.origin.localeCompare(b.origin,'en')||a.currency.localeCompare(b.currency,'en')||a.role.localeCompare(b.role,'en')||a.description.localeCompare(b.description,'fr',{numeric:true,sensitivity:'base'}));
+ for(const row of rows){
+   const learned=g.WRITE_KB?.reviewedFact?.(row);if(!learned?.payload)continue;
+   const p=learned.payload,n=v=>(v===null||v===undefined||v==='')?null:(Number.isFinite(Number(v))?Number(v):null);
+   if(clean(p.description))row.description=clean(p.description);
+   row.cogs=n(p.cogs);row.shipping=n(p.shipping);row.unitTotal=n(p.unitTotal);
+   if(row.unitTotal===null&&row.cogs!==null&&row.shipping!==null)row.unitTotal=row.cogs+row.shipping;
+   row.amount=row.unitTotal===null?null:Math.round((row.unitTotal*Number(row.quantity||0)+Number.EPSILON)*100)/100;
+   row.priceBlank=row.unitTotal===null;row.needsReview=false;row.learnedFromReviewedWorkbook=true;
+ }
  rows.forEach((r,i)=>{r.no=i+1;r.parcelCount=parcelCount;r.parcelNeedsReview=conflictOrderIds.length>0});rows.parcelCount=parcelCount;rows.parcelNeedsReview=conflictOrderIds.length>0;
  const allSourceItems=new Set(sourceItems.map(x=>x.sourceItemKey)),missing=[...allSourceItems].filter(k=>!represented.has(k));
  const finalKeys=new Set(),duplicateFinalRows=[];
  for(const r of rows){const k=[r.invoiceEntity,r.origin,r.country,r.currency,r.taxRegime,r.role,r.configurationFingerprint].join('\u0001');if(finalKeys.has(k))duplicateFinalRows.push(k);finalKeys.add(k)}
- const audit={version:'10.0.3',inputRecords:input.length,uniqueRecords:orders.length,deduplicatedRecords:duplicates.length,duplicates,packageRecords:packages.size,parcelCount,giftOnlyExcludedParcels,splitOrderIds,conflictOrderIds,sourceItems:sourceItems.length,representedItems:represented.size,freeItems:new Set(freeAtoms.map(a=>a.sourceItemKey)).size,missingSourceItems:missing,duplicateFinalRows,finalAggregationPass:duplicateFinalRows.length===0,hardPass:missing.length===0&&duplicateFinalRows.length===0};
- return{version:'10.0.3',rows,parcelCount,audit,freeAtoms,sourceItems};
+ const audit={version:'10.1.0',inputRecords:input.length,uniqueRecords:orders.length,deduplicatedRecords:duplicates.length,duplicates,packageRecords:packages.size,parcelCount,giftOnlyExcludedParcels,splitOrderIds,conflictOrderIds,sourceItems:sourceItems.length,representedItems:represented.size,freeItems:new Set(freeAtoms.map(a=>a.sourceItemKey)).size,missingSourceItems:missing,duplicateFinalRows,finalAggregationPass:duplicateFinalRows.length===0,hardPass:missing.length===0&&duplicateFinalRows.length===0};
+ return{version:'10.1.0',rows,parcelCount,audit,freeAtoms,sourceItems};
 }
 g.WRITE_V10_PRODUCTION={VERSION,shortenDescription,duplicateKey,canonicalOrders,orderConflicts,freeDecision,build};
 })(window);
