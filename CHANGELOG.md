@@ -1,3 +1,22 @@
+## v10.0.5 — 2026-08-12 17:40 (Europe/Paris)
+- 修复动态 FACT 数据行缺少底色、表格边框和字体继承：红字样式从 Golden FACT 原始 style 47/49 克隆，仅修改字体颜色。
+- Total colis 行恢复 Golden 模板原生 50/51/52 样式。
+- 正式导出改为一次下载一个 ZIP，包含专业会计结算 Excel 与每个订单工作簿对应的 Golden FACT Excel。
+- 内部 audit JSON 不再作为用户下载文件。
+- 补齐 V10.0.3 / V10.0.4 / V10.0.5 的 GitHub CHANGELOG、WebApp 历史更新与 release-meta。
+
+## v10.0.4 — 2026-08-12 17:10 (Europe/Paris)
+- 恢复专业会计结算 Excel 导出链路。
+- FACT 继续使用唯一 Golden XLSX 模板。
+- 停止默认下载内部 audit JSON。
+- 关闭存在版式/字体失真的 Canvas PDF 正式输出，避免交付错误文件。
+
+## v10.0.3 — 2026-08-12 16:40 (Europe/Paris)
+- 最终 FACT 按 invoiceEntity + origin + country + currency + taxRegime + role + 完整会计 Configuration 唯一归并。
+- SKU 只保留在审计/溯源层，不再导致同一人工会计配置被拆成多行。
+- PACKAGE、UPSELL、SERVICE、FEE 保持独立会计语义。
+- 新增 duplicateFinalRows 硬门，禁止相同最终会计键重复输出。
+
 ## v10.0.0-rc1 — 2026-08-12 13:27 (Europe/Paris)
 - V10 Universal Order-to-Invoice Compiler 候选版：新增 CanonicalOrder、BillableAtom、Accounting IR、Pricing Waterfall、Invoice Compiler、Learning Governance 与 Canary Router。
 - 修复 P0：cadeau 不能单独判免费；多实体组合拆分；SERVICE/FEE 独立落账；currency 聚合隔离；五重守恒替代 V9 三重 hardPass。

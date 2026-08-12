@@ -126,7 +126,7 @@ assignGlobalFunction('generatedGenericFactRowsForWorkbook',function(workbookName
 // runtime. The style index MUST be derived from the template's actual cellXfs
 // count instead of being hard-coded: V10.0.1 incorrectly expected 89 while
 // the shipped Golden template contains 87 cellXfs (0..86).
-let PRICE_REVIEW_STYLE=87;
+let PRICE_REVIEW_STYLE=47, PRICE_REVIEW_STYLE_LEFT=49;
 function unifiedFactCountryRow(r,rowNo){
   const country=String(r?.country||'').trim()||'GLOBAL';
   return `<row r="${rowNo}" s="7" customFormat="1" ht="15" customHeight="1" spans="1:11"><c r="A${rowNo}" s="43"/>${xmlTextCell(`B${rowNo}`,44,country)}<c r="C${rowNo}" s="44"/><c r="D${rowNo}" s="45"/><c r="E${rowNo}" s="44"/><c r="F${rowNo}" s="44"/><c r="G${rowNo}" s="44"/><c r="H${rowNo}" s="44"/></row>`;
@@ -150,10 +150,10 @@ function unifiedFactDataRow(r,rowNo,index){
     xmlTextCell(`C${rowNo}`,reviewStyle,desc),
     q===null?`<c r="D${rowNo}" s="48"/>`:xmlNumberCell(`D${rowNo}`,48,q),
     `<c r="E${rowNo}" s="${PRICE_REVIEW_STYLE}"/>`,
-    `<c r="F${rowNo}" s="${PRICE_REVIEW_STYLE}"/>`
+    `<c r="F${rowNo}" s="${PRICE_REVIEW_STYLE_LEFT}"/>`
   ];
-  // Production contract: cost is always human-entered. Keep price and amount
-  // cells blank and red without changing the fixed FACT template around them.
+  // Golden FACT body fill/borders/alignment are preserved. Review styles are
+  // clones of original body styles 47/49 with font color changed only.
   if(priceBlank){cells.push(`<c r="G${rowNo}" s="${PRICE_REVIEW_STYLE}"/>`);cells.push(`<c r="H${rowNo}" s="${PRICE_REVIEW_STYLE}"/>`)}
   return `<row r="${rowNo}" s="7" customFormat="1" ht="27.75" customHeight="1" spans="1:11">${cells.join('')}</row>`;
 }
@@ -201,8 +201,8 @@ function patchUnifiedFactTemplateSheetXml(xml,data,workbookName){
 
   const parcelCount=Number(data?.parcelCount??data?.meta?.parcelCount??data?.[0]?.parcelCount??0)||0;
   const parcelReview=!!(data?.parcelNeedsReview??data?.meta?.parcelNeedsReview??data?.[0]?.parcelNeedsReview);
-  const parcelStyle=parcelReview?PRICE_REVIEW_STYLE:50;
-  const totalXml=`<row r="${totalRow}" ht="32.25" customHeight="1" spans="1:8"><c r="A${totalRow}" s="20"/>${xmlTextCell(`B${totalRow}`,parcelStyle,'Total colis')}${xmlTextCell(`C${totalRow}`,parcelStyle,'')}${xmlNumberCell(`D${totalRow}`,parcelStyle,parcelCount)}<c r="E${totalRow}" s="${PRICE_REVIEW_STYLE}"/><c r="F${totalRow}" s="${PRICE_REVIEW_STYLE}"/><c r="G${totalRow}" s="${PRICE_REVIEW_STYLE}"/><c r="H${totalRow}" s="${PRICE_REVIEW_STYLE}"/></row>`;
+  const parcelStyle=50;
+  const totalXml=`<row r="${totalRow}" ht="32.25" customHeight="1" spans="1:8"><c r="A${totalRow}" s="20"/>${xmlTextCell(`B${totalRow}`,50,'Total colis')}${xmlTextCell(`C${totalRow}`,50,'')}${xmlNumberCell(`D${totalRow}`,51,parcelCount)}<c r="E${totalRow}" s="50"/><c r="F${totalRow}" s="52"/><c r="G${totalRow}" s="52"/><c r="H${totalRow}" s="52"/></row>`;
   const blankXml=`<row r="${totalRow+1}" ht="15" customHeight="1" spans="1:8"><c r="A${totalRow+1}" s="20"/></row>`;
 
   const sheetData=xml.match(/<sheetData>[\s\S]*?<\/sheetData>/)?.[0];
@@ -247,21 +247,36 @@ function patchUnifiedFactTemplateSheetXml(xml,data,workbookName){
 window.WRITE_FACT_V731={patchSheet:patchUnifiedFactTemplateSheetXml};
 
 function ensureProductionRedStyleXml(xml){
-  const fontMatch=/<fonts count="(\d+)">/.exec(xml),xfMatch=/<cellXfs count="(\d+)">/.exec(xml);
-  if(!fontMatch||!xfMatch)throw new Error('统一 FACT 样式表结构异常');
-  const fontId=Number(fontMatch[1]),xfCount=Number(xfMatch[1]);
-  if(/WRITE_V10_PRICE_REVIEW/.test(xml)){
-    PRICE_REVIEW_STYLE=Math.max(0,xfCount-1);
+  const markerCenter=/WRITE_V1005_REVIEW_CENTER=(\d+)/.exec(xml);
+  const markerLeft=/WRITE_V1005_REVIEW_LEFT=(\d+)/.exec(xml);
+  if(markerCenter&&markerLeft){
+    PRICE_REVIEW_STYLE=Number(markerCenter[1]);
+    PRICE_REVIEW_STYLE_LEFT=Number(markerLeft[1]);
     return xml;
   }
+  const fontMatch=/<fonts count="(\d+)">/.exec(xml);
+  const xfMatch=/<cellXfs count="(\d+)">/.exec(xml);
+  const xfsBlock=/<cellXfs count="\d+">([\s\S]*?)<\/cellXfs>/.exec(xml);
+  if(!fontMatch||!xfMatch||!xfsBlock)throw new Error('统一 FACT 样式表结构异常');
+  const fontId=Number(fontMatch[1]),xfCount=Number(xfMatch[1]);
+  const xfs=[...xfsBlock[1].matchAll(/<xf\b[^>]*?(?:\/>|>[\s\S]*?<\/xf>)/g)].map(m=>m[0]);
+  if(!xfs[47]||!xfs[49])throw new Error(`Golden FACT 基础样式缺失：cellXfs=${xfs.length}`);
   PRICE_REVIEW_STYLE=xfCount;
-  const font='<font><name val="Aptos Narrow"/><sz val="10"/><color rgb="FF9C0006"/><family val="2"/><scheme val="minor"/></font><!-- WRITE_V10_PRICE_REVIEW -->';
-  const xf=`<xf numFmtId="177" fontId="${fontId}" fillId="13" borderId="9" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf>`;
+  PRICE_REVIEW_STYLE_LEFT=xfCount+1;
+  const font='<font><name val="Arial"/><sz val="10"/><color rgb="FFFF0000"/><family val="2"/></font>';
+  const cloneWithRedFont=xf=>{
+    let out=xf.replace(/fontId="\d+"/,`fontId="${fontId}"`);
+    if(!/applyFont=/.test(out))out=out.replace('<xf ','<xf applyFont="1" ');
+    else out=out.replace(/applyFont="\d+"/,'applyFont="1"');
+    return out;
+  };
+  const center=cloneWithRedFont(xfs[47]),left=cloneWithRedFont(xfs[49]);
+  const markers=`<!-- WRITE_V1005_REVIEW_CENTER=${PRICE_REVIEW_STYLE} --><!-- WRITE_V1005_REVIEW_LEFT=${PRICE_REVIEW_STYLE_LEFT} -->`;
   return xml
     .replace(`<fonts count="${fontId}">`,`<fonts count="${fontId+1}">`)
     .replace('</fonts>',font+'</fonts>')
-    .replace(`<cellXfs count="${xfCount}">`,`<cellXfs count="${xfCount+1}">`)
-    .replace('</cellXfs>',xf+'</cellXfs>');
+    .replace(`<cellXfs count="${xfCount}">`,`<cellXfs count="${xfCount+2}">`)
+    .replace('</cellXfs>',center+left+markers+'</cellXfs>');
 }
 window.WRITE_FACT_V10_STYLES={
   ensureProductionRedStyleXml,
