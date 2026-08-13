@@ -252,14 +252,8 @@ async function learnExact(spec,items,fileName){
     const er=await g.WRITE_KB.learnComponentCostEquation({origin:'CN',country:spec.country,currency:spec.currency,components,totalCogs:goodsCogs,configurationFingerprint:spec.configurationFingerprint,sourceFile:fileName},true).catch(()=>null);
     if(er){componentEquations++;componentCostRules+=Number(er.solved?.learned)||0}
   }
-  if(Number.isFinite(spec.unitTotal)){
-    const cr=await g.WRITE_KB.learnCostModel({
-      productName:'',sku:`CONFIG:${spec.configurationFingerprint}`,country:spec.country,currency:spec.currency,
-      strategy:'UNIT_FIXED',unitCost:spec.unitTotal,cogs:spec.cogs,shipping:spec.shipping,
-      sourceFactDescription:spec.description,sourceFile:fileName,confidence:1
-    },true).catch(()=>null);
-    if(count(cr)==='new')costRules++;
-  }
+  // V10.4.0: Configuration total remains FACT semantic evidence only.
+  // SKU COGS and per-package fee are learned independently.
   for(const p of items||[]){
     if(!clean(p.productName||p.rawProductName)&&!clean(p.sku))continue;
     const pr=await g.WRITE_KB.learnReviewedProduct({

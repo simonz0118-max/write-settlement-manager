@@ -1,0 +1,13 @@
+{
+  "version": "10.4.0",
+  "channel": "PUBLIC",
+  "date": "2026-08-13",
+  "architecture": [
+    "SKU_PRODUCT_COST",
+    "CONFIGURATION_FACT",
+    "PACKAGE_FEE"
+  ],
+  "noNewConfigAggregateCost": true,
+  "d1SchemaChange": false,
+  "basedOnValidatedCandidate": "10.3.8"
+}

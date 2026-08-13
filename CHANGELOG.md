@@ -1,3 +1,11 @@
+## V10.4.0 — Public three-layer cost-learning release
+- Promoted the validated V10.3.8 three-layer learning architecture to public release.
+- SKU/product COGS is independently learned and recomposed by quantity.
+- Configuration/FACT remains semantic/accounting evidence rather than an aggregate cost key.
+- Per-package fee is learned once per parcel by main product identity + quantity tier + destination/currency.
+- New CONFIG:<fingerprint> aggregate COST_MODEL writes are suppressed; historical rules remain compatible.
+- D1/IndexedDB sync schema, accounting, FACT, conservation and export pipelines are preserved.
+
 
 ## v10.3.7 — 2026-08-13 17:34
 

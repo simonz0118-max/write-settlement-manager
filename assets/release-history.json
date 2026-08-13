@@ -1,22 +1,40 @@
 {
   "current": {
-    "version": "10.3.7",
-    "time": "2026-08-13 17:34",
-    "title": "Audited Component Cost Learning + Sidebar Typography Unification",
+    "version": "10.4.0",
+    "time": "2026-08-13 19:46",
+    "title": "Public Release — Three-Layer Cost Learning",
     "sections": [
       {
-        "label": "V10.3.7",
+        "label": "V10.4.0",
         "items": [
-          "人工审核 FACT 回传后新增 COMPONENT_COST_EQUATION，把审核 COGS 与商品组成保存为云端可同步方程。",
-          "单一未知商品立即求单位成本；多未知商品仅在历史审核方程满秩、唯一可解且残差合格时学习，欠定数据绝不猜价。",
-          "学出的 SKU/产品单位成本写入 COST_MODEL，新组合、新数量可直接复用；运费仍按一个订单/一个包裹只计算一次。",
-          "重复回传幂等；更新业务日期/订单号优先；FR 不进入组件成本学习。",
-          "删除数据管理专属字体规则，所有侧栏菜单统一使用同一视觉合同。"
+          "正式发布三层成本学习：商品成本层、Configuration/FACT 层、包裹费用层完全解耦。",
+          "人工审核 FACT 回传后，SKU/产品成本独立学习；商品数量或组合变化后可重新组合计算，不再要求见过完全相同 Configuration。",
+          "包裹费用按主商品身份 + 主商品数量档位 + 国家 + 币种独立学习；一个订单/一个包裹只计算一次。",
+          "Stylo eternel 无论搭配多少 Coffret Cadeau、笔芯等默认配件，配件不额外增加包裹费用；Stylo 数量变化进入对应新档位。",
+          "停止新增 CONFIG:<configurationFingerprint> 整体组合成本规则；历史 CONFIG 规则继续兼容读取，不清库。",
+          "保留 REVIEWED_FACT、REVIEWED_PRODUCT、COMPONENT_COST_EQUATION、IndexedDB + Cloudflare D1 跨设备同步与冲突/幂等机制。",
+          "保留订单统计、FACT、数量守恒、会计结算、SAFE XLSX 导出、历史更新以及 CN / FR 隔离逻辑。",
+          "发布门禁与当前 main 对齐：未知价格保持空白/红色，审核样式按实际解析的 cellXfs 数量动态派生；正式导出链为 single XLSX delivery，不再使用历史 PDF 函数名作为发布条件。"
         ]
       }
     ]
   },
   "history": [
+    {
+      "version": "10.4.0",
+      "time": "2026-08-13 19:46",
+      "title": "Public Release — Three-Layer Cost Learning",
+      "items": [
+        "正式发布三层成本学习：商品成本层、Configuration/FACT 层、包裹费用层完全解耦。",
+        "人工审核 FACT 回传后，SKU/产品成本独立学习；商品数量或组合变化后可重新组合计算，不再要求见过完全相同 Configuration。",
+        "包裹费用按主商品身份 + 主商品数量档位 + 国家 + 币种独立学习；一个订单/一个包裹只计算一次。",
+        "Stylo eternel 无论搭配多少 Coffret Cadeau、笔芯等默认配件，配件不额外增加包裹费用；Stylo 数量变化进入对应新档位。",
+        "停止新增 CONFIG:<configurationFingerprint> 整体组合成本规则；历史 CONFIG 规则继续兼容读取，不清库。",
+        "保留 REVIEWED_FACT、REVIEWED_PRODUCT、COMPONENT_COST_EQUATION、IndexedDB + Cloudflare D1 跨设备同步与冲突/幂等机制。",
+        "保留订单统计、FACT、数量守恒、会计结算、SAFE XLSX 导出、历史更新以及 CN / FR 隔离逻辑。",
+        "发布门禁与当前 main 对齐：未知价格保持空白/红色，审核样式按实际解析的 cellXfs 数量动态派生；正式导出链为 single XLSX delivery，不再使用历史 PDF 函数名作为发布条件。"
+      ]
+    },
     {
       "version": "10.3.7",
       "time": "2026-08-13 17:34",
@@ -1302,5 +1320,6 @@
         "RC1 默认 canary 0%，等待独立生产验收后再逐级接管。"
       ]
     }
-  ]
+  ],
+  "currentVersion": "10.4.0"
 }
