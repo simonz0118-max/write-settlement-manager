@@ -1,6 +1,6 @@
 /* WRITE V10.2.1 — Rule Learning accessibility + canonical release history */
 (function(g){'use strict';
-const VERSION='10.2.5',API='/api/rules/catalog';let data=null,selected=new Set(),loading=false;
+const VERSION='10.2.6',API='/api/rules/catalog';let data=null,selected=new Set(),loading=false;
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt=v=>v==null||v===''?'—':String(v),byId=id=>document.getElementById(id);
 const semver=v=>String(v||'0').replace(/^v/i,'').split('.').map(x=>Number.parseInt(x,10)||0);
@@ -15,35 +15,30 @@ function showView(name){
   if(name==='history')repairHistory();
 }
 
+function ensureV1026MenuStyle(){
+  if(document.querySelector('style[data-v1026-menu-style]'))return;
+  const st=document.createElement('style');st.setAttribute('data-v1026-menu-style','1');
+  st.textContent='.nav-item[data-view="learning"]{display:flex!important;align-items:center!important;gap:12px!important}.nav-item[data-view="learning"] .v1026-nav-icon{display:inline-flex!important;align-items:center!important;justify-content:center!important;width:18px!important;min-width:18px!important;font-size:14px!important;line-height:1!important;font-weight:600!important}.nav-item[data-view="learning"] .v1024-nav-label{display:inline-block!important;font-size:13px!important;line-height:1.2!important;font-weight:650!important;writing-mode:horizontal-tb!important;white-space:nowrap!important;letter-spacing:0!important}';
+  document.head.appendChild(st);
+}
 function normalizeDataManagementPage(){
+  ensureV1026MenuStyle();
   const nav=document.querySelector('.nav-item[data-view="learning"]');
   if(nav){
-    // Remove all stray text nodes created by historical rename patches.
     [...nav.childNodes].forEach(n=>{if(n.nodeType===3)n.textContent=''});
+    let icon=nav.querySelector('[data-v1026-nav-icon]');
+    if(!icon){icon=document.createElement('span');nav.prepend(icon)}
+    icon.setAttribute('data-v1026-nav-icon','1');icon.className='v1026-nav-icon';icon.textContent='⌘';
     let label=nav.querySelector('[data-v1024-nav-label]');
-    if(!label){
-      const candidates=[...nav.querySelectorAll('span')].filter(x=>!x.closest('svg')&&!x.classList.contains('icon'));
-      label=candidates[candidates.length-1]||document.createElement('span');
-      if(!label.parentNode)nav.appendChild(label);
-      label.setAttribute('data-v1024-nav-label','1');
-    }
-    label.textContent='数据管理';
-    label.classList.add('v1024-nav-label');
-    nav.setAttribute('aria-label','数据管理');
-    nav.title='数据管理';
+    if(!label){label=document.createElement('span');nav.appendChild(label)}
+    label.setAttribute('data-v1024-nav-label','1');label.className='v1024-nav-label';label.textContent='数据管理';
+    nav.setAttribute('aria-label','数据管理');nav.title='数据管理';
   }
   const host=document.querySelector('[data-view-panel="learning"]');
   if(!host)return;
   const head=host.querySelector('.page-head');
-  if(head){
-    const h1=head.querySelector('h1');if(h1)h1.textContent='数据管理';
-    const eyebrow=head.querySelector('.eyebrow');if(eyebrow)eyebrow.textContent='CLOUD DATA';
-    const sub=head.querySelector('p');if(sub)sub.textContent='Cloudflare D1 云端权威数据，可查询、修改、删除和维护。';
-  }
-  [...host.children].forEach(el=>{
-    if(el===head||el.id==='cloudRuleLibrary')return;
-    el.remove();
-  });
+  if(head){const h1=head.querySelector('h1');if(h1)h1.textContent='数据管理';const eyebrow=head.querySelector('.eyebrow');if(eyebrow)eyebrow.textContent='CLOUD DATA';const sub=head.querySelector('p');if(sub)sub.textContent='Cloudflare D1 云端权威数据，可查询、修改、删除和维护。'}
+  [...host.children].forEach(el=>{if(el===head||el.id==='cloudRuleLibrary')return;el.remove()});
 }
 
 function forceNavigation(){

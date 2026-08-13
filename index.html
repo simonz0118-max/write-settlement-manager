@@ -31,12 +31,12 @@
 <link href="./src/v10/v1011-hero-learning.css?v=10.2.0-001" rel="stylesheet"/>
 <link href="./src/v10/cloud-rule-library-v102.css?v=10.2.4-001" rel="stylesheet"/>
 </head>
-<body data-release="10.2.5">
+<body data-release="10.2.6">
 <div class="app-shell">
 <aside class="sidebar">
 <div class="brand">
 <img class="brand-logo brand-logo-c" src="./assets/panda-logo-c-image2.png" alt="WRITE 熊猫简笔画 Logo"/>
-<div class="brand-copy"><strong>WRITE</strong><span>Settlement Manager</span><small>v10.2.5 Production</small></div>
+<div class="brand-copy"><strong>WRITE</strong><span>Settlement Manager</span><small>v10.2.6 Production</small></div>
 </div>
 <nav class="side-nav" id="sideNav">
 <button class="nav-item active" data-view="dashboard"><span>⌂</span>首页</button>
@@ -44,7 +44,7 @@
 <button class="nav-item" data-view="products"><span>◇</span>商品分类</button>
 <button class="nav-item" data-view="review"><span>◎</span>待复核 <b hidden="" id="navReviewCount">0</b></button>
 <button class="nav-item" data-view="quality"><span>△</span>数据质量</button>
-<button class="nav-item" data-view="learning"><span>⌘</span>规则学习</button>
+<button class="nav-item" data-view="learning"><span data-v1026-nav-icon="1" class="v1026-nav-icon">⌘</span><span data-v1024-nav-label="1" class="v1024-nav-label">数据管理</span></button>
 <button class="nav-item" data-view="imports"><span>↧</span>导入记录</button>
 <button class="nav-item" data-view="history"><span>↺</span>历史更新</button>
 <button class="nav-item theme-cycle" id="themeToggleButton" type="button" title="切换主题：自动 / 浅色 / 深色"><span id="themeIcon">◐</span><span class="theme-label" id="themeLabel">主题：自动</span></button>
@@ -287,7 +287,7 @@ setTimeout(function(){
 <script src="./src/v8/historical-training.js?v=9.0.0-001"></script>
 <script src="./src/v8/zero-loss-engine.js?v=9.0.0-001"></script>
 <script src="./src/v8/fidelity-evaluator.js?v=9.0.0-001"></script>
-<script src="./src/v10/production-core.js?v=10.2.5-final-001"></script>
+<script src="./src/v10/production-core.js?v=10.2.6-001"></script>
 <script src="./src/v10/pdf-renderer.js?v=10.0.6"></script>
 <script>window.WRITE_V10_SETTINGS={mode:'PRODUCTION',rolloutPercent:100,pricingMode:'BLANK_RED_HUMAN'};</script>
 <script defer src="./src/v10/production-adapter.js?v=10.2.5-final-001"></script>
@@ -297,5 +297,5 @@ setTimeout(function(){
 <script defer src="./src/v10/review-learning-v101.js?v=10.2.5-final-001"></script>
 <script defer src="./src/v10/review-learning-hero-v1011.js?v=10.2.0-cloudstable-001"></script>
 <input id="knowledgeReviewedFile" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden>
-<script defer src="./src/v10/cloud-rule-library-v102.js?v=10.2.5-final-001"></script>
+<script defer src="./src/v10/cloud-rule-library-v102.js?v=10.2.6-001"></script>
 </body></html>

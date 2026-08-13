@@ -1,25 +1,36 @@
 {
   "current": {
-    "version": "10.2.5",
-    "time": "2026-08-13 10:30",
-    "title": "Learning Match + Cost Recovery FINAL",
+    "version": "10.2.6",
+    "time": "2026-08-13 11:35",
+    "title": "Learned Price Recovery + Data Management Menu Fix",
     "sections": [
       {
-        "label": "学习与成本恢复",
+        "label": "价格恢复与 UI",
         "items": [
-          "基于 GitHub main 当前真实源码重做 V10.2.5，不再使用整行源码硬锚点补丁。",
-          "修复 storeAccount 被误当 fulfillmentOrigin；Shipster/JJ 历史店铺信号归一为 CN。",
-          "修复历史人工审核 provenance 因 origin 污染而被 CN-only 学习入口过滤。",
-          "SKU *1/*2/*3 等数量后缀不再作为商品身份；新旧 D1 规则按基础 SKU 兼容命中。",
-          "REVIEWED_FACT ConfigurationFingerprint 兼容历史控制字符与新的 \\\\u0002/\\\\u0003 安全表示。",
-          "统一结算工作簿 XML 动态文本执行 XML 1.0 安全转义，防止 WRITE_LEARNING_SOURCE 生成损坏 XLSX。",
-          "旧 D1 REVIEWED_PRODUCT / REVIEWED_FACT 无需清库，可通过 payload 兼容扫描恢复命中。",
-          "保留业务日期/最新订单号优先策略、数据管理 UI 和 Cloudflare D1 同步。"
+          "修复左侧“数据管理”菜单图标被文字标签覆盖的问题，图标与文字使用独立节点并统一字号。",
+          "生产开票价格链升级：REVIEWED_FACT 精确命中失败后，继续匹配语义等价历史 FACT。",
+          "恢复人工审核时已经保存的 CONFIG COST_MODEL 价格；历史标点、斜杠/连字符及 \\u0002/\\u0003 表示差异不再导致价格丢失。",
+          "严格保持国家、仓别、币种、税制和角色隔离，不跨范围串价。",
+          "新增 priceMatch 审计状态：REVIEWED_FACT / CONFIG_COST_MODEL / NO_LEARNED_PRICE。",
+          "无真实云端价格规则的配置继续留空，不伪造 0 或猜测成本。"
         ]
       }
     ]
   },
   "history": [
+    {
+      "version": "10.2.6",
+      "time": "2026-08-13 11:35",
+      "title": "Learned Price Recovery + Data Management Menu Fix",
+      "items": [
+        "修复左侧“数据管理”菜单图标被文字标签覆盖的问题，图标与文字使用独立节点并统一字号。",
+        "生产开票价格链升级：REVIEWED_FACT 精确命中失败后，继续匹配语义等价历史 FACT。",
+        "恢复人工审核时已经保存的 CONFIG COST_MODEL 价格；历史标点、斜杠/连字符及 \\u0002/\\u0003 表示差异不再导致价格丢失。",
+        "严格保持国家、仓别、币种、税制和角色隔离，不跨范围串价。",
+        "新增 priceMatch 审计状态：REVIEWED_FACT / CONFIG_COST_MODEL / NO_LEARNED_PRICE。",
+        "无真实云端价格规则的配置继续留空，不伪造 0 或猜测成本。"
+      ]
+    },
     {
       "version": "10.2.5",
       "time": "2026-08-13 10:30",

@@ -1,3 +1,11 @@
+## v10.2.6 — 2026-08-13 11:35 (Europe/Paris)
+- 修复左侧“数据管理”菜单图标被文字标签覆盖的问题，图标与文字使用独立节点并统一字号。
+- 生产开票价格链升级：REVIEWED_FACT 精确命中失败后，继续匹配语义等价历史 FACT。
+- 恢复人工审核时已经保存的 CONFIG COST_MODEL 价格；历史标点、斜杠/连字符及 \u0002/\u0003 表示差异不再导致价格丢失。
+- 严格保持国家、仓别、币种、税制和角色隔离，不跨范围串价。
+- 新增 priceMatch 审计状态：REVIEWED_FACT / CONFIG_COST_MODEL / NO_LEARNED_PRICE。
+- 无真实云端价格规则的配置继续留空，不伪造 0 或猜测成本。
+
 ## v10.2.5 — 2026-08-13 10:30 (Europe/Paris)
 - 基于 GitHub main 当前真实源码重做 V10.2.5，不再使用整行源码硬锚点补丁。
 - 修复 storeAccount 被误当 fulfillmentOrigin；Shipster/JJ 历史店铺信号归一为 CN。

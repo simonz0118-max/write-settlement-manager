@@ -1,5 +1,5 @@
 /* WRITE V10 production statistics contract: orders -> country + full package composition -> one FACT. */
-(function(g){'use strict';const VERSION='10.2.5';
+(function(g){'use strict';const VERSION='10.2.6';
 const clean=v=>String(v??'').replace(/\r/g,' ').replace(/\s+/g,' ').trim();
 const norm=v=>clean(v).toUpperCase();
 function canonicalOrigin(o={}){
@@ -12,6 +12,19 @@ function canonicalOrigin(o={}){
  if(/SHIPSTER|\bJJ\b|中国仓|CHINA/i.test(store))return'CN';
  if(/法国仓|FRANCE\s*WAREHOUSE|WAREHOUSE\s*FR|ENTREP[OÔ]T\s*FR/i.test(store))return'FR';
  return'UNKNOWN';
+}
+function restoreConfig(v=''){return String(v??'').replace(/\\u(0002|0003)/gi,(_,h)=>String.fromCharCode(parseInt(h,16)))}
+function configSemantic(v=''){
+ return restoreConfig(v).split('\u0003').filter(Boolean).map(part=>{const a=part.split('\u0002'),mult=Number(a.pop())||1;const desc=String(a.join('\u0002')||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[’']/g,'').replace(/\s*[\/|–—-]\s*/g,' ').replace(/[^a-z0-9\u4e00-\u9fff]+/g,' ').replace(/\s+/g,' ').trim();return desc+'\u0002'+mult}).sort().join('\u0003')
+}
+function sameScopePayload(p,row){const origin=canonicalOrigin({fulfillmentOrigin:p?.origin}),country=norm(p?.country),currency=norm(p?.currency),tax=clean(p?.taxRegime)||'UNSPECIFIED',role=clean(p?.role||'');return(!p?.invoiceEntity||String(p.invoiceEntity||'DEFAULT')===String(row.invoiceEntity||'DEFAULT'))&&origin===row.origin&&country===row.country&&currency===row.currency&&tax===row.taxRegime&&(!role||role===row.role)}
+function semanticReviewedFact(row){const target=configSemantic(row.configurationFingerprint);if(!target)return null;return(g.WRITE_KB?.list?.()||[]).filter(r=>r?.type==='REVIEWED_FACT'&&!r.deleted&&r.confirmed!==false&&sameScopePayload(r.payload||{},row)&&configSemantic(r.payload?.configurationFingerprint)===target).sort((a,b)=>String(b.updatedAt||'').localeCompare(String(a.updatedAt||'')))[0]||null}
+function configCostModel(row){const exact=g.WRITE_KB?.costModel?.({sku:'CONFIG:'+row.configurationFingerprint,productName:row.description,country:row.country,currency:row.currency});if(exact)return exact;const target=configSemantic(row.configurationFingerprint);if(!target)return null;return(g.WRITE_KB?.list?.()||[]).filter(r=>r?.type==='COST_MODEL'&&!r.deleted&&r.confirmed!==false).filter(r=>norm(r.payload?.country)===row.country&&norm(r.payload?.currency)===row.currency).filter(r=>String(r.payload?.sku||'').startsWith('CONFIG:')&&configSemantic(String(r.payload.sku).slice(7))===target).sort((a,b)=>String(b.updatedAt||'').localeCompare(String(a.updatedAt||'')))[0]||null}
+function applyLearnedPrice(row){
+ const fact=g.WRITE_KB?.reviewedFact?.(row)||semanticReviewedFact(row),p=fact?.payload||null,num=v=>(v===null||v===undefined||v===''||!Number.isFinite(Number(v)))?null:Number(v);
+ if(p){if(clean(p.description))row.description=clean(p.description);row.cogs=num(p.cogs);row.shipping=num(p.shipping);row.unitTotal=num(p.unitTotal);if(row.unitTotal===null&&row.cogs!==null&&row.shipping!==null)row.unitTotal=row.cogs+row.shipping;if(row.unitTotal!==null){row.amount=Math.round((row.unitTotal*Number(row.quantity||0)+Number.EPSILON)*100)/100;row.priceBlank=false;row.needsReview=false;row.learnedFromReviewedWorkbook=true;row.priceMatch='REVIEWED_FACT';return true}}
+ const cost=configCostModel(row),m=cost?.payload||null;if(m){const unit=num(m.unitCost),cogs=num(m.cogs),shipping=num(m.shipping);if(unit!==null||cogs!==null||shipping!==null){row.cogs=cogs;row.shipping=shipping;row.unitTotal=unit!==null?unit:((cogs||0)+(shipping||0));row.amount=Math.round((row.unitTotal*Number(row.quantity||0)+Number.EPSILON)*100)/100;row.priceBlank=false;row.needsReview=false;row.learnedFromReviewedWorkbook=true;row.priceMatch='CONFIG_COST_MODEL';return true}}
+ row.priceMatch='NO_LEARNED_PRICE';return false
 }
 function tracking(o={}){return clean(o.trackingNumber||o.tracking||o.waybill||o.parcelId||o.packageId)}
 function orderId(o={},i=0){return clean(o.orderId||o.recordKey)||`ROW:${i+1}`}
@@ -116,15 +129,7 @@ function build(input=[]){
   for(const a of parts){represented.add(a.sourceItemKey);row.rawEvidence.push({orderId:oid,trackingNumber:primary.__tracking,sourceItemKey:a.sourceItemKey,rawProductName:a.sourceText,sku:a.sku,shortDescription:a.description,multiplicity:a.multiplicity,role:a.role,family:a.family,needsReview:a.needsReview})}
  }
  const rows=[...packageGroups.values(),...separateGroups.values()].sort((a,b)=>a.country.localeCompare(b.country,'en')||a.origin.localeCompare(b.origin,'en')||a.currency.localeCompare(b.currency,'en')||a.role.localeCompare(b.role,'en')||a.description.localeCompare(b.description,'fr',{numeric:true,sensitivity:'base'}));
- for(const row of rows){
-   const learned=g.WRITE_KB?.reviewedFact?.(row);if(!learned?.payload)continue;
-   const p=learned.payload,n=v=>(v===null||v===undefined||v==='')?null:(Number.isFinite(Number(v))?Number(v):null);
-   if(clean(p.description))row.description=clean(p.description);
-   row.cogs=n(p.cogs);row.shipping=n(p.shipping);row.unitTotal=n(p.unitTotal);
-   if(row.unitTotal===null&&row.cogs!==null&&row.shipping!==null)row.unitTotal=row.cogs+row.shipping;
-   row.amount=row.unitTotal===null?null:Math.round((row.unitTotal*Number(row.quantity||0)+Number.EPSILON)*100)/100;
-   row.priceBlank=row.unitTotal===null;row.needsReview=false;row.learnedFromReviewedWorkbook=true;
- }
+ for(const row of rows)applyLearnedPrice(row);
  rows.forEach((r,i)=>{r.no=i+1;r.parcelCount=parcelCount;r.parcelNeedsReview=conflictOrderIds.length>0});rows.parcelCount=parcelCount;rows.parcelNeedsReview=conflictOrderIds.length>0;
  const allSourceItems=new Set(sourceItems.map(x=>x.sourceItemKey)),missing=[...allSourceItems].filter(k=>!represented.has(k));
  const finalKeys=new Set(),duplicateFinalRows=[];
