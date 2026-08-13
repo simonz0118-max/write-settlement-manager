@@ -1,45 +1,76 @@
 {
   "current": {
-    "version": "10.3.3",
-    "time": "2026-08-13 15:20",
-    "title": "No-Observer UI Recovery + SAFE XLSX",
+    "version": "10.3.4",
+    "time": "2026-08-13 15:46",
+    "title": "Menu Alignment + Complete Authoritative History",
     "sections": [
       {
-        "label": "V10.3.3",
+        "label": "V10.3.4",
         "items": [
-          "根治页面卡死：从 V10.2.9 源码移除菜单 MutationObserver。",
-          "数据管理仅使用静态 HTML + CSS。",
-          "修正 V10.3.2：旧 Observer 实际挂在 sideNav.__v1029。",
-          "保留 V10.2.9 完整套装、成本、单包裹运费和云端学习核心。",
-          "继续使用 SAFE XLSX。"
+          "数据管理菜单恢复为与其它侧边栏完全相同的 DOM 结构、字号、间距和对齐方式。",
+          "删除 V10.3.3 专用菜单嵌套结构，清除遗留伪元素影响。",
+          "历史更新页面改为每次直接 no-store 读取 assets/release-history.json 权威数据。",
+          "统一品牌版本、历史页当前版本与第一条历史记录为 V10.3.4。",
+          "补齐缺失的 V10.2.8、V10.3.0、V10.3.1、V10.3.2、V10.3.3 历史记录。"
         ]
       }
     ]
   },
   "history": [
     {
+      "version": "10.3.4",
+      "time": "2026-08-13 15:46",
+      "title": "Menu Alignment + Complete Authoritative History",
+      "items": [
+        "数据管理菜单恢复为与其它侧边栏完全相同的 DOM 结构、字号、间距和对齐方式。",
+        "删除 V10.3.3 专用菜单嵌套结构，清除遗留伪元素影响。",
+        "历史更新页面改为每次直接 no-store 读取 assets/release-history.json 权威数据。",
+        "统一品牌版本、历史页当前版本与第一条历史记录为 V10.3.4。",
+        "补齐缺失的 V10.2.8、V10.3.0、V10.3.1、V10.3.2、V10.3.3 历史记录。"
+      ]
+    },
+    {
       "version": "10.3.3",
       "time": "2026-08-13 15:20",
       "title": "No-Observer UI Recovery + SAFE XLSX",
       "items": [
-        "根治页面卡死：从 V10.2.9 源码移除菜单 MutationObserver。",
-        "数据管理仅使用静态 HTML + CSS。",
-        "修正 V10.3.2：旧 Observer 实际挂在 sideNav.__v1029。",
-        "保留 V10.2.9 完整套装、成本、单包裹运费和云端学习核心。",
-        "继续使用 SAFE XLSX。"
+        "从 V10.2.9 源码彻底移除菜单 MutationObserver。",
+        "数据管理改为静态 HTML + CSS。",
+        "根治英雄页卡死。",
+        "保留 SAFE XLSX 与 V10.2.9 结算/学习核心。"
       ]
     },
     {
       "version": "10.3.2",
       "time": "2026-08-13 14:58",
-      "title": "SAFE XLSX Integrity + Definitive Data Management Nav",
+      "title": "SAFE XLSX Integrity + Data Management Recovery",
       "items": [
-        "彻底移除 V10.3.0/V10.3.1 会生成非法 XLSX XML 的旧导出层。",
-        "新导出层不再修改现有单元格标签结构；FACT 仅逐行安全删除底部管理统计。",
-        "工作簿继续精简为 FACT / 结算总览 / 订单明细 / 商品汇总 / 审计记录，学习源 veryHidden。",
-        "商品汇总和结算总览统一读取生产引擎去重统计。",
-        "正确断开 sideNav.__v1029Observer，并用哨兵阻止旧延迟脚本重新创建 Observer。",
-        "数据管理固定为唯一 ⌘ + 数据管理 标签。"
+        "卸载会生成非法 XLSX XML 的 V10.3.0/V10.3.1 危险导出层。",
+        "FACT 只安全删除底部管理统计。",
+        "修复 WPS 无法打开 / Numbers 残缺预览问题。",
+        "继续修复数据管理旧运行时干扰。"
+      ]
+    },
+    {
+      "version": "10.3.1",
+      "time": "2026-08-13 14:35",
+      "title": "Invoice / Statistics Integrity Emergency Fix",
+      "items": [
+        "修复 V10.3.0 FACT 清理逻辑误删正式发票行。",
+        "商品统计改用生产引擎去重后的 productSalesSummary。",
+        "待复核按 needsReview 对应真实订单去重统计。",
+        "尝试修复数据管理旧运行时干扰。"
+      ]
+    },
+    {
+      "version": "10.3.0",
+      "time": "2026-08-13 14:05",
+      "title": "Professional Accounting Workbook + Full UI Audit",
+      "items": [
+        "FACT 首页恢复为纯正式发票。",
+        "导出工作簿精简为 FACT / 结算总览 / 订单明细 / 商品汇总 / 审计记录。",
+        "后续 Sheet 改为传统专业会计 Excel 风格。",
+        "WebApp 全页面进行 overflow、字体、Grid、搜索区和侧边栏视觉整理。"
       ]
     },
     {
@@ -52,6 +83,18 @@
         "SERVICE/FEE 独立，FREE_GIFT 不计应付",
         "FACT 底部新增最终商品销售统计",
         "数据管理菜单使用唯一 DOM + MutationObserver 锁定"
+      ]
+    },
+    {
+      "version": "10.2.8",
+      "time": "2026-08-13 12:28",
+      "title": "Package Costing + Sidebar Integrity",
+      "items": [
+        "修复数据管理侧边栏重复图标/重复文字及字号异常。",
+        "恢复完整订单配置聚合：一个订单/包裹对应一条 PACKAGE FACT。",
+        "多商品订单按各商品成本分别计算后相加。",
+        "每个包裹只计算一次运费；有 Stylo eternel 按支数档位，无 Stylo eternel 按该国家 X1 默认运费。",
+        "礼盒、笔芯不额外增加运费；组件成本未知时继续标红。"
       ]
     },
     {

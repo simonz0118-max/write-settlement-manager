@@ -1,0 +1,23 @@
+/* WRITE V10.3.4 — menu parity: data management uses the exact same nav geometry */
+.nav-item[data-view="learning"]::before,
+.nav-item[data-view="learning"]::after{content:none!important;display:none!important}
+.nav-item[data-view="learning"]{
+  display:flex!important;
+  align-items:center!important;
+  gap:12px!important;
+  padding:13px 14px!important;
+  font-size:14px!important;
+  text-align:left!important;
+  white-space:nowrap!important;
+}
+.nav-item[data-view="learning"]>span{
+  width:20px!important;
+  min-width:20px!important;
+  flex:0 0 20px!important;
+  display:inline-block!important;
+  text-align:center!important;
+  font-size:inherit!important;
+  line-height:normal!important;
+  margin:0!important;
+  padding:0!important;
+}
