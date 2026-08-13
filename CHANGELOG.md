@@ -1,3 +1,13 @@
+## V10.5.0 — Production Learning E2E Hardening
+- Production pricing authority is exact SKU COST_MODEL + learned PACKAGE_FEE once.
+- Unknown SKU family fallback costs are no longer production-authoritative.
+- WRITE-CN origin canonicalization added.
+- Namespace-prefixed OOXML row/c parsing supported by V7.5.8 worker.
+- V10.4 module can no longer overwrite product release identity.
+- Unified production export button capture layer added.
+- Release history and release-meta synchronized without deleting historical entries.
+- This release must pass repository regression gates before deployment.
+
 ## V10.4.1 — Release Notes Auto-Sync Hotfix
 - First-open release popup now reads `assets/release-history.json` with `no-store`.
 - Deployed `body[data-release]` is authoritative.

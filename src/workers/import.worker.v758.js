@@ -3,7 +3,7 @@
  * Contract: preserve every non-empty source cell, never drop an order row only
  * because orderId/amount/category/cost is unknown, and never truncate at column P.
  */
-importScripts('./import.worker.bundle.js?v=7.4.1-001');
+importScripts('./import.worker.bundle.js?v=9.0.0-002');
 
 const V750_LEGACY_INFER_SCHEMA = inferSchema;
 

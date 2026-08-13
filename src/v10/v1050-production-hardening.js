@@ -1,0 +1,98 @@
+/* WRITE V10.5.0 — Production Learning Hardening
+ * Production price authority:
+ *   exact SKU COST_MODEL x quantity + learned PACKAGE_FEE once.
+ * REVIEWED_FACT/CONFIG are semantic/audit only. No family fallback price.
+ */
+(function(g){'use strict';
+const VERSION='10.5.0';
+const clean=v=>String(v??'').replace(/\r/g,' ').replace(/\s+/g,' ').trim();
+const upper=v=>clean(v).toUpperCase();
+const norm=v=>clean(v).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+const baseSku=v=>clean(v).replace(/\s*(?:\*|x|×)\s*\d+(?:[.,]\d+)?\s*$/i,'').trim();
+const round4=n=>Math.round((Number(n)+Number.EPSILON)*10000)/10000;
+function canonicalOrigin(v=''){
+ const s=upper(typeof v==='object'?(v.fulfillmentOrigin||v.origin||v.storeAccount||v.shopAccount||''):v).replace(/_/g,'-').replace(/\s+/g,'-');
+ if(['CN','CHINA','CHINE','中国','WRITE-CN','WRITE-CHINA'].includes(s)||/(^|-)WRITE-CN($|-)|中国仓|SHIPSTER/.test(s))return'CN';
+ if(['FR','FRANCE','法国','WRITE-FR','WRITE-FRANCE'].includes(s)||/(^|-)WRITE-FR($|-)|法国仓/.test(s))return'FR';
+ return upper(typeof v==='object'?(v.fulfillmentOrigin||v.origin||''):v)||'UNKNOWN';
+}
+function exactUnitCost(e,row){
+ const sku=baseSku(e.sku),name=clean(e.productName||e.rawProductName||e.shortDescription);
+ if(!sku&&!name)return null;
+ try{
+  const c=g.WRITE_KB?.calculateCost?.({sku,productName:name,country:row.country,currency:row.currency,quantity:1,orderAmount:0});
+  if(c?.resolved&&Number.isFinite(Number(c.unitCost))){
+   const rs=upper(c.rule?.payload?.sku||sku);
+   if(rs.startsWith('CONFIG:')||rs.startsWith('PACKAGE_FEE:'))return null;
+   return {unitCost:Number(c.unitCost),rule:c.rule};
+  }
+ }catch{}
+ return null;
+}
+function components(row){
+ const m=new Map();
+ for(const e of row.rawEvidence||[]){
+  if(String(e._role||e.role||row.role)==='FREE_GIFT')continue;
+  const sku=baseSku(e.sku),name=clean(e.productName||e.rawProductName||e.shortDescription),q=Math.max(0,Number(e.multiplicity??e.quantity??1)||0);
+  if(!q)continue;const k=sku?'sku:'+norm(sku):'name:'+norm(name);if(k==='sku:'||k==='name:')continue;
+  const x=m.get(k)||{sku,productName:name,family:clean(e.family),quantity:0};x.quantity+=q;m.set(k,x);
+ }
+ return [...m.values()];
+}
+function packageFee(row,comps){
+ const T=g.WRITE_V1040_LAYERING?._test;if(!T?.packageFeeSku)return null;
+ const origin=canonicalOrigin(row.origin);
+ const sku=T.packageFeeSku({origin,country:row.country,currency:row.currency},comps);
+ try{
+  const c=g.WRITE_KB?.calculateCost?.({sku,productName:'PACKAGE_FEE',country:row.country,currency:row.currency,quantity:1,orderAmount:0});
+  if(c?.resolved&&Number.isFinite(Number(c.totalCost)))return {fee:Number(c.totalCost),sku,rule:c.rule};
+ }catch{}
+ return null;
+}
+function hardenPackage(row){
+ if(String(row.role)!=='PACKAGE')return row;
+ row.origin=canonicalOrigin(row.origin);
+ const comps=components(row);let cogs=0,missing=[];
+ for(const c of comps){const x=exactUnitCost(c,row);if(!x)missing.push(c);else cogs+=x.unitCost*c.quantity}
+ const fee=packageFee(row,comps);
+ if(missing.length||!fee){
+  row.cogs=missing.length?null:round4(cogs);row.shipping=null;row.unitTotal=null;row.amount=null;
+  row.priceBlank=true;row.needsReview=true;row.priceMatch='V1050_EXACT_SKU_OR_PACKAGE_FEE_MISSING';
+  row.priceSource='V1050_REVIEW_REQUIRED';row.missingCostComponents=missing.map(x=>x.sku||x.productName);
+  return row;
+ }
+ row.cogs=round4(cogs);row.shipping=round4(fee.fee);row.unitTotal=round4(cogs+fee.fee);
+ row.amount=round4(row.unitTotal*(Number(row.quantity)||0));row.priceBlank=false;row.needsReview=false;
+ row.priceMatch='V1050_EXACT_SKU_PLUS_PACKAGE_FEE';row.priceSource='V1050_EXACT_SKU_COGS_PLUS_LEARNED_PACKAGE_FEE_ONCE';
+ row.packageFeeRuleSku=fee.sku;return row;
+}
+function install(){
+ const X=g.WRITE_V10_PRODUCTION;if(!X?.build||X.__v1050)return false;
+ const base=X.build.bind(X);X.build=input=>{const r=base(input);(r.rows||[]).forEach(hardenPackage);r.version=VERSION;r.costLearningArchitecture='EXACT_SKU_COGS + SEMANTIC_FACT + PACKAGE_FEE_ONCE';return r};
+ X.__v1050=true;return true;
+}
+function lockVersion(){
+ if(typeof document==='undefined')return;
+ document.body.dataset.release=VERSION;document.querySelectorAll('.brand-copy small').forEach(x=>x.textContent=`v${VERSION} Production`);
+}
+function bindExport(){
+ if(typeof document==='undefined')return;
+ ['heroExportButton','topExportButton','quickExportButton'].forEach(id=>{
+  const el=document.getElementById(id);if(!el||el.dataset.v1050Export==='1')return;el.dataset.v1050Export='1';
+  el.addEventListener('click',async e=>{e.preventDefault();e.stopImmediatePropagation();try{
+   if(typeof g.WRITE_V10_EXPORT?.downloadProductionPackage==='function')await g.WRITE_V10_EXPORT.downloadProductionPackage();
+   else if(typeof g.WRITE_V10_EXPORT?.download==='function')await g.WRITE_V10_EXPORT.download();
+   else throw new Error('Production export controller unavailable');
+  }catch(err){console.error('[WRITE V10.5 export]',err);alert('导出失败：'+(err?.message||err))}
+  },true);
+ });
+}
+function reviewTruth(){
+ const r=g.WRITE_V10_RUNTIME?.lastProduction||g.WRITE_V10_PRODUCTION?.lastResult;const rows=r?.rows;if(!Array.isArray(rows))return;
+ const n=rows.filter(x=>x.needsReview).length;
+ for(const id of['metricReview','quickReviewCount','navReviewCount']){const e=document.getElementById(id);if(e){e.textContent=String(n);e.hidden=n===0}}
+}
+function boot(){install();lockVersion();bindExport();reviewTruth();let n=0;const t=setInterval(()=>{install();lockVersion();bindExport();reviewTruth();if(++n>40)clearInterval(t)},125)}
+if(typeof document!=='undefined'){document.readyState==='loading'?document.addEventListener('DOMContentLoaded',boot,{once:true}):boot()}else install();
+g.WRITE_V1050_HARDENING={VERSION,canonicalOrigin,hardenPackage,install,_test:{components,exactUnitCost,packageFee}};
+})(typeof window!=='undefined'?window:globalThis);

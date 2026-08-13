@@ -16,7 +16,7 @@ const baseSku=v=>clean(v).replace(/\s*(?:\*|x|×)\s*\d+(?:[.,]\d+)?\s*$/i,'').tr
 const round4=n=>Math.round((Number(n)+Number.EPSILON)*10000)/10000;
 const reviewedByFingerprint=new Map();
 
-function isCN(v=''){return ['CN','CHINA','CHINE','中国'].includes(upper(v))}
+function isCN(v=''){return ['CN','CHINA','CHINE','中国','WRITE-CN','WRITE_CN','WRITE CN'].includes(upper(v))}
 function isMainProduct(x={}){
   const fam=upper(x.family);
   if(fam==='PENCIL_MAIN')return true;
@@ -144,12 +144,7 @@ function installRuntimeLayer(){
   X.__v1040Layered=true;
   return true;
 }
-function updateVersionUi(){
-  if(typeof document==='undefined')return;
-  document.body.dataset.release=VERSION;
-  document.querySelectorAll('.brand-copy small').forEach(x=>x.textContent=`v${VERSION} Production`);
-  const cv=document.getElementById('historyCurrentVersion');if(cv)cv.textContent=`v${VERSION}`;
-}
+function updateVersionUi(){ /* V10.5: module version must never overwrite product release version. */ }
 function install(){
   const a=installKbLayer(),b=installRuntimeLayer();updateVersionUi();
   return a||b;

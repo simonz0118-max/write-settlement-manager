@@ -1,25 +1,42 @@
 {
   "current": {
-    "version": "10.4.1",
-    "time": "2026-08-13 21:36",
-    "title": "Release Notes Auto-Sync Hotfix",
+    "version": "10.5.0",
+    "time": "2026-08-13 23:45",
+    "title": "Production Learning E2E Hardening",
     "sections": [
       {
-        "label": "更新弹窗与版本同步",
+        "label": "真实 E2E 生产加固",
         "items": [
-          "修复每个版本首次打开的“本次更新”弹窗长期停留在 V10.2.6 的问题。",
-          "首次更新弹窗改为直接 no-store 读取 assets/release-history.json 权威更新日志，不再依赖 app.bundle 内固化的旧 release-meta。",
-          "弹窗版本以实际部署的 body[data-release] 为准；当前版本内容从 release-history current/history 自动匹配。",
-          "同一浏览器同一版本只自动弹出一次；新版本发布后使用独立版本键自动重新弹出。",
-          "旧 app.bundle 弹窗控制器在启动前被静默，避免先闪出旧版本弹窗；新权威弹窗在应用启动后接管。",
-          "历史更新页与首次弹窗现在共用同一份 release-history.json 数据源，消除双轨版本信息。",
-          "同步更新 release-meta.js 兼容快照，但新弹窗不再依赖该静态文件。",
-          "保留 V10.4.0 三层成本学习、订单统计、FACT、数量守恒、会计、SAFE XLSX、D1/IndexedDB 与 CN/FR 隔离逻辑。"
+          "根据真实浏览器/XLSX/D1 全链路 E2E FAIL 报告进行生产加固，不再以局部逻辑模拟作为上线依据。",
+          "新 SKU 生产定价只允许精确 SKU COST_MODEL；删除 V10.2.9 家族硬编码成本 fallback 的生产权威，未知成本保持空白并进入待复核。",
+          "历史 REVIEWED_FACT / CONFIG 继续保留用于语义与审计，但 V10.5 最终生产金额由精确 SKU 成本 + 独立 PACKAGE_FEE 一次性组成。",
+          "补充 WRITE-CN / WRITE_CN / WRITE CN → CN 规范化，修复人工学习包裹费因 origin=UNKNOWN 无法复用。",
+          "修复 namespace-prefixed XLSX 的双层 Worker 缓存链：base worker 与 overlay worker 均升级缓存 key 到 9.0.0-002，确保浏览器实际加载仓库已存在的 namespace-safe parser。",
+          "新增 V10.5 最终生产 hardening 层，重新校验 PACKAGE 行的 SKU 成本、包裹费、needsReview 与 priceSource。",
+          "新增统一导出按钮捕获层，hero/top/quick 三个正式导出入口统一调用生产导出控制器并显式报告错误。",
+          "V10.4 模块不再覆盖产品 release 版本；产品版本统一锁定为 V10.5.0。",
+          "保留订单数量守恒、一个订单一个包裹、会计、FACT、SAFE XLSX、IndexedDB/D1、CN/FR 隔离和完整历史更新。"
         ]
       }
     ]
   },
   "history": [
+    {
+      "version": "10.5.0",
+      "time": "2026-08-13 23:45",
+      "title": "Production Learning E2E Hardening",
+      "items": [
+        "根据真实浏览器/XLSX/D1 全链路 E2E FAIL 报告进行生产加固，不再以局部逻辑模拟作为上线依据。",
+        "新 SKU 生产定价只允许精确 SKU COST_MODEL；删除 V10.2.9 家族硬编码成本 fallback 的生产权威，未知成本保持空白并进入待复核。",
+        "历史 REVIEWED_FACT / CONFIG 继续保留用于语义与审计，但 V10.5 最终生产金额由精确 SKU 成本 + 独立 PACKAGE_FEE 一次性组成。",
+        "补充 WRITE-CN / WRITE_CN / WRITE CN → CN 规范化，修复人工学习包裹费因 origin=UNKNOWN 无法复用。",
+        "修复 namespace-prefixed XLSX 的双层 Worker 缓存链：base worker 与 overlay worker 均升级缓存 key 到 9.0.0-002，确保浏览器实际加载仓库已存在的 namespace-safe parser。",
+        "新增 V10.5 最终生产 hardening 层，重新校验 PACKAGE 行的 SKU 成本、包裹费、needsReview 与 priceSource。",
+        "新增统一导出按钮捕获层，hero/top/quick 三个正式导出入口统一调用生产导出控制器并显式报告错误。",
+        "V10.4 模块不再覆盖产品 release 版本；产品版本统一锁定为 V10.5.0。",
+        "保留订单数量守恒、一个订单一个包裹、会计、FACT、SAFE XLSX、IndexedDB/D1、CN/FR 隔离和完整历史更新。"
+      ]
+    },
     {
       "version": "10.4.1",
       "time": "2026-08-13 21:36",
@@ -1336,5 +1353,5 @@
       ]
     }
   ],
-  "currentVersion": "10.4.1"
+  "currentVersion": "10.5.0"
 }
