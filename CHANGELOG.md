@@ -1,3 +1,13 @@
+# v10.2.8 — Package Costing + Sidebar Integrity
+- 修复左侧“数据管理”重复图标、重复文字、字号/布局异常。
+- 恢复完整订单配置聚合：同一订单多商品保持一条 PACKAGE FACT。
+- 多商品订单：各商品成本分别计算后相加。
+- 一个订单=一个包裹：Shipping 只计算一次。
+- 有 Stylo eternel：按该订单 1支/2支/多支档位计算一次运费。
+- 无 Stylo eternel：按该国家 Stylo eternel X1 默认运费计算一次。
+- Coffret Cadeau / Lot de mines 等不增加额外运费。
+- 组件成本未知时保持红色待审核，不猜价。
+
 ## v10.2.6 — 2026-08-13 11:35 (Europe/Paris)
 
 ## v10.2.7 — 2026-08-13 11:40
