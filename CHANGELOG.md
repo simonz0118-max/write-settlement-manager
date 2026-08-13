@@ -1,3 +1,11 @@
+
+## v10.2.9 — 2026-08-13 13:40
+
+- 完整订单配置聚合为一个 PACKAGE。
+- 多商品组件成本相加；每包裹 Shipping 只计算一次。
+- SERVICE/FEE 独立，FREE_GIFT 不计应付。
+- FACT 底部新增最终商品销售统计。
+- 数据管理菜单使用唯一 DOM + MutationObserver 锁定。
 # v10.2.8 — Package Costing + Sidebar Integrity
 - 修复左侧“数据管理”重复图标、重复文字、字号/布局异常。
 - 恢复完整订单配置聚合：同一订单多商品保持一条 PACKAGE FACT。
