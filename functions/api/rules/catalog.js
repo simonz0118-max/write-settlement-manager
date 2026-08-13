@@ -1,5 +1,6 @@
 const TABLE='write_rules_v1017';
-const json=(body,status=200)=>new Response(JSON.stringify(body),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store'}});
+const cors={'access-control-allow-origin':'*','access-control-allow-methods':'GET, POST, OPTIONS','access-control-allow-headers':'content-type'};
+const json=(body,status=200)=>new Response(JSON.stringify(body),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store',...cors}});
 const PRODUCT_TYPES=new Set(['REVIEWED_PRODUCT','COST_MODEL','PRODUCT_CATEGORY']);
 const MANAGE_TYPES=new Set(['REVIEWED_PRODUCT','COST_MODEL','PRODUCT_CATEGORY','REVIEWED_FACT','RULE_CONFLICT']);
 
@@ -133,7 +134,7 @@ async function mutateRule(db,op){
   }
   return {ok:false,status:400,error:'UNKNOWN_ACTION'};
 }
-export async function onRequestOptions(){return new Response(null,{status:204,headers:{allow:'GET, POST, OPTIONS'}})}
+export async function onRequestOptions(){return new Response(null,{status:204,headers:{allow:'GET, POST, OPTIONS',...cors}})}
 export async function onRequestGet({request,env}){
   try{
     if(!env.WRITE_RULES_DB)return json({ok:false,error:'WRITE_RULES_DB binding missing'},503);

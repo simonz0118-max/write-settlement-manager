@@ -1,22 +1,36 @@
 {
   "current": {
-    "version": "10.3.4",
-    "time": "2026-08-13 15:46",
-    "title": "Menu Alignment + Complete Authoritative History",
+    "version": "10.3.5",
+    "time": "2026-08-13 16:05",
+    "title": "Legacy Runtime Source Cleanup + Cloud Catalog Recovery",
     "sections": [
       {
-        "label": "V10.3.4",
+        "label": "V10.3.5",
         "items": [
-          "数据管理菜单恢复为与其它侧边栏完全相同的 DOM 结构、字号、间距和对齐方式。",
-          "删除 V10.3.3 专用菜单嵌套结构，清除遗留伪元素影响。",
-          "历史更新页面改为每次直接 no-store 读取 assets/release-history.json 权威数据。",
-          "统一品牌版本、历史页当前版本与第一条历史记录为 V10.3.4。",
-          "补齐缺失的 V10.2.8、V10.3.0、V10.3.1、V10.3.2、V10.3.3 历史记录。"
+          "源头禁用 cloud-rule-library-v102、v1027、v1028 的菜单和版本写入副作用。",
+          "数据管理只保留与其它菜单完全同构的单图标 + 直接文字 DOM。",
+          "移除旧 history-runtime 与 V10.3.4 双历史渲染竞争。",
+          "pages.dev 遇 Catalog 404 自动回退 f.neovora.co 生产 API。",
+          "Catalog API 增加 CORS GET/POST/OPTIONS。",
+          "保留套装、成本、单包裹运费业务逻辑。"
         ]
       }
     ]
   },
   "history": [
+    {
+      "version": "10.3.5",
+      "time": "2026-08-13 16:05",
+      "title": "Legacy Runtime Source Cleanup + Cloud Catalog Recovery",
+      "items": [
+        "源头禁用 cloud-rule-library-v102、v1027、v1028 的菜单和版本写入副作用。",
+        "数据管理只保留与其它菜单完全同构的单图标 + 直接文字 DOM。",
+        "移除旧 history-runtime 与 V10.3.4 双历史渲染竞争。",
+        "pages.dev 遇 Catalog 404 自动回退 f.neovora.co 生产 API。",
+        "Catalog API 增加 CORS GET/POST/OPTIONS。",
+        "保留套装、成本、单包裹运费业务逻辑。"
+      ]
+    },
     {
       "version": "10.3.4",
       "time": "2026-08-13 15:46",

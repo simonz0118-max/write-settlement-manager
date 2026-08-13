@@ -1,6 +1,6 @@
 /* WRITE V10.2.1 — Rule Learning accessibility + canonical release history */
 (function(g){'use strict';
-const VERSION='10.2.6',API='/api/rules/catalog';let data=null,selected=new Set(),loading=false;
+const VERSION='10.3.5',API_LOCAL='/api/rules/catalog',API_PROD='https://f.neovora.co/api/rules/catalog';let API=API_LOCAL,data=null,selected=new Set(),loading=false;
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt=v=>v==null||v===''?'—':String(v),byId=id=>document.getElementById(id);
 const semver=v=>String(v||'0').replace(/^v/i,'').split('.').map(x=>Number.parseInt(x,10)||0);
@@ -15,32 +15,8 @@ function showView(name){
   if(name==='history')repairHistory();
 }
 
-function ensureV1026MenuStyle(){
-  if(document.querySelector('style[data-v1026-menu-style]'))return;
-  const st=document.createElement('style');st.setAttribute('data-v1026-menu-style','1');
-  st.textContent='.nav-item[data-view="learning"]{display:flex!important;align-items:center!important;gap:12px!important}.nav-item[data-view="learning"] .v1026-nav-icon{display:inline-flex!important;align-items:center!important;justify-content:center!important;width:18px!important;min-width:18px!important;font-size:14px!important;line-height:1!important;font-weight:600!important}.nav-item[data-view="learning"] .v1024-nav-label{display:inline-block!important;font-size:13px!important;line-height:1.2!important;font-weight:650!important;writing-mode:horizontal-tb!important;white-space:nowrap!important;letter-spacing:0!important}';
-  document.head.appendChild(st);
-}
-function normalizeDataManagementPage(){
-  ensureV1026MenuStyle();
-  const nav=document.querySelector('.nav-item[data-view="learning"]');
-  if(nav){
-    [...nav.childNodes].forEach(n=>{if(n.nodeType===3)n.textContent=''});
-    let icon=nav.querySelector('[data-v1026-nav-icon]');
-    if(!icon){icon=document.createElement('span');nav.prepend(icon)}
-    icon.setAttribute('data-v1026-nav-icon','1');icon.className='v1026-nav-icon';icon.textContent='⌘';
-    let label=nav.querySelector('[data-v1024-nav-label]');
-    if(!label){label=document.createElement('span');nav.appendChild(label)}
-    label.setAttribute('data-v1024-nav-label','1');label.className='v1024-nav-label';label.textContent='数据管理';
-    nav.setAttribute('aria-label','数据管理');nav.title='数据管理';
-  }
-  const host=document.querySelector('[data-view-panel="learning"]');
-  if(!host)return;
-  const head=host.querySelector('.page-head');
-  if(head){const h1=head.querySelector('h1');if(h1)h1.textContent='数据管理';const eyebrow=head.querySelector('.eyebrow');if(eyebrow)eyebrow.textContent='CLOUD DATA';const sub=head.querySelector('p');if(sub)sub.textContent='Cloudflare D1 云端权威数据，可查询、修改、删除和维护。'}
-  [...host.children].forEach(el=>{if(el===head||el.id==='cloudRuleLibrary')return;el.remove()});
-}
-
+function ensureV1026MenuStyle(){}
+function normalizeDataManagementPage(){const host=document.querySelector('[data-view-panel=\"learning\"]');if(!host)return;const head=host.querySelector('.page-head');if(head){const h1=head.querySelector('h1');if(h1)h1.textContent='数据管理';const eyebrow=head.querySelector('.eyebrow');if(eyebrow)eyebrow.textContent='CLOUD DATA';const sub=head.querySelector('p');if(sub)sub.textContent='Cloudflare D1 云端权威数据，可查询、修改、删除和维护。'}[...host.children].forEach(el=>{if(el===head||el.id==='cloudRuleLibrary')return;el.remove()})}
 function forceNavigation(){
   document.addEventListener('click',e=>{
     const b=e.target?.closest?.('.nav-item[data-view="learning"],.nav-item[data-view="history"]');if(!b)return;
@@ -58,7 +34,7 @@ function inject(){
   <div class="cr-other"><button id="crOtherToggle">查看非产品规则 <b id="crOtherCount">0</b></button><div id="crOtherRules" hidden></div></div>`;
   const head=host.querySelector('.page-head');head?.after(sec);if(!head)host.appendChild(sec);normalizeDataManagementPage();bind();
 }
-async function request(url=API,opts){const r=await fetch(url,opts);const j=await r.json().catch(()=>({}));if(!r.ok||j.ok===false)throw Object.assign(new Error(j.error||`HTTP ${r.status}`),{status:r.status,data:j});return j}
+async function request(url=API,opts){let r=await fetch(url,opts);if(r.status===404&&location.hostname.endsWith('.pages.dev')&&String(url).startsWith(API_LOCAL)){const suffix=String(url).slice(API_LOCAL.length);r=await fetch(API_PROD+suffix,opts)}const j=await r.json().catch(()=>({}));if(!r.ok||j.ok===false)throw Object.assign(new Error(j.error||`HTTP ${r.status}`),{status:r.status,data:j});return j}
 async function refresh(q=''){
   if(loading||!byId('crCloudState'))return;loading=true;byId('crCloudState').textContent='正在读取云端…';
   try{data=await request(API+(q?'?q='+encodeURIComponent(q):''));selected.clear();render();byId('crCloudState').textContent=`已同步 · ${data.counts.totalRules} 条规则`}
@@ -101,15 +77,8 @@ function bind(){
   byId('crTable').addEventListener('change',e=>{if(e.target.matches('.cr-check')){e.target.checked?selected.add(e.target.dataset.id):selected.delete(e.target.dataset.id);updateSelection()}});
   document.addEventListener('click',e=>{const d=e.target.closest('[data-detail]');if(d){const x=byId('crd-'+cssId(d.dataset.detail));if(x)x.hidden=!x.hidden;return}const ep=e.target.closest('[data-edit]');if(ep){editProduct((data?.products||[]).find(x=>x.id===ep.dataset.edit));return}const dp=e.target.closest('[data-delete]');if(dp){deleteProduct((data?.products||[]).find(x=>x.id===dp.dataset.delete));return}const re=e.target.closest('[data-rule-edit]');if(re){editRule(findRule(re.dataset.ruleEdit));return}const rd=e.target.closest('[data-rule-delete]');if(rd){const r=findRule(rd.dataset.ruleDelete);if(r&&confirm(`删除云端规则 ${r.type} / ${r.ruleId}？`))mutate([{action:'delete',ruleId:r.ruleId,expectedUpdatedAt:r.updatedAt}]).catch(e=>alert(e.message))}});
 }
-function releaseEntry(e){return `<article class="canonical-release-entry"><div class="canonical-release-version"><b>v${esc(e.version||'')}</b><small>${esc(e.time||'')}</small></div><div><h3>${esc(e.title||'WRITE Settlement Manager')}</h3>${(e.items||[]).map(x=>`<p>— ${esc(x)}</p>`).join('')}</div></article>`}
-function repairHistory(){
-  const host=document.querySelector('[data-view-panel="history"]');if(!host)return;
-  const meta=g.WRITE_RELEASE_META||{},history=sortedHistory(meta.history||[]),current='10.2.5';
-  host.querySelectorAll('.panel,.release-list,.history-list').forEach(x=>{if(x.id!=='canonicalReleaseHistory')x.hidden=true});
-  let box=byId('canonicalReleaseHistory');if(!box){box=document.createElement('section');box.id='canonicalReleaseHistory';box.className='panel canonical-release-history';const head=host.querySelector('.page-head');head?.after(box)}
-  box.innerHTML=`<div class="canonical-current"><span>当前版本</span><b>v${current}</b></div><div class="canonical-history-summary">WRITE Settlement Manager · ${history.length} 个历史版本</div><div class="canonical-release-list">${history.map(releaseEntry).join('')}</div>`;
-}
-function start(){normalizeDataManagementPage();inject();forceNavigation();document.body.dataset.release=VERSION;document.querySelectorAll('.brand-copy small').forEach(e=>e.textContent='v10.2.5 Production');if(document.querySelector('[data-view-panel="learning"].active'))refresh();if(document.querySelector('[data-view-panel="history"].active'))repairHistory()}
+function repairHistory(){g.WRITE_V1035_HISTORY?.refresh?.()}
+function start(){normalizeDataManagementPage();inject();forceNavigation();if(document.querySelector('[data-view-panel=\"learning\"].active'))refresh();if(document.querySelector('[data-view-panel=\"history\"].active'))g.WRITE_V1035_HISTORY?.refresh?.()}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();
 g.WRITE_CLOUD_RULE_LIBRARY={VERSION,refresh,showView,repairHistory,_test:{compareVersions,sortedHistory}};
 })(window);
