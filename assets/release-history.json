@@ -1,25 +1,40 @@
 {
   "current": {
-    "version": "10.4.0",
-    "time": "2026-08-13 19:46",
-    "title": "Public Release — Three-Layer Cost Learning",
+    "version": "10.4.1",
+    "time": "2026-08-13 21:36",
+    "title": "Release Notes Auto-Sync Hotfix",
     "sections": [
       {
-        "label": "V10.4.0",
+        "label": "更新弹窗与版本同步",
         "items": [
-          "正式发布三层成本学习：商品成本层、Configuration/FACT 层、包裹费用层完全解耦。",
-          "人工审核 FACT 回传后，SKU/产品成本独立学习；商品数量或组合变化后可重新组合计算，不再要求见过完全相同 Configuration。",
-          "包裹费用按主商品身份 + 主商品数量档位 + 国家 + 币种独立学习；一个订单/一个包裹只计算一次。",
-          "Stylo eternel 无论搭配多少 Coffret Cadeau、笔芯等默认配件，配件不额外增加包裹费用；Stylo 数量变化进入对应新档位。",
-          "停止新增 CONFIG:<configurationFingerprint> 整体组合成本规则；历史 CONFIG 规则继续兼容读取，不清库。",
-          "保留 REVIEWED_FACT、REVIEWED_PRODUCT、COMPONENT_COST_EQUATION、IndexedDB + Cloudflare D1 跨设备同步与冲突/幂等机制。",
-          "保留订单统计、FACT、数量守恒、会计结算、SAFE XLSX 导出、历史更新以及 CN / FR 隔离逻辑。",
-          "发布门禁与当前 main 对齐：未知价格保持空白/红色，审核样式按实际解析的 cellXfs 数量动态派生；正式导出链为 single XLSX delivery，不再使用历史 PDF 函数名作为发布条件。"
+          "修复每个版本首次打开的“本次更新”弹窗长期停留在 V10.2.6 的问题。",
+          "首次更新弹窗改为直接 no-store 读取 assets/release-history.json 权威更新日志，不再依赖 app.bundle 内固化的旧 release-meta。",
+          "弹窗版本以实际部署的 body[data-release] 为准；当前版本内容从 release-history current/history 自动匹配。",
+          "同一浏览器同一版本只自动弹出一次；新版本发布后使用独立版本键自动重新弹出。",
+          "旧 app.bundle 弹窗控制器在启动前被静默，避免先闪出旧版本弹窗；新权威弹窗在应用启动后接管。",
+          "历史更新页与首次弹窗现在共用同一份 release-history.json 数据源，消除双轨版本信息。",
+          "同步更新 release-meta.js 兼容快照，但新弹窗不再依赖该静态文件。",
+          "保留 V10.4.0 三层成本学习、订单统计、FACT、数量守恒、会计、SAFE XLSX、D1/IndexedDB 与 CN/FR 隔离逻辑。"
         ]
       }
     ]
   },
   "history": [
+    {
+      "version": "10.4.1",
+      "time": "2026-08-13 21:36",
+      "title": "Release Notes Auto-Sync Hotfix",
+      "items": [
+        "修复每个版本首次打开的“本次更新”弹窗长期停留在 V10.2.6 的问题。",
+        "首次更新弹窗改为直接 no-store 读取 assets/release-history.json 权威更新日志，不再依赖 app.bundle 内固化的旧 release-meta。",
+        "弹窗版本以实际部署的 body[data-release] 为准；当前版本内容从 release-history current/history 自动匹配。",
+        "同一浏览器同一版本只自动弹出一次；新版本发布后使用独立版本键自动重新弹出。",
+        "旧 app.bundle 弹窗控制器在启动前被静默，避免先闪出旧版本弹窗；新权威弹窗在应用启动后接管。",
+        "历史更新页与首次弹窗现在共用同一份 release-history.json 数据源，消除双轨版本信息。",
+        "同步更新 release-meta.js 兼容快照，但新弹窗不再依赖该静态文件。",
+        "保留 V10.4.0 三层成本学习、订单统计、FACT、数量守恒、会计、SAFE XLSX、D1/IndexedDB 与 CN/FR 隔离逻辑。"
+      ]
+    },
     {
       "version": "10.4.0",
       "time": "2026-08-13 19:46",
@@ -1321,5 +1336,5 @@
       ]
     }
   ],
-  "currentVersion": "10.4.0"
+  "currentVersion": "10.4.1"
 }

@@ -1,4 +1,4 @@
-(function(g){'use strict';const VERSION='10.4.0';
+(function(g){'use strict';const VERSION='10.4.1';
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const pv=v=>{const m=String(v||'').replace(/^v/i,'').match(/^(\d+)\.(\d+)\.(\d+)/);return m?[+m[1],+m[2],+m[3]]:[0,0,0]};
 const cmp=(a,b)=>{const A=pv(a.version),B=pv(b.version);for(let i=0;i<3;i++)if(A[i]!==B[i])return B[i]-A[i];return 0};

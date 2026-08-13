@@ -1,3 +1,12 @@
+## V10.4.1 — Release Notes Auto-Sync Hotfix
+- First-open release popup now reads `assets/release-history.json` with `no-store`.
+- Deployed `body[data-release]` is authoritative.
+- Legacy app.bundle popup is suppressed before startup.
+- New popup uses a per-version v2 localStorage key and automatically reappears for future releases.
+- History page and first-open popup now share the same authoritative source.
+- `src/release-meta.js` remains synchronized only as a compatibility snapshot.
+- V10.4.0 costing/accounting/export/cloud-sync behavior is preserved.
+
 ## V10.4.0 — Public three-layer cost-learning release
 - Promoted the validated V10.3.8 three-layer learning architecture to public release.
 - SKU/product COGS is independently learned and recomposed by quantity.
