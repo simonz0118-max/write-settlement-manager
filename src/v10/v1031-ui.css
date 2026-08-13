@@ -1,0 +1,24 @@
+/* WRITE V10.3.1 final sidebar/data-management lock */
+.nav-item[data-view="learning"]{
+  display:flex!important;align-items:center!important;gap:10px!important;
+  width:100%!important;min-width:0!important;font-size:12px!important;
+  padding-left:14px!important;padding-right:14px!important;box-sizing:border-box!important;
+}
+.nav-item[data-view="learning"]>*{display:none!important}
+.nav-item[data-view="learning"]>.v1031-nav-icon{
+  display:inline-flex!important;flex:0 0 18px!important;width:18px!important;
+  align-items:center!important;justify-content:center!important;font-size:13px!important;line-height:1!important;
+}
+.nav-item[data-view="learning"]>.v1031-nav-label{
+  display:block!important;flex:1 1 auto!important;min-width:0!important;
+  font-size:12px!important;font-weight:600!important;line-height:1.25!important;
+  white-space:nowrap!important;overflow:visible!important;text-overflow:clip!important;
+  writing-mode:horizontal-tb!important;letter-spacing:0!important;
+}
+.cr-toolbar{display:grid!important;grid-template-columns:minmax(360px,1fr) 104px 78px 112px!important;gap:10px!important;align-items:stretch!important}
+.cr-search,.cr-search textarea{min-width:0!important;width:100%!important;box-sizing:border-box!important}
+.cr-grid{grid-template-columns:28px minmax(240px,1.35fr) minmax(150px,.75fr) minmax(190px,1fr) minmax(170px,.9fr) 150px 186px!important;gap:12px!important}
+.cr-cell,.cr-actions{min-width:0!important}
+.cr-cell{overflow-wrap:anywhere!important}
+.cr-actions{display:flex!important;gap:6px!important;justify-content:flex-end!important}
+@media(max-width:1200px){.cr-toolbar{grid-template-columns:1fr 1fr!important}.cr-grid{grid-template-columns:28px minmax(220px,1.3fr) minmax(140px,.8fr) minmax(180px,1fr) minmax(150px,.9fr) 130px!important}.cr-actions{grid-column:2/-1;justify-content:flex-start!important}}
