@@ -10,10 +10,21 @@
  */
 (function(g){'use strict';
 
-const VERSION='10.1.6';
+const VERSION='10.2.5';
 const dec=new TextDecoder();
 const clean=v=>String(v??'').replace(/\r/g,' ').replace(/\s+/g,' ').trim();
 const upper=v=>clean(v).toUpperCase();
+const baseReviewedSku=v=>clean(v).replace(/\s*(?:\*|x|×)\s*\d+(?:[.,]\d+)?\s*$/i,'').trim();
+const restoreInternalKey=v=>String(v??'').replace(/\\u(0002|0003)/gi,(_,h)=>String.fromCharCode(parseInt(h,16)));
+function provenanceOrigin(p={}){
+ const raw=upper(p.origin);
+ if(['CN','CHINA','CHINE','中国'].includes(raw))return'CN';
+ if(['FR','FRANCE','法国'].includes(raw))return'FR';
+ const hay=[p.origin,p.workbook,p.sourceSheet,p.shortDescription].map(x=>String(x||'')).join(' ');
+ if(/法国仓|FRANCE\s*WAREHOUSE|WAREHOUSE\s*FR|ENTREP[OÔ]T\s*FR/i.test(hay))return'FR';
+ if(/SHIPSTER|\bJJ\b|中国仓|CHINA\s*WAREHOUSE|\bCN\b/i.test(hay))return'CN';
+ return'UNKNOWN';
+}
 const finite=v=>(v===null||v===undefined||v===''||!Number.isFinite(Number(v)))?null:Number(v);
 const unesc=s=>String(s)
   .replace(/&#x([0-9a-f]+);/gi,(_,h)=>String.fromCodePoint(parseInt(h,16)))
@@ -229,7 +240,7 @@ async function learnExact(spec,items,fileName){
   for(const p of items||[]){
     if(!clean(p.productName||p.rawProductName)&&!clean(p.sku))continue;
     const pr=await g.WRITE_KB.learnReviewedProduct({
-      productName:clean(p.productName||p.rawProductName),sku:clean(p.sku),family:clean(p.family),role:clean(p.role),
+      productName:clean(p.productName||p.rawProductName),sku:baseReviewedSku(p.sku),family:clean(p.family),role:clean(p.role),
       normalizedDescription:clean(p.normalizedDescription||p.shortDescription),
       approvedFactDescription:spec.description,country:spec.country,origin:'CN',currency:spec.currency,
       configurationFingerprint:spec.configurationFingerprint,sourceFile:fileName
@@ -246,7 +257,7 @@ async function importNewCN(file,map,ss,sheets){
   if(!factS||!provS)throw new Error('NEW_CN_STRUCTURE_MISSING');
   const facts=newFactRows(rowsFor(map,factS,ss)),prov=parseProv(rowsFor(map,provS,ss)),groups=new Map();
   for(const p of prov){
-    if(upper(p.origin)!=='CN')continue;
+    if(provenanceOrigin(p)!=='CN')continue;
     const key=`${clean(p.factCountry)}\u0001${Number(p.factNo)}`;
     if(!groups.has(key))groups.set(key,[]);groups.get(key).push(p);
   }
@@ -257,7 +268,7 @@ async function importNewCN(file,map,ss,sheets){
       (Number.isFinite(f.cogs)&&Number.isFinite(f.shipping)?f.cogs+f.shipping:null);
     const spec={invoiceEntity:clean(h.invoiceEntity)||'DEFAULT',origin:'CN',country:upper(h.factCountry),
       currency:upper(h.currency)||'EUR',taxRegime:clean(h.taxRegime)||'UNSPECIFIED',role:clean(h.role)||'PACKAGE',
-      configurationFingerprint:clean(h.configurationFingerprint),description:f.description,cogs:f.cogs,shipping:f.shipping,
+      configurationFingerprint:restoreInternalKey(clean(h.configurationFingerprint)),description:f.description,cogs:f.cogs,shipping:f.shipping,
       unitTotal:unit,amount:f.amount,quantity:f.quantity,sourceFile:file.name};
     if(!spec.configurationFingerprint){unmatched++;continue}
     addCounts(totals,await learnExact(spec,items,file.name));seen.add(key);

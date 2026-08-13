@@ -43,6 +43,36 @@ function norm(v=''){
 function country(v=''){
   return String(v??'').trim().toUpperCase();
 }
+function baseSku(v=''){return String(v??'').trim().replace(/\s*(?:\*|x|×)\s*\d+(?:[.,]\d+)?\s*$/i,'').trim()}
+function normSku(v=''){return norm(baseSku(v))}
+function restoreFingerprint(v=''){return String(v??'').replace(/\\u(0002|0003)/gi,(_,h)=>String.fromCharCode(parseInt(h,16)))}
+function canonicalRuleOrigin(v=''){
+ const raw=country(v);
+ if(['CN','CHINA','CHINE','中国'].includes(raw))return'CN';
+ if(['FR','FRANCE','法国'].includes(raw))return'FR';
+ if(/SHIPSTER|\bJJ\b|中国仓|CHINA/i.test(String(v||'')))return'CN';
+ if(/法国仓|FRANCE\s*WAREHOUSE|WAREHOUSE\s*FR|ENTREP[OÔ]T\s*FR/i.test(String(v||'')))return'FR';
+ return raw||'UNKNOWN';
+}
+function compatibleSkuRule(type,spec={}){
+ const target=normSku(spec.sku);if(!target)return null;
+ const c=country(spec.country),o=canonicalRuleOrigin(spec.origin),cur=String(spec.currency||'').toUpperCase();
+ return [...cache.values()].filter(r=>r.type===type&&!r.deleted&&normSku(r.payload?.sku)===target)
+  .filter(r=>!c||!r.payload?.country||country(r.payload.country)===c)
+  .filter(r=>type!=='REVIEWED_PRODUCT'||!o||!r.payload?.origin||canonicalRuleOrigin(r.payload.origin)===o)
+  .filter(r=>!cur||!r.payload?.currency||String(r.payload.currency).toUpperCase()===cur)
+  .sort((a,b)=>priority(b)-priority(a)||String(b.updatedAt||'').localeCompare(String(a.updatedAt||'')))[0]||null
+}
+function compatibleReviewedFact(spec={}){
+ const fp=restoreFingerprint(spec.configurationFingerprint),entity=String(spec.invoiceEntity||'DEFAULT'),c=country(spec.country),o=canonicalRuleOrigin(spec.origin),cur=String(spec.currency||'').toUpperCase(),tax=String(spec.taxRegime||'UNSPECIFIED'),role=String(spec.role||'');
+ return [...cache.values()].filter(r=>r.type==='REVIEWED_FACT'&&!r.deleted)
+  .filter(r=>String(r.payload?.invoiceEntity||'DEFAULT')===entity)
+  .filter(r=>restoreFingerprint(r.payload?.configurationFingerprint)===fp)
+  .filter(r=>country(r.payload?.country)===c&&canonicalRuleOrigin(r.payload?.origin)===o)
+  .filter(r=>String(r.payload?.currency||'').toUpperCase()===cur)
+  .filter(r=>String(r.payload?.taxRegime||'UNSPECIFIED')===tax&&String(r.payload?.role||'')===role)
+  .sort((a,b)=>priority(b)-priority(a)||String(b.updatedAt||'').localeCompare(String(a.updatedAt||'')))[0]||null
+}
 function cacheKey(type,lookupKey){return type+'\u0001'+lookupKey}
 function priority(rule){return Number(rule?.priority)||PRIORITY[rule?.confidenceLevel]||0}
 function shouldReplace(existing,incoming){
@@ -251,12 +281,13 @@ async function recordConflict(ruleType,lookupKey,existingPayload,incomingPayload
     confirmed:false,source:'CONFLICT:'+source});
 }
 function costLookupKeys(spec={}){
-  const sku=norm(spec.sku),name=norm(spec.productName),c=country(spec.country),cur=String(spec.currency||'').toUpperCase();
-  const keys=[];if(sku)keys.push('sku:'+sku+'\\u0001'+c+'\\u0001'+cur,'sku:'+sku+'\\u0001'+c+'\\u0001','sku:'+sku);
-  if(name)keys.push('name:'+name+'\\u0001'+c+'\\u0001'+cur,'name:'+name+'\\u0001'+c+'\\u0001','name:'+name);
-  return keys;
+ const sku=normSku(spec.sku),rawSku=norm(spec.sku),name=norm(spec.productName),c=country(spec.country),cur=String(spec.currency||'').toUpperCase(),keys=[];
+ if(sku)keys.push('sku:'+sku+'\\u0001'+c+'\\u0001'+cur,'sku:'+sku+'\\u0001'+c+'\\u0001','sku:'+sku);
+ if(rawSku&&rawSku!==sku)keys.push('sku:'+rawSku+'\\u0001'+c+'\\u0001'+cur,'sku:'+rawSku+'\\u0001'+c+'\\u0001','sku:'+rawSku);
+ if(name)keys.push('name:'+name+'\\u0001'+c+'\\u0001'+cur,'name:'+name+'\\u0001'+c+'\\u0001','name:'+name);
+ return [...new Set(keys)]
 }
-function costModel(spec={}){for(const k of costLookupKeys(spec)){const r=find('COST_MODEL',k);if(r)return r}return null}
+function costModel(spec={}){for(const k of costLookupKeys(spec)){const r=find('COST_MODEL',k);if(r)return r}return compatibleSkuRule('COST_MODEL',spec)}
 function calculateCost(spec={}){
   const rule=costModel(spec);if(!rule)return {resolved:false};
   const m=rule.payload||{},q=Math.max(0,Number(spec.quantity)||0),amount=Number(spec.orderAmount)||0;let total=null,unit=null;
@@ -305,12 +336,13 @@ async function learnFactModel(model={},manual=false){
   return upsert({type:'FACT_MODEL',lookupKey,payload:model,confidenceLevel:manual?'MANUAL_CONFIRMED':'AUTO_INFERRED',confirmed:!!manual,source:manual?'MANUAL_FACT':'HISTORICAL_FACT'});
 }
 function reviewedProductLookupKeys(spec={}){
-  const sku=norm(spec.sku),name=norm(spec.productName),c=country(spec.country),o=country(spec.origin),cur=String(spec.currency||'').toUpperCase(),keys=[];
-  if(sku){if(c&&o&&cur)keys.push('sku:'+sku+'\\u0001'+c+'\\u0001'+o+'\\u0001'+cur);keys.push('sku:'+sku)}
-  if(name){if(c&&o&&cur)keys.push('name:'+name+'\\u0001'+c+'\\u0001'+o+'\\u0001'+cur);keys.push('name:'+name)}
-  return keys;
+ const sku=normSku(spec.sku),rawSku=norm(spec.sku),name=norm(spec.productName),c=country(spec.country),o=canonicalRuleOrigin(spec.origin),cur=String(spec.currency||'').toUpperCase(),keys=[];
+ if(sku){if(c&&o&&cur)keys.push('sku:'+sku+'\\u0001'+c+'\\u0001'+o+'\\u0001'+cur);keys.push('sku:'+sku)}
+ if(rawSku&&rawSku!==sku){if(c&&o&&cur)keys.push('sku:'+rawSku+'\\u0001'+c+'\\u0001'+o+'\\u0001'+cur);keys.push('sku:'+rawSku)}
+ if(name){if(c&&o&&cur)keys.push('name:'+name+'\\u0001'+c+'\\u0001'+o+'\\u0001'+cur);keys.push('name:'+name)}
+ return [...new Set(keys)]
 }
-function reviewedProduct(spec={}){for(const k of reviewedProductLookupKeys(spec)){const r=find('REVIEWED_PRODUCT',k);if(r)return r}return null}
+function reviewedProduct(spec={}){for(const k of reviewedProductLookupKeys(spec)){const r=find('REVIEWED_PRODUCT',k);if(r)return r}return compatibleSkuRule('REVIEWED_PRODUCT',spec)}
 async function learnReviewedProduct(spec={},manual=true){
   const keys=reviewedProductLookupKeys(spec);if(!keys.length)throw new Error('审核商品规则缺少 SKU/产品名');
   const lookupKey=keys[0],payload={productName:String(spec.productName||''),sku:String(spec.sku||''),family:String(spec.family||''),role:String(spec.role||''),normalizedDescription:String(spec.normalizedDescription||''),approvedFactDescription:String(spec.approvedFactDescription||''),country:country(spec.country),origin:country(spec.origin),currency:String(spec.currency||'').toUpperCase(),configurationFingerprint:String(spec.configurationFingerprint||''),sourceFile:String(spec.sourceFile||'')};
@@ -328,8 +360,8 @@ async function learnReviewedProduct(spec={},manual=true){
   const rule=await upsert({type:'REVIEWED_PRODUCT',lookupKey,payload,confidenceLevel:'MANUAL_CONFIRMED',confirmed:true,source:'REVIEWED_WORKBOOK'});
   return {rule,created:true,ruleId:rule?.ruleId||'',syncState:rule?.syncState||''};
 }
-function reviewedFactLookupKey(spec={}){return[String(spec.invoiceEntity||'DEFAULT'),country(spec.origin),country(spec.country),String(spec.currency||'').toUpperCase(),String(spec.taxRegime||'UNSPECIFIED'),String(spec.role||''),String(spec.configurationFingerprint||'')].join('\\u0001')}
-function reviewedFact(spec={}){return find('REVIEWED_FACT',reviewedFactLookupKey(spec))||null}
+function reviewedFactLookupKey(spec={}){return[String(spec.invoiceEntity||'DEFAULT'),canonicalRuleOrigin(spec.origin),country(spec.country),String(spec.currency||'').toUpperCase(),String(spec.taxRegime||'UNSPECIFIED'),String(spec.role||''),restoreFingerprint(spec.configurationFingerprint)].join('\u0001')}
+function reviewedFact(spec={}){return find('REVIEWED_FACT',reviewedFactLookupKey(spec))||compatibleReviewedFact(spec)||null}
 async function learnReviewedFact(spec={},manual=true){
   const lookupKey=reviewedFactLookupKey(spec),payload={invoiceEntity:String(spec.invoiceEntity||'DEFAULT'),origin:country(spec.origin),country:country(spec.country),currency:String(spec.currency||'').toUpperCase(),taxRegime:String(spec.taxRegime||'UNSPECIFIED'),role:String(spec.role||''),configurationFingerprint:String(spec.configurationFingerprint||''),description:String(spec.description||''),cogs:spec.cogs,shipping:spec.shipping,unitTotal:spec.unitTotal,amount:spec.amount,quantity:spec.quantity,sourceFile:String(spec.sourceFile||'')};
   if(!payload.configurationFingerprint)throw new Error('审核 FACT 规则缺少 Configuration');

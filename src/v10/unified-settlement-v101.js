@@ -1,6 +1,17 @@
 /* WRITE V10.1.0 Unified Settlement Workbook */
-(function(g){'use strict';const VERSION='10.1.0',enc=new TextEncoder(),dec=new TextDecoder();
-const esc=s=>String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+(function(g){'use strict';const VERSION='10.2.5',enc=new TextEncoder(),dec=new TextDecoder();
+const xmlSafe=s=>String(s??'').replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g,ch=>'\\u'+ch.charCodeAt(0).toString(16).padStart(4,'0'));
+const esc=s=>xmlSafe(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const baseLearningSku=v=>String(v??'').replace(/\s*(?:\*|x|×)\s*\d+(?:[.,]\d+)?\s*$/i,'').trim();
+function learningOrigin(line={}){
+ const raw=String(line.origin||'').trim().toUpperCase();
+ if(['CN','CHINA','CHINE','中国'].includes(raw))return'CN';
+ if(['FR','FRANCE','法国'].includes(raw))return'FR';
+ const hay=String(line.origin||'')+' '+(line.rawEvidence||[]).map(x=>String(x?.origin||x?.warehouse||'')).join(' ');
+ if(/法国仓|FRANCE\s*WAREHOUSE|WAREHOUSE\s*FR|ENTREP[OÔ]T\s*FR/i.test(hay))return'FR';
+ if(/SHIPSTER|\bJJ\b|中国仓|CHINA\s*WAREHOUSE|\bCN\b/i.test(hay))return'CN';
+ return'UNKNOWN';
+}
 const u16=(b,o)=>b[o]|b[o+1]<<8,u32=(b,o)=>(b[o]|b[o+1]<<8|b[o+2]<<16|b[o+3]<<24)>>>0;
 const p16=n=>[n&255,n>>8&255],p32=n=>[n&255,n>>8&255,n>>16&255,n>>24&255];
 function crc32(a){let c=0xffffffff;for(const v of a){c^=v;for(let i=0;i<8;i++)c=c>>>1^((c&1)?0xedb88320:0)}return(c^0xffffffff)>>>0}
@@ -15,7 +26,14 @@ function cell(ref,v){if(v==null||v==='')return`<c r="${ref}"/>`;if(typeof v==='n
 function simpleSheet(rows){let body='';rows.forEach((r,i)=>body+=`<row r="${i+1}">${r.map((v,j)=>cell(col(j+1)+(i+1),v)).join('')}</row>`);return`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>${body}</sheetData></worksheet>`}
 function stripStyles(x){return x.replace(/(<c\b[^>]*?)\s+s="\d+"/g,'$1').replace(/(<row\b[^>]*?)\s+s="\d+"/g,'$1')}
 function rankCountry(c){const p=['FRANCE','BELGIUM','CANADA','SWITZERLAND','LUXEMBOURG','GERMANY','SPAIN','ITALY','NETHERLANDS','AUSTRIA','PORTUGAL','REUNION ISLAND'],i=p.indexOf(String(c||'').toUpperCase());return i<0?999:i}
-function learningRows(res,wb){const h=['WRITE_LEARNING_SOURCE_V1','workbook','factCountry','factNo','originalFactDescription','configurationFingerprint','role','origin','currency','taxRegime','invoiceEntity','sourceItemKey','productName','sku','family','multiplicity','orderId','trackingNumber','shortDescription'],rows=[h],ctr=new Map();for(const line of[...(res.rows||[])].sort((a,b)=>rankCountry(a.country)-rankCountry(b.country)||String(a.country).localeCompare(String(b.country),'en')||String(a.description).localeCompare(String(b.description),'fr'))){const c=String(line.country||'GLOBAL'),no=(ctr.get(c)||0)+1;ctr.set(c,no);for(const e of(line.rawEvidence?.length?line.rawEvidence:[{}]))rows.push(['V1',wb,c,no,line.description||'',line.configurationFingerprint||'',line.role||'',line.origin||'',line.currency||'',line.taxRegime||'',line.invoiceEntity||'',e.sourceItemKey||'',e.rawProductName||'',e.sku||'',e.family||'',Number(e.multiplicity)||1,e.orderId||'',e.trackingNumber||'',e.shortDescription||''])}return rows}
+function learningRows(res,wb){
+ const h=['WRITE_LEARNING_SOURCE_V1','workbook','factCountry','factNo','originalFactDescription','configurationFingerprint','role','origin','currency','taxRegime','invoiceEntity','sourceItemKey','productName','sku','family','multiplicity','orderId','trackingNumber','shortDescription'],rows=[h],ctr=new Map();
+ for(const line of[...(res.rows||[])].sort((a,b)=>rankCountry(a.country)-rankCountry(b.country)||String(a.country).localeCompare(String(b.country),'en')||String(a.description).localeCompare(String(b.description),'fr'))){
+  const c=String(line.country||'GLOBAL'),no=(ctr.get(c)||0)+1;ctr.set(c,no);
+  for(const e of(line.rawEvidence?.length?line.rawEvidence:[{}]))rows.push(['V1',wb,c,no,line.description||'',line.configurationFingerprint||'',line.role||'',learningOrigin(line),line.currency||'',line.taxRegime||'',line.invoiceEntity||'',e.sourceItemKey||'',e.rawProductName||'',baseLearningSku(e.sku||''),e.family||'',Number(e.multiplicity)||1,e.orderId||'',e.trackingNumber||'',e.shortDescription||''])
+ }
+ return rows
+}
 async function mergeFactAndAccounting(factBlob,accountingBlob,res,wbName){const fact=await readZip(factBlob),acc=await readZip(accountingBlob);let w=txt(fact,'xl/workbook.xml'),wr=txt(fact,'xl/_rels/workbook.xml.rels'),ct=txt(fact,'[Content_Types].xml');const aw=txt(acc,'xl/workbook.xml'),ar=rels(txt(acc,'xl/_rels/workbook.xml.rels')),used=new Set(sheets(w).map(x=>x.name.toLowerCase()));let sid=Math.max(...sheets(w).map(x=>x.id),0)+1,rid=Math.max(...[...wr.matchAll(/Id="rId(\d+)"/g)].map(x=>+x[1]),0)+1,sn=Math.max(...[...fact.keys()].map(n=>+(/sheet(\d+)\.xml/.exec(n)?.[1]||0)),1)+1;const add=[];for(const sh of sheets(aw)){const t=ar.get(sh.rid);if(!t)continue;const src=t.startsWith('/xl/')?t.slice(1):(t.startsWith('xl/')?t:'xl/'+t.replace(/^\//,''));if(!acc.has(src))continue;let name=sh.name.slice(0,31),i=2;while(used.has(name.toLowerCase()))name=(sh.name.slice(0,28)+'_'+i++).slice(0,31);used.add(name.toLowerCase());const path=`xl/worksheets/sheet${sn++}.xml`,r=`rId${rid++}`;fact.set(path,enc.encode(stripStyles(dec.decode(acc.get(src)))));add.push({name,id:sid++,rid:r,path,state:''})}const lp=`xl/worksheets/sheet${sn++}.xml`,lr=`rId${rid++}`;fact.set(lp,enc.encode(simpleSheet(learningRows(res,wbName))));add.push({name:'WRITE_LEARNING_SOURCE',id:sid++,rid:lr,path:lp,state:'veryHidden'});w=w.replace('</sheets>',add.map(x=>`<sheet xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" name="${esc(x.name)}" sheetId="${x.id}"${x.state?` state="${x.state}"`:''} r:id="${x.rid}"/>`).join('')+'</sheets>');wr=wr.replace('</Relationships>',add.map(x=>`<Relationship Id="${x.rid}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/${x.path.split('/').pop()}"/>`).join('')+'</Relationships>');ct=ct.replace('</Types>',add.map(x=>`<Override PartName="/${x.path}" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join('')+'</Types>');setTxt(fact,'xl/workbook.xml',w);setTxt(fact,'xl/_rels/workbook.xml.rels',wr);setTxt(fact,'[Content_Types].xml',ct);return writeZip(fact)}
 g.WRITE_V101_WORKBOOK={VERSION,readZip,writeZip,sheets,rels,simpleSheet,learningRows,mergeFactAndAccounting};
 })(window);

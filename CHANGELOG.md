@@ -1,3 +1,13 @@
+## v10.2.5 — 2026-08-13 10:30 (Europe/Paris)
+- 基于 GitHub main 当前真实源码重做 V10.2.5，不再使用整行源码硬锚点补丁。
+- 修复 storeAccount 被误当 fulfillmentOrigin；Shipster/JJ 历史店铺信号归一为 CN。
+- 修复历史人工审核 provenance 因 origin 污染而被 CN-only 学习入口过滤。
+- SKU *1/*2/*3 等数量后缀不再作为商品身份；新旧 D1 规则按基础 SKU 兼容命中。
+- REVIEWED_FACT ConfigurationFingerprint 兼容历史控制字符与新的 \\u0002/\\u0003 安全表示。
+- 统一结算工作簿 XML 动态文本执行 XML 1.0 安全转义，防止 WRITE_LEARNING_SOURCE 生成损坏 XLSX。
+- 旧 D1 REVIEWED_PRODUCT / REVIEWED_FACT 无需清库，可通过 payload 兼容扫描恢复命中。
+- 保留业务日期/最新订单号优先策略、数据管理 UI 和 Cloudflare D1 同步。
+
 ## v10.2.4 — 2026-08-13 02:20 (Europe/Paris)
 - 修复左侧“数据管理”菜单重复文字和竖排文字：清除历史补丁遗留 text node，只保留一个规范标签。
 - 数据管理表格重建为 1320px 最小宽度的独立滚动网格，避免产品名、分类、范围、FACT/成本、更新时间跨列重叠。

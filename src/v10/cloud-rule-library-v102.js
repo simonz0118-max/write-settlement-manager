@@ -1,6 +1,6 @@
 /* WRITE V10.2.1 — Rule Learning accessibility + canonical release history */
 (function(g){'use strict';
-const VERSION='10.2.4',API='/api/rules/catalog';let data=null,selected=new Set(),loading=false;
+const VERSION='10.2.5',API='/api/rules/catalog';let data=null,selected=new Set(),loading=false;
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt=v=>v==null||v===''?'—':String(v),byId=id=>document.getElementById(id);
 const semver=v=>String(v||'0').replace(/^v/i,'').split('.').map(x=>Number.parseInt(x,10)||0);
@@ -109,12 +109,12 @@ function bind(){
 function releaseEntry(e){return `<article class="canonical-release-entry"><div class="canonical-release-version"><b>v${esc(e.version||'')}</b><small>${esc(e.time||'')}</small></div><div><h3>${esc(e.title||'WRITE Settlement Manager')}</h3>${(e.items||[]).map(x=>`<p>— ${esc(x)}</p>`).join('')}</div></article>`}
 function repairHistory(){
   const host=document.querySelector('[data-view-panel="history"]');if(!host)return;
-  const meta=g.WRITE_RELEASE_META||{},history=sortedHistory(meta.history||[]),current='10.2.4';
+  const meta=g.WRITE_RELEASE_META||{},history=sortedHistory(meta.history||[]),current='10.2.5';
   host.querySelectorAll('.panel,.release-list,.history-list').forEach(x=>{if(x.id!=='canonicalReleaseHistory')x.hidden=true});
   let box=byId('canonicalReleaseHistory');if(!box){box=document.createElement('section');box.id='canonicalReleaseHistory';box.className='panel canonical-release-history';const head=host.querySelector('.page-head');head?.after(box)}
   box.innerHTML=`<div class="canonical-current"><span>当前版本</span><b>v${current}</b></div><div class="canonical-history-summary">WRITE Settlement Manager · ${history.length} 个历史版本</div><div class="canonical-release-list">${history.map(releaseEntry).join('')}</div>`;
 }
-function start(){normalizeDataManagementPage();inject();forceNavigation();document.body.dataset.release=VERSION;document.querySelectorAll('.brand-copy small').forEach(e=>e.textContent='v10.2.4 Production');if(document.querySelector('[data-view-panel="learning"].active'))refresh();if(document.querySelector('[data-view-panel="history"].active'))repairHistory()}
+function start(){normalizeDataManagementPage();inject();forceNavigation();document.body.dataset.release=VERSION;document.querySelectorAll('.brand-copy small').forEach(e=>e.textContent='v10.2.5 Production');if(document.querySelector('[data-view-panel="learning"].active'))refresh();if(document.querySelector('[data-view-panel="history"].active'))repairHistory()}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();
 g.WRITE_CLOUD_RULE_LIBRARY={VERSION,refresh,showView,repairHistory,_test:{compareVersions,sortedHistory}};
 })(window);

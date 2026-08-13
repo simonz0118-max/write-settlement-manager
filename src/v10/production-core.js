@@ -1,7 +1,18 @@
 /* WRITE V10 production statistics contract: orders -> country + full package composition -> one FACT. */
-(function(g){'use strict';const VERSION='10.1.0';
+(function(g){'use strict';const VERSION='10.2.5';
 const clean=v=>String(v??'').replace(/\r/g,' ').replace(/\s+/g,' ').trim();
 const norm=v=>clean(v).toUpperCase();
+function canonicalOrigin(o={}){
+ const raw=norm(o.fulfillmentOrigin||o.origin);
+ if(['CN','CHINA','CHINE','中国'].includes(raw))return'CN';
+ if(['FR','FRANCE','法国'].includes(raw))return'FR';
+ const inferred=g.WRITE_HUMAN_WORKFLOW_V84?.fulfillmentOrigin?.({...o,fulfillmentOrigin:'',origin:''})?.origin;
+ if(inferred==='CN'||inferred==='FR')return inferred;
+ const store=clean(o.storeAccount||o.shopAccount||o.rawFields?.['店铺账号']);
+ if(/SHIPSTER|\bJJ\b|中国仓|CHINA/i.test(store))return'CN';
+ if(/法国仓|FRANCE\s*WAREHOUSE|WAREHOUSE\s*FR|ENTREP[OÔ]T\s*FR/i.test(store))return'FR';
+ return'UNKNOWN';
+}
 function tracking(o={}){return clean(o.trackingNumber||o.tracking||o.waybill||o.parcelId||o.packageId)}
 function orderId(o={},i=0){return clean(o.orderId||o.recordKey)||`ROW:${i+1}`}
 function stableString(x){if(Array.isArray(x))return`[${x.map(stableString).join(',')}]`;if(x&&typeof x==='object')return`{${Object.keys(x).sort().map(k=>`${k}:${stableString(x[k])}`).join(',')}}`;return JSON.stringify(x)}
@@ -44,7 +55,7 @@ function build(input=[]){
  const R=g.WRITE_V10_ATOMS.ROLES;
  function dims(o,country){return{
    invoiceEntity:clean(o.invoiceEntity)||'DEFAULT',
-   origin:norm(o.fulfillmentOrigin||g.WRITE_HUMAN_WORKFLOW_V84?.fulfillmentOrigin?.(o)?.origin)||'UNKNOWN',
+   origin:canonicalOrigin(o),
    country,
    currency:norm(o.currency||o.orderCurrency||o.paymentCurrency)||'UNKNOWN',
    taxRegime:clean(o.taxRegime)||'UNSPECIFIED'

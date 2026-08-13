@@ -1,13 +1,24 @@
 /* WRITE V10 production adapter. V9 remains available only as an explicit rollback snapshot. */
-(function(g){'use strict';const VERSION='10.0.3';
+(function(g){'use strict';const VERSION='10.2.5';
 const v9Generic=g.generatedGenericFactRowsForWorkbook,v9Generated=g.generatedFactRowsForWorkbook,v9All=g.allGeneratedFactRows;
+function canonicalOrigin(o={}){
+ const raw=String(o.fulfillmentOrigin||o.origin||'').trim().toUpperCase();
+ if(['CN','CHINA','CHINE','中国'].includes(raw))return'CN';
+ if(['FR','FRANCE','法国'].includes(raw))return'FR';
+ const inferred=g.WRITE_HUMAN_WORKFLOW_V84?.fulfillmentOrigin?.({...o,fulfillmentOrigin:'',origin:''})?.origin;
+ if(inferred==='CN'||inferred==='FR')return inferred;
+ const store=String(o.storeAccount||o.shopAccount||o.sourceRawFields?.['店铺账号']||'');
+ if(/SHIPSTER|\bJJ\b|中国仓|CHINA/i.test(store))return'CN';
+ if(/法国仓|FRANCE\s*WAREHOUSE|WAREHOUSE\s*FR|ENTREP[OÔ]T\s*FR/i.test(store))return'FR';
+ return'UNKNOWN';
+}
 function sourceOrders(workbookName){
  const b=g.WRITE_V8_SOURCE_BRIDGE?.(),all=b?.orders||[];
  return all.filter(o=>!workbookName||String(o.sourceFile||'')===String(workbookName)).map((o,i)=>({
   ...o,orderId:o.orderId||o.recordKey||o.fulfillmentRecordId||`ROW:${i+1}`,
   trackingNumber:o.trackingNumber||o.trackingNo||o.tracking||o.waybill||o.sourceRawFields?.['包裹号']||'',
   destinationCountry:o.destinationCountry||o.country||'GLOBAL',
-  fulfillmentOrigin:o.fulfillmentOrigin||o.origin||o.storeAccount||'UNKNOWN',
+  fulfillmentOrigin:canonicalOrigin(o),
   lineItems:(o.lineItems||o.sourceItems||[]).map((x,ii,arr)=>({...x,productName:x.productName||x.description||x.title||x.sku||'Article',amount:x.amount??x.lineTotal??(arr.length===1?o.orderAmount:undefined),sourceItemKey:x.sourceItemKey||`${o.orderId||o.recordKey||i}::${ii}`}))
  }))
 }
