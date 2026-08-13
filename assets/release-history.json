@@ -1,23 +1,34 @@
 {
   "current": {
-    "version": "10.2.6",
-    "time": "2026-08-13 11:35",
-    "title": "Learned Price Recovery + Data Management Menu Fix",
+    "version": "10.2.7",
+    "time": "2026-08-13 11:40",
+    "title": "FINAL Learned Price Recovery + Stable Overlay",
     "sections": [
       {
-        "label": "价格恢复与 UI",
+        "label": "V10.2.7",
         "items": [
-          "修复左侧“数据管理”菜单图标被文字标签覆盖的问题，图标与文字使用独立节点并统一字号。",
-          "生产开票价格链升级：REVIEWED_FACT 精确命中失败后，继续匹配语义等价历史 FACT。",
-          "恢复人工审核时已经保存的 CONFIG COST_MODEL 价格；历史标点、斜杠/连字符及 \\u0002/\\u0003 表示差异不再导致价格丢失。",
-          "严格保持国家、仓别、币种、税制和角色隔离，不跨范围串价。",
-          "新增 priceMatch 审计状态：REVIEWED_FACT / CONFIG_COST_MODEL / NO_LEARNED_PRICE。",
-          "无真实云端价格规则的配置继续留空，不伪造 0 或猜测成本。"
+          "修复已学习订单仍全红且无成本：新增独立生产价格恢复层，不再修改旧价格循环源码。",
+          "PACKAGE 按人工审核 FACT #10063 的业务口径恢复“国家 + 铅笔件数 Xn”聚合。",
+          "Coffret Cadeau/笔芯独立 UPSELL；Gravure 独立 SERVICE；免费项继续不计费。",
+          "数据管理菜单恢复独立 ⌘ 图标，文字字号与其他菜单一致。",
+          "V10.2.7 部署器只新增 hotfix 与版本元数据，不修改旧业务循环，也不依赖历史源码硬锚点。"
         ]
       }
     ]
   },
   "history": [
+    {
+      "version": "10.2.7",
+      "time": "2026-08-13 11:40",
+      "title": "FINAL Learned Price Recovery + Stable Overlay",
+      "items": [
+        "修复已学习订单仍全红且无成本：新增独立生产价格恢复层，不再修改旧价格循环源码。",
+        "PACKAGE 按人工审核 FACT #10063 的业务口径恢复“国家 + 铅笔件数 Xn”聚合。",
+        "Coffret Cadeau/笔芯独立 UPSELL；Gravure 独立 SERVICE；免费项继续不计费。",
+        "数据管理菜单恢复独立 ⌘ 图标，文字字号与其他菜单一致。",
+        "V10.2.7 部署器只新增 hotfix 与版本元数据，不修改旧业务循环，也不依赖历史源码硬锚点。"
+      ]
+    },
     {
       "version": "10.2.6",
       "time": "2026-08-13 11:35",
