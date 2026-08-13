@@ -15,6 +15,18 @@ const dec=new TextDecoder();
 const clean=v=>String(v??'').replace(/\r/g,' ').replace(/\s+/g,' ').trim();
 const upper=v=>clean(v).toUpperCase();
 const baseReviewedSku=v=>clean(v).replace(/\s*(?:\*|x|×)\s*\d+(?:[.,]\d+)?\s*$/i,'').trim();
+function reviewedBusinessRankV1051(fileName=''){
+ const t=String(fileName||'');
+ let date='';
+ const y=t.match(/(?:^|[_\-\s])(\d{4})[-_.](\d{1,2})[-_.](\d{1,2})(?:[_\-\s.]|$)/);
+ if(y)date=`${y[1]}-${String(Number(y[2])).padStart(2,'0')}-${String(Number(y[3])).padStart(2,'0')}`;
+ if(!date){
+  const d=t.match(/(?:^|[_\-\s])(\d{1,2})[-_.](\d{1,2})[-_.](\d{2,4})(?:[_\-\s.]|$)/);
+  if(d){let yy=Number(d[3]);if(yy<100)yy+=2000;date=`${yy}-${String(Number(d[2])).padStart(2,'0')}-${String(Number(d[1])).padStart(2,'0')}`;}
+ }
+ const om=[...t.matchAll(/(?:order|commande|cmd)[-_.\s#]*(\d{1,12})/gi)].map(m=>Number(m[1])).filter(Number.isFinite);
+ return {businessDate:date,latestOrderNumber:om.length?Math.max(...om):0,reviewedAt:new Date().toISOString()};
+}
 const restoreInternalKey=v=>String(v??'').replace(/\\u(0002|0003)/gi,(_,h)=>String.fromCharCode(parseInt(h,16)));
 function provenanceOrigin(p={}){
  const raw=upper(p.origin);
@@ -238,6 +250,7 @@ function reviewedGoodsCogs(spec={}){
 }
 
 async function learnExact(spec,items,fileName){
+  const businessRank=reviewedBusinessRankV1051(fileName);spec={...spec,...businessRank};
   let factRules=0,productRules=0,costRules=0,componentEquations=0,componentCostRules=0,conflicts=0,alreadyLearned=0,newRules=0,ruleIds=[];
   const count=result=>{
     const rid=String(result?.ruleId||result?.rule?.ruleId||'');if(rid&&!ruleIds.includes(rid))ruleIds.push(rid);
@@ -249,7 +262,7 @@ async function learnExact(spec,items,fileName){
   const fr=await g.WRITE_KB.learnReviewedFact(spec,true);if(count(fr)==='new')factRules++;
   const components=representativeComponents(items),goodsCogs=reviewedGoodsCogs(spec);
   if(components.length&&Number.isFinite(goodsCogs)&&g.WRITE_KB?.learnComponentCostEquation){
-    const er=await g.WRITE_KB.learnComponentCostEquation({origin:'CN',country:spec.country,currency:spec.currency,components,totalCogs:goodsCogs,configurationFingerprint:spec.configurationFingerprint,sourceFile:fileName},true).catch(()=>null);
+    const er=await g.WRITE_KB.learnComponentCostEquation({origin:'CN',country:spec.country,currency:spec.currency,components,totalCogs:goodsCogs,configurationFingerprint:spec.configurationFingerprint,sourceFile:fileName,...businessRank},true).catch(()=>null);
     if(er){componentEquations++;componentCostRules+=Number(er.solved?.learned)||0}
   }
   // V10.4.0: Configuration total remains FACT semantic evidence only.
@@ -260,7 +273,7 @@ async function learnExact(spec,items,fileName){
       productName:clean(p.productName||p.rawProductName),sku:baseReviewedSku(p.sku),family:clean(p.family),role:clean(p.role),
       normalizedDescription:clean(p.normalizedDescription||p.shortDescription),
       approvedFactDescription:spec.description,country:spec.country,origin:'CN',currency:spec.currency,
-      configurationFingerprint:spec.configurationFingerprint,sourceFile:fileName
+      configurationFingerprint:spec.configurationFingerprint,sourceFile:fileName,...businessRank
     },true);
     if(count(pr)==='new')productRules++;
   }

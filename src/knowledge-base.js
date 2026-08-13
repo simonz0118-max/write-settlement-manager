@@ -48,8 +48,8 @@ function normSku(v=''){return norm(baseSku(v))}
 function restoreFingerprint(v=''){return String(v??'').replace(/\\u(0002|0003)/gi,(_,h)=>String.fromCharCode(parseInt(h,16)))}
 function canonicalRuleOrigin(v=''){
  const raw=country(v);
- if(['CN','CHINA','CHINE','中国'].includes(raw))return'CN';
- if(['FR','FRANCE','法国'].includes(raw))return'FR';
+ if(['CN','CHINA','CHINE','中国','WRITE-CN','WRITE_CN','WRITE CN'].includes(raw))return'CN';
+ if(['FR','FRANCE','法国','WRITE-FR','WRITE_FR','WRITE FR'].includes(raw))return'FR';
  if(/SHIPSTER|\bJJ\b|中国仓|CHINA/i.test(String(v||'')))return'CN';
  if(/法国仓|FRANCE\s*WAREHOUSE|WAREHOUSE\s*FR|ENTREP[OÔ]T\s*FR/i.test(String(v||'')))return'FR';
  return raw||'UNKNOWN';
@@ -247,7 +247,11 @@ function parseBusinessDateFromText(v=''){
   return '';
 }
 function maxOrderNumberFromText(v=''){
-  const nums=String(v||'').match(/\d{4,}/g)||[];
+  const text=String(v||'');
+  const explicit=[...text.matchAll(/(?:order|commande|cmd)[-_.\s#]*(\d{1,12})/gi)]
+    .map(m=>Number(m[1])).filter(Number.isFinite);
+  if(explicit.length)return explicit.reduce((m,x)=>Math.max(m,x),0);
+  const nums=text.match(/\d{4,}/g)||[];
   return nums.reduce((m,x)=>Math.max(m,Number(x)||0),0);
 }
 function ruleBusinessRank(payload={}){
@@ -266,7 +270,16 @@ function compareBusinessRank(a={},b={}){
 }
 function semanticPayloadSignature(type,payload={}){
   const p={...payload};
-  delete p.sourceFile;delete p.quantity;delete p.amount;delete p.confidence;delete p.sourceFactDescription;
+  // Provenance/ranking metadata is evidence, never business-value identity.
+  for(const k of ['sourceFile','quantity','amount','confidence','sourceFactDescription','businessDate','latestOrderNumber','reviewedAt'])delete p[k];
+  if(type==='REVIEWED_PRODUCT'){
+    // One SKU can appear in many FACT Configurations/quantities without becoming a product conflict.
+    for(const k of ['approvedFactDescription','configurationFingerprint','productName'])delete p[k];
+  }
+  if(type==='COST_MODEL'){
+    // Cost conflict means actual price model disagreement, not different evidence wording/composition.
+    for(const k of ['productName','cogs','shipping'])delete p[k];
+  }
   return payloadSignature(p);
 }
 function sameSemanticPayload(type,a,b){return semanticPayloadSignature(type,a)===semanticPayloadSignature(type,b)}
@@ -301,7 +314,8 @@ async function learnCostModel(spec={},manual=true){
   const keys=costLookupKeys(spec);if(!keys.length)throw new Error('成本规则缺少商品身份');
   const lookupKey=keys[0],payload={productName:String(spec.productName||''),sku:String(spec.sku||''),country:country(spec.country),currency:String(spec.currency||'').toUpperCase(),
     strategy:String(spec.strategy||'UNIT_FIXED'),unitCost:spec.unitCost,orderCost:spec.orderCost,percent:spec.percent,tiers:Array.isArray(spec.tiers)?spec.tiers:[],
-    cogs:spec.cogs,shipping:spec.shipping,sourceFactDescription:String(spec.sourceFactDescription||''),sourceFile:String(spec.sourceFile||''),confidence:Number(spec.confidence)||0};
+    cogs:spec.cogs,shipping:spec.shipping,sourceFactDescription:String(spec.sourceFactDescription||''),sourceFile:String(spec.sourceFile||''),confidence:Number(spec.confidence)||0,
+    businessDate:String(spec.businessDate||''),latestOrderNumber:Number(spec.latestOrderNumber)||0,reviewedAt:String(spec.reviewedAt||'')};
   const existing=find('COST_MODEL',lookupKey);
   if(existing?.confirmed&&sameSemanticPayload('COST_MODEL',existing.payload,payload))return learnedNoop(existing);
   if(existing?.confirmed){
@@ -345,7 +359,8 @@ function reviewedProductLookupKeys(spec={}){
 function reviewedProduct(spec={}){for(const k of reviewedProductLookupKeys(spec)){const r=find('REVIEWED_PRODUCT',k);if(r)return r}return compatibleSkuRule('REVIEWED_PRODUCT',spec)}
 async function learnReviewedProduct(spec={},manual=true){
   const keys=reviewedProductLookupKeys(spec);if(!keys.length)throw new Error('审核商品规则缺少 SKU/产品名');
-  const lookupKey=keys[0],payload={productName:String(spec.productName||''),sku:String(spec.sku||''),family:String(spec.family||''),role:String(spec.role||''),normalizedDescription:String(spec.normalizedDescription||''),approvedFactDescription:String(spec.approvedFactDescription||''),country:country(spec.country),origin:country(spec.origin),currency:String(spec.currency||'').toUpperCase(),configurationFingerprint:String(spec.configurationFingerprint||''),sourceFile:String(spec.sourceFile||'')};
+  const lookupKey=keys[0],payload={productName:String(spec.productName||''),sku:String(spec.sku||''),family:String(spec.family||''),role:String(spec.role||''),normalizedDescription:String(spec.normalizedDescription||''),approvedFactDescription:String(spec.approvedFactDescription||''),country:country(spec.country),origin:country(spec.origin),currency:String(spec.currency||'').toUpperCase(),configurationFingerprint:String(spec.configurationFingerprint||''),sourceFile:String(spec.sourceFile||''),
+    businessDate:String(spec.businessDate||''),latestOrderNumber:Number(spec.latestOrderNumber)||0,reviewedAt:String(spec.reviewedAt||'')};
   const existing=find('REVIEWED_PRODUCT',lookupKey);
   if(existing?.confirmed&&sameSemanticPayload('REVIEWED_PRODUCT',existing.payload,payload))return learnedNoop(existing);
   if(existing?.confirmed){
@@ -363,7 +378,8 @@ async function learnReviewedProduct(spec={},manual=true){
 function reviewedFactLookupKey(spec={}){return[String(spec.invoiceEntity||'DEFAULT'),canonicalRuleOrigin(spec.origin),country(spec.country),String(spec.currency||'').toUpperCase(),String(spec.taxRegime||'UNSPECIFIED'),String(spec.role||''),restoreFingerprint(spec.configurationFingerprint)].join('\u0001')}
 function reviewedFact(spec={}){return find('REVIEWED_FACT',reviewedFactLookupKey(spec))||compatibleReviewedFact(spec)||null}
 async function learnReviewedFact(spec={},manual=true){
-  const lookupKey=reviewedFactLookupKey(spec),payload={invoiceEntity:String(spec.invoiceEntity||'DEFAULT'),origin:country(spec.origin),country:country(spec.country),currency:String(spec.currency||'').toUpperCase(),taxRegime:String(spec.taxRegime||'UNSPECIFIED'),role:String(spec.role||''),configurationFingerprint:String(spec.configurationFingerprint||''),description:String(spec.description||''),cogs:spec.cogs,shipping:spec.shipping,unitTotal:spec.unitTotal,amount:spec.amount,quantity:spec.quantity,sourceFile:String(spec.sourceFile||'')};
+  const lookupKey=reviewedFactLookupKey(spec),payload={invoiceEntity:String(spec.invoiceEntity||'DEFAULT'),origin:country(spec.origin),country:country(spec.country),currency:String(spec.currency||'').toUpperCase(),taxRegime:String(spec.taxRegime||'UNSPECIFIED'),role:String(spec.role||''),configurationFingerprint:String(spec.configurationFingerprint||''),description:String(spec.description||''),cogs:spec.cogs,shipping:spec.shipping,unitTotal:spec.unitTotal,amount:spec.amount,quantity:spec.quantity,sourceFile:String(spec.sourceFile||''),businessDate:String(spec.businessDate||''),
+    latestOrderNumber:Number(spec.latestOrderNumber)||0,reviewedAt:String(spec.reviewedAt||'')};
   if(!payload.configurationFingerprint)throw new Error('审核 FACT 规则缺少 Configuration');
   const existing=find('REVIEWED_FACT',lookupKey);
   if(existing?.confirmed&&sameSemanticPayload('REVIEWED_FACT',existing.payload,payload))return learnedNoop(existing);
@@ -471,6 +487,21 @@ async function learnComponentCostEquation(spec={},manual=true){
   if(!components.length||!Number.isFinite(totalCogs)||totalCogs<0)return {skipped:true,reason:'INVALID_COMPONENT_EQUATION'};
   const lookupKey=componentEquationKey({...spec,components});
   const payload={origin:'CN',country:country(spec.country),currency:String(spec.currency||'').toUpperCase(),components,totalCogs:Math.round(totalCogs*10000)/10000,configurationFingerprint:String(spec.configurationFingerprint||''),sourceFile:String(spec.sourceFile||''),businessDate:String(spec.businessDate||''),latestOrderNumber:Number(spec.latestOrderNumber)||0};
+  // V10.5.1: a one-component audited equation is direct cost evidence.
+  // This is what makes newer business date / same-date higher order deterministically replace an older SKU cost.
+  let directCostResult=null;
+  if(components.length===1){
+    const c=components[0],q=Number(c.quantity||0),unit=q?totalCogs/q:NaN;
+    if(Number.isFinite(unit)&&unit>=0&&unit<=500){
+      directCostResult=await learnCostModel({
+        sku:c.sku,productName:c.productName,country:spec.country,currency:spec.currency,
+        strategy:'UNIT_FIXED',unitCost:Math.round(unit*10000)/10000,
+        sourceFactDescription:'AUDITED_SINGLE_COMPONENT',sourceFile:String(spec.sourceFile||''),
+        confidence:1,businessDate:String(spec.businessDate||''),latestOrderNumber:Number(spec.latestOrderNumber)||0,
+        reviewedAt:String(spec.reviewedAt||'')
+      },true).catch(()=>null);
+    }
+  }
   const existing=find('COMPONENT_COST_EQUATION',lookupKey);let equationResult=null;
   if(existing?.confirmed&&sameSemanticPayload('COMPONENT_COST_EQUATION',existing.payload,payload))equationResult=learnedNoop(existing);
   else if(existing?.confirmed){
@@ -482,7 +513,7 @@ async function learnComponentCostEquation(spec={},manual=true){
     const rule=await upsert({type:'COMPONENT_COST_EQUATION',lookupKey,payload,confidenceLevel:manual?'MANUAL_CONFIRMED':'AUTO_INFERRED',confirmed:!!manual,source:'REVIEWED_COMPONENT_EQUATION'});
     equationResult={rule,created:true,ruleId:rule.ruleId,syncState:rule.syncState};
   }
-  const solved=await solveComponentCosts(payload);return {...equationResult,solved};
+  const solved=await solveComponentCosts(payload);return {...equationResult,directCostResult,solved:{...solved,directLearned:!!(directCostResult?.created||directCostResult?.updatedByLatest)}};
 }
 
 function conflicts(){return [...cache.values()].filter(r=>r.type==='RULE_CONFLICT'&&!r.deleted&&r.payload?.status!=='RESOLVED')}

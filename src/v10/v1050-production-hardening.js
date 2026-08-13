@@ -68,7 +68,11 @@ function hardenPackage(row){
 }
 function install(){
  const X=g.WRITE_V10_PRODUCTION;if(!X?.build||X.__v1050)return false;
- const base=X.build.bind(X);X.build=input=>{const r=base(input);(r.rows||[]).forEach(hardenPackage);r.version=VERSION;r.costLearningArchitecture='EXACT_SKU_COGS + SEMANTIC_FACT + PACKAGE_FEE_ONCE';return r};
+ const base=X.build.bind(X);X.build=input=>{const r=base(input);(r.rows||[]).forEach(hardenPackage);r.version=VERSION;r.costLearningArchitecture='EXACT_SKU_COGS + SEMANTIC_FACT + PACKAGE_FEE_ONCE';
+ X.lastResult=r;
+ try{g.WRITE_PRODUCTION_STATE={result:r,rows:r.rows||[],reviewRows:(r.rows||[]).filter(x=>x.needsReview),reviewCount:(r.rows||[]).filter(x=>x.needsReview).length};
+ g.dispatchEvent?.(new CustomEvent('write-production-result-updated',{detail:g.WRITE_PRODUCTION_STATE}));}catch{}
+ return r};
  X.__v1050=true;return true;
 }
 function lockVersion(){
@@ -88,11 +92,11 @@ function bindExport(){
  });
 }
 function reviewTruth(){
- const r=g.WRITE_V10_RUNTIME?.lastProduction||g.WRITE_V10_PRODUCTION?.lastResult;const rows=r?.rows;if(!Array.isArray(rows))return;
+ const rows=g.WRITE_PRODUCTION_STATE?.rows||g.WRITE_V10_PRODUCTION?.lastResult?.rows||g.WRITE_V10_RUNTIME?.lastProduction?.rows;if(!Array.isArray(rows))return;
  const n=rows.filter(x=>x.needsReview).length;
  for(const id of['metricReview','quickReviewCount','navReviewCount']){const e=document.getElementById(id);if(e){e.textContent=String(n);e.hidden=n===0}}
 }
-function boot(){install();lockVersion();bindExport();reviewTruth();let n=0;const t=setInterval(()=>{install();lockVersion();bindExport();reviewTruth();if(++n>40)clearInterval(t)},125)}
+function boot(){install();lockVersion();bindExport();reviewTruth();g.addEventListener?.('write-production-result-updated',()=>reviewTruth());let n=0;const t=setInterval(()=>{install();lockVersion();bindExport();reviewTruth();if(++n>40)clearInterval(t)},125)}
 if(typeof document!=='undefined'){document.readyState==='loading'?document.addEventListener('DOMContentLoaded',boot,{once:true}):boot()}else install();
 g.WRITE_V1050_HARDENING={VERSION,canonicalOrigin,hardenPackage,install,_test:{components,exactUnitCost,packageFee}};
 })(typeof window!=='undefined'?window:globalThis);

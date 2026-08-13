@@ -1,26 +1,44 @@
 {
   "current": {
-    "version": "10.5.0",
-    "time": "2026-08-13 23:45",
-    "title": "Production Learning E2E Hardening",
+    "version": "10.5.1",
+    "time": "2026-08-13 23:10",
+    "title": "E2E Closure — Origin, Rules, Import & FACT Layout",
     "sections": [
       {
-        "label": "真实 E2E 生产加固",
+        "label": "原50项真实 E2E 收口",
         "items": [
-          "根据真实浏览器/XLSX/D1 全链路 E2E FAIL 报告进行生产加固，不再以局部逻辑模拟作为上线依据。",
-          "新 SKU 生产定价只允许精确 SKU COST_MODEL；删除 V10.2.9 家族硬编码成本 fallback 的生产权威，未知成本保持空白并进入待复核。",
-          "历史 REVIEWED_FACT / CONFIG 继续保留用于语义与审计，但 V10.5 最终生产金额由精确 SKU 成本 + 独立 PACKAGE_FEE 一次性组成。",
-          "补充 WRITE-CN / WRITE_CN / WRITE CN → CN 规范化，修复人工学习包裹费因 origin=UNKNOWN 无法复用。",
-          "修复 namespace-prefixed XLSX 的双层 Worker 缓存链：base worker 与 overlay worker 均升级缓存 key 到 9.0.0-002，确保浏览器实际加载仓库已存在的 namespace-safe parser。",
-          "新增 V10.5 最终生产 hardening 层，重新校验 PACKAGE 行的 SKU 成本、包裹费、needsReview 与 priceSource。",
-          "新增统一导出按钮捕获层，hero/top/quick 三个正式导出入口统一调用生产导出控制器并显式报告错误。",
-          "V10.4 模块不再覆盖产品 release 版本；产品版本统一锁定为 V10.5.0。",
-          "保留订单数量守恒、一个订单一个包裹、会计、FACT、SAFE XLSX、IndexedDB/D1、CN/FR 隔离和完整历史更新。"
+          "基于 V10.5.0 R2 原50项真实生产 E2E（40 PASS / 10 FAIL）继续收口，不降低原断言。",
+          "CanonicalOrder 在最早阶段统一 WRITE-CN/WRITE_CN/WRITE CN 为 CN，并将 storeAccount/源店铺字段纳入 origin 判定，修复 PACKAGE_FEE scope 断链。",
+          "修复 V7.5.8 overlay 覆盖 base namespace-safe parser 的问题：row/c 与流式 nextXmlRow 全面支持合法 OOXML namespace prefix。",
+          "知识库把 PRODUCT/COST 的业务值与 Configuration/FACT 证据分离，避免同一 SKU 因组合、数量或 FACT 描述不同产生伪冲突。",
+          "业务优先级新增显式 businessDate/latestOrderNumber；order-999 等1~3位订单号也参与排序。",
+          "单 SKU 人工审核方程成为直接成本证据：更新日期或同日更大订单号可覆盖旧成本，同优先级不同值仍进入真实 conflict。",
+          "建立最终 Production Result / Review State 单一事实源，FACT needsReview 与页面待复核数量统一。",
+          "修复动态 FACT footer 下移只改 row r 而未同步 cell r 的问题，防止 Total colis 被后续 footer 单元格覆盖及银行区错位。",
+          "正式模板测试升级为 UNKNOWN/PARTIAL 保持空白红色、COMPLETE_LEARNED 可正常填价的 pricing-state 合同；生产导出合同以 XLSX 为准。",
+          "保留 V10.5.0 已通过的陌生 SKU 留空标红、导出按钮、CONFIG 退出主定价、D1 跨设备同步、数量守恒和完整历史。"
         ]
       }
     ]
   },
   "history": [
+    {
+      "version": "10.5.1",
+      "time": "2026-08-13 23:10",
+      "title": "E2E Closure — Origin, Rules, Import & FACT Layout",
+      "items": [
+        "基于 V10.5.0 R2 原50项真实生产 E2E（40 PASS / 10 FAIL）继续收口，不降低原断言。",
+        "CanonicalOrder 在最早阶段统一 WRITE-CN/WRITE_CN/WRITE CN 为 CN，并将 storeAccount/源店铺字段纳入 origin 判定，修复 PACKAGE_FEE scope 断链。",
+        "修复 V7.5.8 overlay 覆盖 base namespace-safe parser 的问题：row/c 与流式 nextXmlRow 全面支持合法 OOXML namespace prefix。",
+        "知识库把 PRODUCT/COST 的业务值与 Configuration/FACT 证据分离，避免同一 SKU 因组合、数量或 FACT 描述不同产生伪冲突。",
+        "业务优先级新增显式 businessDate/latestOrderNumber；order-999 等1~3位订单号也参与排序。",
+        "单 SKU 人工审核方程成为直接成本证据：更新日期或同日更大订单号可覆盖旧成本，同优先级不同值仍进入真实 conflict。",
+        "建立最终 Production Result / Review State 单一事实源，FACT needsReview 与页面待复核数量统一。",
+        "修复动态 FACT footer 下移只改 row r 而未同步 cell r 的问题，防止 Total colis 被后续 footer 单元格覆盖及银行区错位。",
+        "正式模板测试升级为 UNKNOWN/PARTIAL 保持空白红色、COMPLETE_LEARNED 可正常填价的 pricing-state 合同；生产导出合同以 XLSX 为准。",
+        "保留 V10.5.0 已通过的陌生 SKU 留空标红、导出按钮、CONFIG 退出主定价、D1 跨设备同步、数量守恒和完整历史。"
+      ]
+    },
     {
       "version": "10.5.0",
       "time": "2026-08-13 23:45",
@@ -1353,5 +1371,5 @@
       ]
     }
   ],
-  "currentVersion": "10.5.0"
+  "currentVersion": "10.5.1"
 }

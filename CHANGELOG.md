@@ -1,3 +1,14 @@
+## V10.5.1 — E2E Closure
+- Canonical origin now resolves WRITE-CN at CanonicalOrder ingestion time.
+- V7.5.8 overlay no longer regresses namespace-prefixed OOXML parsing.
+- REVIEWED_PRODUCT/COST semantic identity excludes configuration/evidence-only fields.
+- Business priority handles explicit order-N values of any practical length and persists businessDate/latestOrderNumber.
+- Single-component reviewed equations directly update SKU costs under deterministic business priority.
+- Production review count now shares the final production-result truth with FACT needsReview.
+- FACT footer shifts cell references together with row references, protecting Total colis and bank layout.
+- The official template gate is now the current pricing-state + XLSX production contract.
+- Release history/release-meta/index/CHANGELOG synchronized to 10.5.1.
+
 ## V10.5.0 — Production Learning E2E Hardening
 - Production pricing authority is exact SKU COST_MODEL + learned PACKAGE_FEE once.
 - Unknown SKU family fallback costs are no longer production-authoritative.

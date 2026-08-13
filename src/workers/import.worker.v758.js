@@ -17,10 +17,10 @@ function v750ColumnLabel(n){
 // deliberately ignored, so pathological sheets that style cells through XFD do
 // not become 16,384-column dense arrays. Any non-empty cell is still retained.
 parseRelevantRow = function(rowXml, sharedStrings) {
-  const rowNum = Number(/<row[^>]*\br="(\d+)"/.exec(rowXml)?.[1] || 0);
+  const rowNum = Number(/<(?:[A-Za-z_][\w.-]*:)?row[^>]*\br="(\d+)"/.exec(rowXml)?.[1] || 0);
   const values = [];
   const rawCells = {};
-  const cellRe = /<c\b([^>]*?)(?:\/>|>([\s\S]*?)<\/c>)/g;
+  const cellRe = /<(?:[A-Za-z_][\w.-]*:)?c\b([^>]*?)(?:\/>|>([\s\S]*?)<\/(?:[A-Za-z_][\w.-]*:)?c>)/g;
   let match;
   while ((match = cellRe.exec(rowXml))) {
     const ref = /\br="([A-Z]+\d+)"/.exec(match[1])?.[1];
@@ -135,11 +135,11 @@ parseSheetStream = async function(archive, entry, sharedStrings, sourceFile, she
 
   function consume(){
     while(true){
-      const start=buffer.indexOf('<row');
-      if(start<0){if(buffer.length>4096)buffer=buffer.slice(-4096);return}
-      const end=buffer.indexOf('</row>',start);
+      const bounds=nextXmlRow(buffer);
+      if(!bounds){if(buffer.length>4096)buffer=buffer.slice(-4096);return}
+      const {start,end,length}=bounds;
       if(end<0){if(start>0)buffer=buffer.slice(start);return}
-      const rowXml=buffer.slice(start,end+6);buffer=buffer.slice(end+6);
+      const rowXml=buffer.slice(start,end+length);buffer=buffer.slice(end+length);
       const row=parseRelevantRow(rowXml,sharedStrings);
       const hasData=Object.keys(row.rawCells||{}).length>0;if(hasData)nonEmptyRows++;
       if(!schema){

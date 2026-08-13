@@ -192,7 +192,14 @@ function patchUnifiedFactTemplateSheetXml(xml,data,workbookName){
 
   const before=rows.filter(x=>x.n<firstDynamic).map(x=>x.xml).join('');
   const after=rows.filter(x=>x.n>=oldFooterStart)
-    .map(x=>shiftTemplateRowXml(x.xml,x.n,x.n+delta,oldTotal,totalRow)).join('');
+    .map(x=>{
+      const newRow=x.n+delta;
+      let shifted=shiftTemplateRowXml(x.xml,x.n,newRow,oldTotal,totalRow);
+      // V10.5.1 invariant: a row's cell references must match its final row number.
+      // Previously row r=19 could still contain A17/B17..., overwriting Total colis.
+      shifted=shifted.replace(/\br=\"([A-Z]{1,3})\d+\"/g,(_,col)=>`r=\"${col}${newRow}\"`);
+      return shifted;
+    }).join('');
 
   const countryHeaderRows=[];
   const bodyXml=expanded.map((r,i)=>{
