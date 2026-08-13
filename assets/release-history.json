@@ -1,23 +1,34 @@
 {
   "current": {
-    "version": "10.3.5",
-    "time": "2026-08-13 16:05",
-    "title": "Legacy Runtime Source Cleanup + Cloud Catalog Recovery",
+    "version": "10.3.6",
+    "time": "2026-08-13 16:22",
+    "title": "Sidebar Typography Parity + Dashboard Metric Fit",
     "sections": [
       {
-        "label": "V10.3.5",
+        "label": "V10.3.6",
         "items": [
-          "源头禁用 cloud-rule-library-v102、v1027、v1028 的菜单和版本写入副作用。",
-          "数据管理只保留与其它菜单完全同构的单图标 + 直接文字 DOM。",
-          "移除旧 history-runtime 与 V10.3.4 双历史渲染竞争。",
-          "pages.dev 遇 Catalog 404 自动回退 f.neovora.co 生产 API。",
-          "Catalog API 增加 CORS GET/POST/OPTIONS。",
-          "保留套装、成本、单包裹运费业务逻辑。"
+          "统一数据管理与其它侧栏菜单的字号、字重、间距、行高和图标宽度。",
+          "覆盖 cloud-rule-library-v102 遗留的 learning-only 导航 CSS。",
+          "首页六个指标卡使用容器相对字号，长金额不再被右侧裁切。",
+          "订单总额使用更保守字号，兼容千分位、小数与 €。",
+          "保留 V10.3.5 云端和结算核心。"
         ]
       }
     ]
   },
   "history": [
+    {
+      "version": "10.3.6",
+      "time": "2026-08-13 16:22",
+      "title": "Sidebar Typography Parity + Dashboard Metric Fit",
+      "items": [
+        "统一数据管理与其它侧栏菜单的字号、字重、间距、行高和图标宽度。",
+        "覆盖 cloud-rule-library-v102 遗留的 learning-only 导航 CSS。",
+        "首页六个指标卡使用容器相对字号，长金额不再被右侧裁切。",
+        "订单总额使用更保守字号，兼容千分位、小数与 €。",
+        "保留 V10.3.5 云端和结算核心。"
+      ]
+    },
     {
       "version": "10.3.5",
       "time": "2026-08-13 16:05",
