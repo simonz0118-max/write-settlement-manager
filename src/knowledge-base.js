@@ -380,6 +380,111 @@ async function learnReviewedFact(spec={},manual=true){
   return {rule,created:true,ruleId:rule?.ruleId||'',syncState:rule?.syncState||''};
 }
 
+
+function componentIdentity(spec={}){
+  const sku=normSku(spec.sku),name=norm(spec.productName);
+  return sku?{key:'sku:'+sku,sku:String(spec.sku||''),productName:String(spec.productName||'')}:
+    (name?{key:'name:'+name,sku:'',productName:String(spec.productName||'')} : null);
+}
+function normalizeEquationComponents(items=[]){
+  const m=new Map();
+  for(const x of items||[]){
+    const id=componentIdentity(x);if(!id)continue;
+    const q=Math.max(0,Number(x.quantity??x.multiplicity??1)||0);if(!q)continue;
+    const cur=m.get(id.key)||{...id,quantity:0};cur.quantity+=q;m.set(id.key,cur);
+  }
+  return [...m.values()].sort((a,b)=>a.key.localeCompare(b.key));
+}
+function equationScope(payload={}){return [canonicalRuleOrigin(payload.origin||'CN'),country(payload.country),String(payload.currency||'').toUpperCase()].join('\u0001')}
+function componentEquationKey(spec={}){
+  const comps=normalizeEquationComponents(spec.components||[]);
+  return equationScope(spec)+'\u0001'+comps.map(x=>x.key+'\u0002'+x.quantity).join('\u0003');
+}
+function componentEquations(scopeSpec={}){
+  const scope=equationScope(scopeSpec);
+  return [...cache.values()].filter(r=>r.type==='COMPONENT_COST_EQUATION'&&!r.deleted&&r.confirmed!==false&&equationScope(r.payload||{})===scope)
+    .sort((a,b)=>String(b.updatedAt||'').localeCompare(String(a.updatedAt||'')));
+}
+function knownComponentUnit(comp,scope={}){
+  try{
+    const r=calculateCost({sku:comp.sku,productName:comp.productName,country:scope.country,currency:scope.currency,quantity:1,orderAmount:0});
+    return r?.resolved&&Number.isFinite(Number(r.unitCost))?Number(r.unitCost):null;
+  }catch{return null}
+}
+function solveLinear(A,b){
+  const n=A[0]?.length||0,m=A.length;if(!n||m<n)return null;
+  const ata=Array.from({length:n},()=>Array(n).fill(0)),atb=Array(n).fill(0);
+  for(let r=0;r<m;r++)for(let i=0;i<n;i++){atb[i]+=A[r][i]*b[r];for(let j=0;j<n;j++)ata[i][j]+=A[r][i]*A[r][j]}
+  const aug=ata.map((row,i)=>[...row,atb[i]]);
+  for(let c=0;c<n;c++){
+    let p=c;for(let r=c+1;r<n;r++)if(Math.abs(aug[r][c])>Math.abs(aug[p][c]))p=r;
+    if(Math.abs(aug[p][c])<1e-9)return null;
+    [aug[c],aug[p]]=[aug[p],aug[c]];
+    const d=aug[c][c];for(let j=c;j<=n;j++)aug[c][j]/=d;
+    for(let r=0;r<n;r++){if(r===c)continue;const f=aug[r][c];for(let j=c;j<=n;j++)aug[r][j]-=f*aug[c][j]}
+  }
+  return aug.map(r=>r[n]);
+}
+async function solveComponentCosts(scopeSpec={}){
+  const eqs=componentEquations(scopeSpec),scope={origin:canonicalRuleOrigin(scopeSpec.origin||'CN'),country:country(scopeSpec.country),currency:String(scopeSpec.currency||'').toUpperCase()};
+  const componentMeta=new Map();for(const e of eqs)for(const c of(e.payload?.components||[]))componentMeta.set(c.key,c);
+  let learned=0,passes=0;
+  for(;passes<12;passes++){
+    let changed=false;
+    for(const e of eqs){
+      const p=e.payload||{};let residual=Number(p.totalCogs),unknown=[];
+      if(!Number.isFinite(residual))continue;
+      for(const c of(p.components||[])){const u=knownComponentUnit(c,scope);if(u===null)unknown.push(c);else residual-=u*Number(c.quantity||0)}
+      if(unknown.length!==1)continue;
+      const c=unknown[0],q=Number(c.quantity||0),unit=q?residual/q:NaN;
+      if(!Number.isFinite(unit)||unit<0||unit>500)continue;
+      const rr=await learnCostModel({sku:c.sku,productName:c.productName,country:scope.country,currency:scope.currency,strategy:'UNIT_FIXED',unitCost:Math.round(unit*10000)/10000,sourceFactDescription:'AUDITED_COMPONENT_EQUATION',sourceFile:p.sourceFile||'',confidence:1},true).catch(()=>null);
+      if(rr&&!rr.conflict&&!rr.unchanged&&!rr.alreadyLearned){learned++;changed=true}
+    }
+    if(changed)continue;
+    const unknownKeys=[...componentMeta.keys()].filter(k=>knownComponentUnit(componentMeta.get(k),scope)===null);
+    if(!unknownKeys.length||unknownKeys.length>24)break;
+    const A=[],B=[],used=[];
+    for(const e of eqs){
+      const p=e.payload||{};let rhs=Number(p.totalCogs);if(!Number.isFinite(rhs))continue;
+      const row=Array(unknownKeys.length).fill(0);
+      for(const c of(p.components||[])){const u=knownComponentUnit(c,scope),q=Number(c.quantity||0);if(u===null){const i=unknownKeys.indexOf(c.key);if(i>=0)row[i]+=q}else rhs-=u*q}
+      if(row.some(v=>Math.abs(v)>1e-12)){A.push(row);B.push(rhs);used.push(e)}
+    }
+    if(A.length<unknownKeys.length)break;
+    const x=solveLinear(A,B);if(!x||x.some(v=>!Number.isFinite(v)||v<0||v>500))break;
+    let valid=true;
+    for(let r=0;r<A.length;r++){const pred=A[r].reduce((s,v,i)=>s+v*x[i],0),tol=Math.max(.03,Math.abs(B[r])*.012);if(Math.abs(pred-B[r])>tol){valid=false;break}}
+    if(!valid)break;
+    for(let i=0;i<unknownKeys.length;i++){
+      const c=componentMeta.get(unknownKeys[i]),src=used.map(e=>e.payload?.sourceFile||'').filter(Boolean).sort().pop()||'';
+      const rr=await learnCostModel({sku:c.sku,productName:c.productName,country:scope.country,currency:scope.currency,strategy:'UNIT_FIXED',unitCost:Math.round(x[i]*10000)/10000,sourceFactDescription:'AUDITED_COMPONENT_SYSTEM',sourceFile:src,confidence:1},true).catch(()=>null);
+      if(rr&&!rr.conflict&&!rr.unchanged&&!rr.alreadyLearned){learned++;changed=true}
+    }
+    if(!changed)break;
+  }
+  return {learned,passes,equations:eqs.length};
+}
+async function learnComponentCostEquation(spec={},manual=true){
+  const components=normalizeEquationComponents(spec.components||[]),totalCogs=Number(spec.totalCogs);
+  if(canonicalRuleOrigin(spec.origin||'CN')!=='CN')return {ignoredFR:true};
+  if(!components.length||!Number.isFinite(totalCogs)||totalCogs<0)return {skipped:true,reason:'INVALID_COMPONENT_EQUATION'};
+  const lookupKey=componentEquationKey({...spec,components});
+  const payload={origin:'CN',country:country(spec.country),currency:String(spec.currency||'').toUpperCase(),components,totalCogs:Math.round(totalCogs*10000)/10000,configurationFingerprint:String(spec.configurationFingerprint||''),sourceFile:String(spec.sourceFile||''),businessDate:String(spec.businessDate||''),latestOrderNumber:Number(spec.latestOrderNumber)||0};
+  const existing=find('COMPONENT_COST_EQUATION',lookupKey);let equationResult=null;
+  if(existing?.confirmed&&sameSemanticPayload('COMPONENT_COST_EQUATION',existing.payload,payload))equationResult=learnedNoop(existing);
+  else if(existing?.confirmed){
+    const rank=compareBusinessRank(payload,existing.payload);
+    if(rank>0){const rule=await upsert({type:'COMPONENT_COST_EQUATION',lookupKey,payload,confidenceLevel:'MANUAL_CONFIRMED',confirmed:true,source:'LATEST_BUSINESS_DATA'});equationResult={rule,updatedByLatest:true,ruleId:rule.ruleId,syncState:rule.syncState}}
+    else if(rank<0)equationResult={rule:existing,unchanged:true,alreadyLearned:true,olderIgnored:true,ruleId:existing.ruleId,syncState:existing.syncState};
+    else {const c=await recordConflict('COMPONENT_COST_EQUATION',lookupKey,existing.payload,payload,'MANUAL');equationResult={conflict:true,rule:existing,conflictRule:c}}
+  } else {
+    const rule=await upsert({type:'COMPONENT_COST_EQUATION',lookupKey,payload,confidenceLevel:manual?'MANUAL_CONFIRMED':'AUTO_INFERRED',confirmed:!!manual,source:'REVIEWED_COMPONENT_EQUATION'});
+    equationResult={rule,created:true,ruleId:rule.ruleId,syncState:rule.syncState};
+  }
+  const solved=await solveComponentCosts(payload);return {...equationResult,solved};
+}
+
 function conflicts(){return [...cache.values()].filter(r=>r.type==='RULE_CONFLICT'&&!r.deleted&&r.payload?.status!=='RESOLVED')}
 
 async function migrateLegacy(){
@@ -496,6 +601,7 @@ function stats(){
     currencyRules:rules.filter(r=>r.type==='CURRENCY_POLICY').length,
     taxRules:rules.filter(r=>r.type==='TAX_POLICY').length,
     factModels:rules.filter(r=>r.type==='FACT_MODEL').length,
+    componentEquations:rules.filter(r=>r.type==='COMPONENT_COST_EQUATION').length,
     conflicts:rules.filter(r=>r.type==='RULE_CONFLICT'&&r.payload?.status!=='RESOLVED').length,
     syncing,ready,
     online:navigator.onLine,
@@ -539,7 +645,7 @@ setInterval(()=>{if(navigator.onLine)sync().catch(()=>{})},5*60*1000);
 
 
 window.WRITE_KB={
-  init,sync,stats,list,productCategory,factPrice,learnProduct,learnPrice,learnSchema,schemaRules,schemaFor,costModel,calculateCost,learnCostModel,currencyPolicy,learnCurrencyPolicy,taxPolicy,learnTaxPolicy,learnFactModel,reviewedProduct,learnReviewedProduct,reviewedFact,learnReviewedFact,conflicts,cloudReceiptStatus,beginBatchLearning,endBatchLearning,batchLearningActive,exportBackup,importBackup,renderStatus,
+  init,sync,stats,list,productCategory,factPrice,learnProduct,learnPrice,learnSchema,schemaRules,schemaFor,costModel,calculateCost,learnCostModel,currencyPolicy,learnCurrencyPolicy,taxPolicy,learnTaxPolicy,learnFactModel,reviewedProduct,learnReviewedProduct,reviewedFact,learnReviewedFact,componentEquations,learnComponentCostEquation,solveComponentCosts,conflicts,cloudReceiptStatus,beginBatchLearning,endBatchLearning,batchLearningActive,exportBackup,importBackup,renderStatus,
   priority:PRIORITY
 };
 })();

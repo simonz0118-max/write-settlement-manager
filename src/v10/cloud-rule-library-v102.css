@@ -98,24 +98,6 @@ html[data-theme="dark"] .cr-batchbar{background:#1c1c1e!important}
    This block intentionally overrides all older cloud-rule UI patches.
    ============================================================ */
 
-.nav-item[data-view="learning"]{
-  display:flex!important;
-  align-items:center!important;
-  gap:12px!important;
-  white-space:nowrap!important;
-  overflow:hidden!important;
-}
-.nav-item[data-view="learning"] .v1024-nav-label{
-  display:block!important;
-  writing-mode:horizontal-tb!important;
-  text-orientation:mixed!important;
-  white-space:nowrap!important;
-  line-height:1.2!important;
-  font-size:14px!important;
-  font-weight:650!important;
-  letter-spacing:0!important;
-}
-
 [data-view-panel="learning"]{
   overflow:visible!important;
 }

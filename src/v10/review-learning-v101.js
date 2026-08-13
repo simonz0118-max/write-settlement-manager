@@ -219,8 +219,26 @@ function parseProv(rows){
   return rows.slice(1).filter(r=>r?.some(v=>v!==''&&v!=null))
     .map(r=>Object.fromEntries(h.map((k,i)=>[k,r[i]??''])));
 }
+
+function representativeComponents(items=[]){
+  const groups=new Map();
+  for(const p of items||[]){const oid=clean(p.orderId)||'__NO_ORDER__';if(!groups.has(oid))groups.set(oid,[]);groups.get(oid).push(p)}
+  const list=[...groups.values()][0]||[],m=new Map();
+  for(const p of list){
+    const sku=baseReviewedSku(p.sku),productName=clean(p.productName||p.rawProductName||p.shortDescription),key=sku?'sku:'+sku.toLowerCase():'name:'+normLabel(productName);
+    if(!key.replace(/^(sku:|name:)$/,''))continue;
+    const q=Math.max(0,Number(p.multiplicity||p.quantity||1)||0);if(!q)continue;
+    const x=m.get(key)||{sku,productName,quantity:0};x.quantity+=q;m.set(key,x)
+  }
+  return [...m.values()]
+}
+function reviewedGoodsCogs(spec={}){
+  const c=finite(spec.cogs);if(c!==null)return c;
+  const u=finite(spec.unitTotal),sh=finite(spec.shipping);return u!==null&&sh!==null?u-sh:null
+}
+
 async function learnExact(spec,items,fileName){
-  let factRules=0,productRules=0,costRules=0,conflicts=0,alreadyLearned=0,newRules=0,ruleIds=[];
+  let factRules=0,productRules=0,costRules=0,componentEquations=0,componentCostRules=0,conflicts=0,alreadyLearned=0,newRules=0,ruleIds=[];
   const count=result=>{
     const rid=String(result?.ruleId||result?.rule?.ruleId||'');if(rid&&!ruleIds.includes(rid))ruleIds.push(rid);
     if(result?.conflict){conflicts++;return'conflict'}
@@ -229,6 +247,11 @@ async function learnExact(spec,items,fileName){
     return'none'
   };
   const fr=await g.WRITE_KB.learnReviewedFact(spec,true);if(count(fr)==='new')factRules++;
+  const components=representativeComponents(items),goodsCogs=reviewedGoodsCogs(spec);
+  if(components.length&&Number.isFinite(goodsCogs)&&g.WRITE_KB?.learnComponentCostEquation){
+    const er=await g.WRITE_KB.learnComponentCostEquation({origin:'CN',country:spec.country,currency:spec.currency,components,totalCogs:goodsCogs,configurationFingerprint:spec.configurationFingerprint,sourceFile:fileName},true).catch(()=>null);
+    if(er){componentEquations++;componentCostRules+=Number(er.solved?.learned)||0}
+  }
   if(Number.isFinite(spec.unitTotal)){
     const cr=await g.WRITE_KB.learnCostModel({
       productName:'',sku:`CONFIG:${spec.configurationFingerprint}`,country:spec.country,currency:spec.currency,
@@ -247,9 +270,9 @@ async function learnExact(spec,items,fileName){
     },true);
     if(count(pr)==='new')productRules++;
   }
-  return{factRules,productRules,costRules,conflicts,alreadyLearned,newRules,ruleIds};
+  return{factRules,productRules,costRules,componentEquations,componentCostRules,conflicts,alreadyLearned,newRules,ruleIds};
 }
-function addCounts(a,b){for(const k of['factRules','productRules','costRules','conflicts','alreadyLearned','newRules'])a[k]=(a[k]||0)+(b[k]||0);a.ruleIds=[...new Set([...(a.ruleIds||[]),...(b.ruleIds||[])])];return a}
+function addCounts(a,b){for(const k of['factRules','productRules','costRules','componentEquations','componentCostRules','conflicts','alreadyLearned','newRules'])a[k]=(a[k]||0)+(b[k]||0);a.ruleIds=[...new Set([...(a.ruleIds||[]),...(b.ruleIds||[])])];return a}
 
 async function importNewCN(file,map,ss,sheets){
   const factS=sheets.find(s=>upper(s.name)==='FACT')||sheets.find(s=>/FACT/i.test(s.name)&&!/FR/i.test(s.name));
@@ -261,7 +284,7 @@ async function importNewCN(file,map,ss,sheets){
     const key=`${clean(p.factCountry)}\u0001${Number(p.factNo)}`;
     if(!groups.has(key))groups.set(key,[]);groups.get(key).push(p);
   }
-  const totals={factRules:0,productRules:0,costRules:0,conflicts:0,alreadyLearned:0,newRules:0,ruleIds:[]},seen=new Set();let unmatched=0;
+  const totals={factRules:0,productRules:0,costRules:0,componentEquations:0,componentCostRules:0,conflicts:0,alreadyLearned:0,newRules:0,ruleIds:[]},seen=new Set();let unmatched=0;
   for(const[key,items]of groups){
     const f=facts.by.get(key);if(!f){unmatched++;continue}
     const h=items[0],unit=Number.isFinite(f.unitTotal)?f.unitTotal:
@@ -312,7 +335,7 @@ async function importLegacyCN(file,map,ss,sheets){
   const built=g.WRITE_V10_PRODUCTION.build(orders);
   const predicted=(built.rows||[]).filter(r=>upper(r.origin)==='CN');
   const matches=alignLegacy(human,predicted);
-  const totals={factRules:0,productRules:0,costRules:0,conflicts:0,alreadyLearned:0,newRules:0,ruleIds:[]};
+  const totals={factRules:0,productRules:0,costRules:0,componentEquations:0,componentCostRules:0,conflicts:0,alreadyLearned:0,newRules:0,ruleIds:[]};
   for(const m of matches){
     const f=m.fact,p=m.predicted,unit=Number.isFinite(f.unitTotal)?f.unitTotal:
       (Number.isFinite(f.cogs)&&Number.isFinite(f.shipping)?f.cogs+f.shipping:null);
