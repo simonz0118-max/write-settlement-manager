@@ -1,27 +1,36 @@
 {
   "current": {
-    "version": "10.5.1",
-    "time": "2026-08-13 23:10",
-    "title": "E2E Closure — Origin, Rules, Import & FACT Layout",
+    "version": "10.5.2",
+    "time": "2026-08-14 10:55",
+    "title": "Final E2E Closure — Origin & Release Identity",
     "sections": [
       {
-        "label": "原50项真实 E2E 收口",
+        "label": "原50项E2E最终收口",
         "items": [
-          "基于 V10.5.0 R2 原50项真实生产 E2E（40 PASS / 10 FAIL）继续收口，不降低原断言。",
-          "CanonicalOrder 在最早阶段统一 WRITE-CN/WRITE_CN/WRITE CN 为 CN，并将 storeAccount/源店铺字段纳入 origin 判定，修复 PACKAGE_FEE scope 断链。",
-          "修复 V7.5.8 overlay 覆盖 base namespace-safe parser 的问题：row/c 与流式 nextXmlRow 全面支持合法 OOXML namespace prefix。",
-          "知识库把 PRODUCT/COST 的业务值与 Configuration/FACT 证据分离，避免同一 SKU 因组合、数量或 FACT 描述不同产生伪冲突。",
-          "业务优先级新增显式 businessDate/latestOrderNumber；order-999 等1~3位订单号也参与排序。",
-          "单 SKU 人工审核方程成为直接成本证据：更新日期或同日更大订单号可覆盖旧成本，同优先级不同值仍进入真实 conflict。",
-          "建立最终 Production Result / Review State 单一事实源，FACT needsReview 与页面待复核数量统一。",
-          "修复动态 FACT footer 下移只改 row r 而未同步 cell r 的问题，防止 Total colis 被后续 footer 单元格覆盖及银行区错位。",
-          "正式模板测试升级为 UNKNOWN/PARTIAL 保持空白红色、COMPLETE_LEARNED 可正常填价的 pricing-state 合同；生产导出合同以 XLSX 为准。",
-          "保留 V10.5.0 已通过的陌生 SKU 留空标红、导出按钮、CONFIG 退出主定价、D1 跨设备同步、数量守恒和完整历史。"
+          "基于原50项真实E2E第三轮 47 PASS / 3 FAIL，仅收口 B03、B05、F02，不改动已通过的47项业务逻辑。",
+          "修复 production-core 的 WRITE-CN / storeAccount / 源店铺字段 origin 解析。",
+          "恢复已学习 CN PACKAGE_FEE 在新组合订单中的复用。",
+          "V10.5 hardening 不再覆盖产品发布版本。",
+          "历史更新页不再硬编码 10.4.1 或修改 body[data-release]。",
+          "index、release-history、release-meta、CHANGELOG 同步到 V10.5.2。"
         ]
       }
     ]
   },
   "history": [
+    {
+      "version": "10.5.2",
+      "time": "2026-08-14 10:55",
+      "title": "Final E2E Closure — Origin & Release Identity",
+      "items": [
+        "基于原50项真实E2E第三轮 47 PASS / 3 FAIL，仅收口 B03、B05、F02，不改动已通过的47项业务逻辑。",
+        "修复 production-core 的 WRITE-CN / storeAccount / 源店铺字段 origin 解析。",
+        "恢复已学习 CN PACKAGE_FEE 在新组合订单中的复用。",
+        "V10.5 hardening 不再覆盖产品发布版本。",
+        "历史更新页不再硬编码 10.4.1 或修改 body[data-release]。",
+        "index、release-history、release-meta、CHANGELOG 同步到 V10.5.2。"
+      ]
+    },
     {
       "version": "10.5.1",
       "time": "2026-08-13 23:10",
@@ -1371,5 +1380,5 @@
       ]
     }
   ],
-  "currentVersion": "10.5.1"
+  "currentVersion": "10.5.2"
 }

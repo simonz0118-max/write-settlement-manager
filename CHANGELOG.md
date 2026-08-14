@@ -1,3 +1,8 @@
+## V10.5.2 — Final E2E Closure
+- Fix production-core WRITE-CN canonical origin and PACKAGE_FEE scope reuse.
+- Stop hardening/history modules from overriding product release identity.
+- Synchronize index/release-history/release-meta/CHANGELOG.
+
 ## V10.5.1 — E2E Closure
 - Canonical origin now resolves WRITE-CN at CanonicalOrder ingestion time.
 - V7.5.8 overlay no longer regresses namespace-prefixed OOXML parsing.

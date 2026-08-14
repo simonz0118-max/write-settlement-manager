@@ -3,14 +3,11 @@
 const clean=v=>String(v??'').replace(/\r/g,' ').replace(/\s+/g,' ').trim();
 const norm=v=>clean(v).toUpperCase();
 function canonicalOrigin(o={}){
- const raw=norm(o.fulfillmentOrigin||o.origin);
- if(['CN','CHINA','CHINE','中国'].includes(raw))return'CN';
- if(['FR','FRANCE','法国'].includes(raw))return'FR';
+ const raw=norm(o.fulfillmentOrigin||o.origin||o.storeAccount||o.shopAccount||o.salesChannel||o.sourceRawFields?.['店铺账号']||o.rawFields?.['店铺账号']||'').replace(/_/g,'-').replace(/\s+/g,'-');
+ if(['CN','CHINA','CHINE','中国','WRITE-CN','WRITE-CHINA'].includes(raw)||/(?:^|-)WRITE-CN(?:$|-)|中国仓|CHINA-WAREHOUSE|SHIPSTER/.test(raw))return'CN';
+ if(['FR','FRANCE','法国','WRITE-FR','WRITE-FRANCE'].includes(raw)||/(?:^|-)WRITE-FR(?:$|-)|法国仓|FRANCE-WAREHOUSE/.test(raw))return'FR';
  const inferred=g.WRITE_HUMAN_WORKFLOW_V84?.fulfillmentOrigin?.({...o,fulfillmentOrigin:'',origin:''})?.origin;
  if(inferred==='CN'||inferred==='FR')return inferred;
- const store=clean(o.storeAccount||o.shopAccount||o.rawFields?.['店铺账号']);
- if(/SHIPSTER|\bJJ\b|中国仓|CHINA/i.test(store))return'CN';
- if(/法国仓|FRANCE\s*WAREHOUSE|WAREHOUSE\s*FR|ENTREP[OÔ]T\s*FR/i.test(store))return'FR';
  return'UNKNOWN';
 }
 function restoreConfig(v=''){return String(v??'').replace(/\\u(0002|0003)/gi,(_,h)=>String.fromCharCode(parseInt(h,16)))}

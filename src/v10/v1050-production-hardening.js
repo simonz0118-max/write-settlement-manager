@@ -4,12 +4,15 @@
  * REVIEWED_FACT/CONFIG are semantic/audit only. No family fallback price.
  */
 (function(g){'use strict';
-const VERSION='10.5.0';
+const MODULE_VERSION='10.5.0';
 const clean=v=>String(v??'').replace(/\r/g,' ').replace(/\s+/g,' ').trim();
 const upper=v=>clean(v).toUpperCase();
 const norm=v=>clean(v).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
 const baseSku=v=>clean(v).replace(/\s*(?:\*|x|×)\s*\d+(?:[.,]\d+)?\s*$/i,'').trim();
 const round4=n=>Math.round((Number(n)+Number.EPSILON)*10000)/10000;
+function releaseVersion(){
+ return String(g.WRITE_RELEASE_META?.current?.version||document?.body?.dataset?.release||'10.5.2').trim()||'10.5.2';
+}
 function canonicalOrigin(v=''){
  const s=upper(typeof v==='object'?(v.fulfillmentOrigin||v.origin||v.storeAccount||v.shopAccount||''):v).replace(/_/g,'-').replace(/\s+/g,'-');
  if(['CN','CHINA','CHINE','中国','WRITE-CN','WRITE-CHINA'].includes(s)||/(^|-)WRITE-CN($|-)|中国仓|SHIPSTER/.test(s))return'CN';
@@ -68,7 +71,7 @@ function hardenPackage(row){
 }
 function install(){
  const X=g.WRITE_V10_PRODUCTION;if(!X?.build||X.__v1050)return false;
- const base=X.build.bind(X);X.build=input=>{const r=base(input);(r.rows||[]).forEach(hardenPackage);r.version=VERSION;r.costLearningArchitecture='EXACT_SKU_COGS + SEMANTIC_FACT + PACKAGE_FEE_ONCE';
+ const base=X.build.bind(X);X.build=input=>{const r=base(input);(r.rows||[]).forEach(hardenPackage);r.version=releaseVersion();r.costLearningArchitecture='EXACT_SKU_COGS + SEMANTIC_FACT + PACKAGE_FEE_ONCE';
  X.lastResult=r;
  try{g.WRITE_PRODUCTION_STATE={result:r,rows:r.rows||[],reviewRows:(r.rows||[]).filter(x=>x.needsReview),reviewCount:(r.rows||[]).filter(x=>x.needsReview).length};
  g.dispatchEvent?.(new CustomEvent('write-production-result-updated',{detail:g.WRITE_PRODUCTION_STATE}));}catch{}
@@ -77,7 +80,8 @@ function install(){
 }
 function lockVersion(){
  if(typeof document==='undefined')return;
- document.body.dataset.release=VERSION;document.querySelectorAll('.brand-copy small').forEach(x=>x.textContent=`v${VERSION} Production`);
+ const v=releaseVersion();
+ document.querySelectorAll('.brand-copy small').forEach(x=>x.textContent=`v${v} Production`);
 }
 function bindExport(){
  if(typeof document==='undefined')return;
@@ -98,5 +102,5 @@ function reviewTruth(){
 }
 function boot(){install();lockVersion();bindExport();reviewTruth();g.addEventListener?.('write-production-result-updated',()=>reviewTruth());let n=0;const t=setInterval(()=>{install();lockVersion();bindExport();reviewTruth();if(++n>40)clearInterval(t)},125)}
 if(typeof document!=='undefined'){document.readyState==='loading'?document.addEventListener('DOMContentLoaded',boot,{once:true}):boot()}else install();
-g.WRITE_V1050_HARDENING={VERSION,canonicalOrigin,hardenPackage,install,_test:{components,exactUnitCost,packageFee}};
+g.WRITE_V1050_HARDENING={VERSION:MODULE_VERSION,releaseVersion,canonicalOrigin,hardenPackage,install,_test:{components,exactUnitCost,packageFee}};
 })(typeof window!=='undefined'?window:globalThis);
