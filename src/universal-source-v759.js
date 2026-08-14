@@ -610,21 +610,6 @@ window.WRITE_V8_SOURCE_BRIDGE = function(){
   });
 };
 
-// Runtime version marker keeps the currently deployed shell honest even before
-// the next full HTML cache-bust package is applied.
-try{
-  document.body.dataset.release=V759_VERSION;
-  const brandVersion=document.querySelector('.brand-copy small');if(brandVersion)brandVersion.textContent=`v${V759_VERSION}`;
-  const historyCurrent=document.getElementById('historyCurrentVersion');if(historyCurrent)historyCurrent.textContent=`v${V759_VERSION}`;
-  const historyHost=document.getElementById('releaseHistory');
-  if(historyHost&&!historyHost.querySelector('[data-v758-entry]')){
-    const article=document.createElement('article');article.className='history-item current';article.dataset.v757Entry='1';
-    article.innerHTML='<div class="history-meta"><span class="history-version">v7.5.8</span><time class="history-time">2026-08-10 20:45</time></div><div class="history-body"><h3>One Order One Row + True Product Quantity</h3><ul><li>160 个有效源订单必须生成 160 条独立 FACT 订单行。</li><li>Quantity 必须读取每个订单真实商品总数；不得强制为 1。</li><li>订单行数与商品数量双重守恒；历史整单成本转换为单位价后保持总金额不变。</li></ul></div>';
-    historyHost.prepend(article);
-    const count=document.getElementById('historyCount');if(count){const n=Number((count.textContent.match(/\d+/)||[])[0]||0);count.textContent=`${n+1} 个版本`;}
-  }
-}catch(e){console.warn('WRITE v7.5.8 version marker:',e)}
-
 window.WRITE_MANUAL_STANDARD_ACTIVE_V759={
   version:V759_VERSION,
   manualAccountingAggregation:true,

@@ -1,23 +1,52 @@
 {
   "current": {
-    "version": "10.5.2",
-    "time": "2026-08-14 10:55",
-    "title": "Final E2E Closure — Origin & Release Identity",
+    "version": "10.5.3",
+    "time": "2026-08-14 11:40",
+    "title": "Export Parity & Release Authority",
     "sections": [
       {
-        "label": "原50项E2E最终收口",
+        "label": "导出一致性",
         "items": [
-          "基于原50项真实E2E第三轮 47 PASS / 3 FAIL，仅收口 B03、B05、F02，不改动已通过的47项业务逻辑。",
-          "修复 production-core 的 WRITE-CN / storeAccount / 源店铺字段 origin 解析。",
-          "恢复已学习 CN PACKAGE_FEE 在新组合订单中的复用。",
-          "V10.5 hardening 不再覆盖产品发布版本。",
-          "历史更新页不再硬编码 10.4.1 或修改 body[data-release]。",
-          "index、release-history、release-meta、CHANGELOG 同步到 V10.5.2。"
+          "基于原50项真实E2E第四轮 48 PASS / 2 FAIL / 0 BLOCKED，仅收口 B05 与 F02，不改动已通过的48项业务逻辑。",
+          "修复正式导出链 export-runtime → production-adapter → production build 的仓别断链：adapter 现在逐候选字段解析 origin，UNKNOWN 不再遮挡 WRITE-CN。",
+          "导出侧统一识别 WRITE-CN / WRITE_CN / WRITE CN / CN / CHINA / CHINE / 中国为 CN，并读取 storeAccount、shopAccount、salesChannel、sourceRawFields/rawFields 店铺账号。",
+          "因此跨设备 D1 恢复后的 SKU 成本与 CN PACKAGE_FEE 可在新组合正式 Excel 中同时保留；已完整定价行不得因导出重算再次清空 Shipping/Unit Total/Amount 或标红。"
+        ]
+      },
+      {
+        "label": "版本单一事实源",
+        "items": [
+          "修复完整生产加载链的 legacy release writers：universal-source-v759、v10/runtime、review-learning-hero-v1011、v1033-safe-export 均不再写 body[data-release] 或旧侧栏版本。",
+          "首次更新弹窗继续读取权威 body[data-release]，产品版本由当前发布元数据/index 统一为 10.5.3。",
+          "新增 V10.5.3 Export Parity + Release Authority 回归合同：仅扫描 index.html 实际加载的生产脚本，禁止任何 legacy loaded module 再次成为产品版本写入者。"
+        ]
+      },
+      {
+        "label": "回归保护",
+        "items": [
+          "保留第四轮已通过的 namespace UI、SKU 独立成本、PACKAGE_FEE 学习、D1 恢复、Unknown Z 隔离、业务优先级、Total colis、SAFE XLSX、数量守恒和 50k 压力行为。",
+          "本版本不清理生产 D1 现有 conflict，不修改知识库学习语义；D1 冲突治理继续作为独立后续任务。"
         ]
       }
     ]
   },
   "history": [
+    {
+      "version": "10.5.3",
+      "time": "2026-08-14 11:40",
+      "title": "Export Parity & Release Authority",
+      "items": [
+        "基于原50项真实E2E第四轮 48 PASS / 2 FAIL / 0 BLOCKED，仅收口 B05 与 F02，不改动已通过的48项业务逻辑。",
+        "修复正式导出链 export-runtime → production-adapter → production build 的仓别断链：adapter 现在逐候选字段解析 origin，UNKNOWN 不再遮挡 WRITE-CN。",
+        "导出侧统一识别 WRITE-CN / WRITE_CN / WRITE CN / CN / CHINA / CHINE / 中国为 CN，并读取 storeAccount、shopAccount、salesChannel、sourceRawFields/rawFields 店铺账号。",
+        "因此跨设备 D1 恢复后的 SKU 成本与 CN PACKAGE_FEE 可在新组合正式 Excel 中同时保留；已完整定价行不得因导出重算再次清空 Shipping/Unit Total/Amount 或标红。",
+        "修复完整生产加载链的 legacy release writers：universal-source-v759、v10/runtime、review-learning-hero-v1011、v1033-safe-export 均不再写 body[data-release] 或旧侧栏版本。",
+        "首次更新弹窗继续读取权威 body[data-release]，产品版本由当前发布元数据/index 统一为 10.5.3。",
+        "新增 V10.5.3 Export Parity + Release Authority 回归合同：仅扫描 index.html 实际加载的生产脚本，禁止任何 legacy loaded module 再次成为产品版本写入者。",
+        "保留第四轮已通过的 namespace UI、SKU 独立成本、PACKAGE_FEE 学习、D1 恢复、Unknown Z 隔离、业务优先级、Total colis、SAFE XLSX、数量守恒和 50k 压力行为。",
+        "本版本不清理生产 D1 现有 conflict，不修改知识库学习语义；D1 冲突治理继续作为独立后续任务。"
+      ]
+    },
     {
       "version": "10.5.2",
       "time": "2026-08-14 10:55",
@@ -1380,5 +1409,5 @@
       ]
     }
   ],
-  "currentVersion": "10.5.2"
+  "currentVersion": "10.5.3"
 }

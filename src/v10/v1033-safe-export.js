@@ -1,6 +1,6 @@
 /* WRITE V10.3.3 SAFE EXPORT */
 (function(g){'use strict';
-const VERSION='10.3.3',enc=new TextEncoder(),dec=new TextDecoder();
+const MODULE_VERSION='10.3.3',enc=new TextEncoder(),dec=new TextDecoder();
 const pathOf=t=>t.startsWith('/xl/')?t.slice(1):(t.startsWith('xl/')?t:'xl/'+t.replace(/^\//,''));
 function rows(x){return [...x.matchAll(/<row\b[^>]*\br="(\d+)"[^>]*>[\s\S]*?<\/row>/g)].map(m=>({raw:m[0],row:+m[1]}))}
 function cleanFactFooter(x){const m=rows(x).find(r=>r.raw.includes('PRODUCT SALES SUMMARY / 商品销售统计'));if(!m)return x;return x.replace(/<row\b[^>]*\br="(\d+)"[^>]*>[\s\S]*?<\/row>/g,(a,n)=>+n>=m.row?'':a)}
@@ -10,8 +10,7 @@ function replaceMetric(x,label,value){return x.replace(/<row\b[^>]*\br="(\d+)"[^
 function totals(res){const s=Array.isArray(res?.productSalesSummary)?res.productSalesSummary:[],r=new Set();for(const x of(res?.rows||[]))if(x?.needsReview)for(const id of(x.sourceOrderKeys||[]))if(id)r.add(String(id));return{total:s.reduce((a,x)=>a+(Number(x.totalQty)||0),0),gifts:s.reduce((a,x)=>a+(Number(x.giftQty)||0),0),review:r.size}}
 function safePolish(map,W,res){let wb=dec.decode(map.get('xl/workbook.xml')),rx=dec.decode(map.get('xl/_rels/workbook.xml.rels')),ct=dec.decode(map.get('[Content_Types].xml'));const rels=W.rels(rx),all=W.sheets(wb),fact=all.find(s=>String(s.name).toUpperCase()==='FACT')||all[0];if(!fact)return;const fp=pathOf(rels.get(fact.rid)||'');if(map.has(fp))map.set(fp,enc.encode(cleanFactFooter(dec.decode(map.get(fp)))));const names=new Map([['FACT','FACT'],['01_结算总览','01_结算总览'],['05_订单明细','02_订单明细'],['06_商品汇总','03_商品汇总'],['90_订单审计','04_审计记录'],['WRITE_LEARNING_SOURCE','WRITE_LEARNING_SOURCE']]),keep=[],t=totals(res);for(const sh of all){const nn=names.get(sh.name),p=pathOf(rels.get(sh.rid)||'');if(nn){keep.push({...sh,newName:nn});if(map.has(p)&&sh.name==='01_结算总览'){let x=dec.decode(map.get(p));x=replaceMetric(x,'商品件数',t.total);x=replaceMetric(x,'赠品件数',t.gifts);x=replaceMetric(x,'待复核订单',t.review);map.set(p,enc.encode(x))}}else if(p)map.delete(p)}wb=wb.replace(/<sheets>[\s\S]*?<\/sheets>/,`<sheets>${keep.map(s=>`<sheet xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" name="${s.newName}" sheetId="${s.id}"${s.newName==='WRITE_LEARNING_SOURCE'?' state="veryHidden"':''} r:id="${s.rid}"/>`).join('')}</sheets>`);const kr=new Set(keep.map(s=>s.rid));rx=rx.replace(/<Relationship\b[^>]*Id="([^"]+)"[^>]*\/>/g,(a,id)=>(/worksheets\//.test(a)&&!kr.has(id))?'':a);map.set('xl/workbook.xml',enc.encode(wb));map.set('xl/_rels/workbook.xml.rels',enc.encode(rx));map.set('[Content_Types].xml',enc.encode(ct))}
 function patch(){const W=g.WRITE_V101_WORKBOOK;if(!W?.mergeFactAndAccounting||W.__v1033)return;const b=W.mergeFactAndAccounting.bind(W);W.mergeFactAndAccounting=async(f,a,res,n)=>{const blob=await b(f,a,res,n),m=await W.readZip(blob);safePolish(m,W,res);return W.writeZip(m)};W.__v1033=true}
-function stamp(){if(typeof document!=='undefined'){document.body.dataset.release=VERSION;document.querySelectorAll('.brand-copy small').forEach(x=>x.textContent='v'+VERSION+' Production')}}
-function boot(){patch();stamp();setTimeout(()=>{patch();stamp()},300)}
+function boot(){patch();setTimeout(patch,300)}
 if(typeof document!=='undefined'){document.readyState==='loading'?document.addEventListener('DOMContentLoaded',boot):boot()}else patch();
-g.WRITE_V1033={VERSION,_test:{cleanFactFooter,replaceMetric}};
+g.WRITE_V1033={VERSION:MODULE_VERSION,_test:{cleanFactFooter,replaceMetric}};
 })(typeof window!=='undefined'?window:globalThis);

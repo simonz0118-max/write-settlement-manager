@@ -79,7 +79,7 @@ async function run(files){
   return{sources:pack.sourceSummary,rows,totals:t,cloud}
 }
 function install(){const i=input();if(!i)return;i.multiple=true;i.accept='.xlsx,.zip';document.addEventListener('click',e=>{const b=e.target?.closest?.('.reviewed-import-trigger,#knowledgeImportReviewed');if(!b)return;e.preventDefault();e.stopImmediatePropagation();i.click()},true);i.addEventListener('change',async()=>{const fs=[...(i.files||[])];i.value='';if(!fs.length)return;try{await run(fs)}catch(e){g.WRITE_KB?.endBatchLearning?.();setBusy(false);const p=view('学习失败',e?.message||String(e),100,false);p.querySelector('#rlSync').innerHTML='<i class="bad"></i>未上传云端'}},true)}
-function start(){install();panel();document.body.dataset.release=VERSION;document.querySelectorAll('.brand-copy small').forEach(e=>e.textContent='v10.1.5 Production')}
+function start(){install();panel()}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();
 g.WRITE_V1015_BATCH_LEARNING={VERSION,run,expandInputFiles,extractZip,_test:{safeEntryName,aggregate}};
 })(window);

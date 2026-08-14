@@ -1,3 +1,30 @@
+## V10.5.3 — Export Parity & Release Authority
+
+### Production acceptance basis
+- Based on original 50-item real-browser E2E fourth retest: 48 PASS / 2 FAIL / 0 BLOCKED.
+- Scope is intentionally limited to B05 and F02; the 48 passing behaviors are protected from unrelated changes.
+
+### F02 — Export pricing parity
+- Root cause: formal export calls `WRITE_V10_PRODUCTION_ADAPTER.v10ForWorkbook()` and rebuilds production rows.
+- The adapter carried an older `canonicalOrigin()` and could classify `WRITE-CN` as `UNKNOWN`, so CN-scoped `PACKAGE_FEE` was lost only during export.
+- Adapter origin resolution now checks candidates independently; `UNKNOWN`/`UNSPECIFIED` do not block later valid store-account evidence.
+- CN aliases: `CN`, `CHINA`, `CHINE`, `中国`, `WRITE-CN`, `WRITE_CN`, `WRITE CN`, China-warehouse markers and Shipster.
+- FR aliases remain isolated and are resolved independently.
+- Export rows must therefore preserve learned COGS + Shipping + Unit Total + Amount and normal FACT styling when `needsReview=false`.
+- Unknown products remain blank/red and never inherit another SKU cost.
+
+### B05 — Single authoritative release identity
+- Root cause was broader than v1033: production-loaded legacy modules `universal-source-v759.js`, `v10/runtime.js`, `review-learning-hero-v1011.js`, and `v1033-safe-export.js` could each overwrite the shell release with their module version.
+- Removed product-release/sidebar mutations from all four production-loaded legacy modules while preserving their business behavior.
+- Historical module versions remain diagnostic/backward-compatibility metadata only.
+- `body[data-release]`, sidebar, release popup, history and release metadata now derive from the current product release `10.5.3`.
+
+### Regression protection
+- Added V10.5.3 source contract for export-origin aliases and release-writer prohibition.
+- Deployment gate scans production JS for forbidden legacy product-release writes.
+- Existing production/fivefold/accounting/namespace/template/SAFE-XLSX/D1 gates remain mandatory.
+- Production D1 is not cleaned or rewritten by this release.
+
 ## V10.5.2 — Final E2E Closure
 - Fix production-core WRITE-CN canonical origin and PACKAGE_FEE scope reuse.
 - Stop hardening/history modules from overriding product release identity.

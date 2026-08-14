@@ -2,15 +2,20 @@
 (function(g){'use strict';const VERSION='10.2.5';
 const v9Generic=g.generatedGenericFactRowsForWorkbook,v9Generated=g.generatedFactRowsForWorkbook,v9All=g.allGeneratedFactRows;
 function canonicalOrigin(o={}){
- const raw=String(o.fulfillmentOrigin||o.origin||'').trim().toUpperCase();
- if(['CN','CHINA','CHINE','中国'].includes(raw))return'CN';
- if(['FR','FRANCE','法国'].includes(raw))return'FR';
+ const candidates=[
+  o.fulfillmentOrigin,o.origin,o.storeAccount,o.shopAccount,o.salesChannel,
+  o.sourceRawFields?.['店铺账号'],o.rawFields?.['店铺账号']
+ ];
+ for(const value of candidates){
+  const raw=String(value??'').trim().toUpperCase().replace(/_/g,'-').replace(/\s+/g,'-');
+  if(!raw||raw==='UNKNOWN'||raw==='UNSPECIFIED'||raw==='N/A')continue;
+  if(['CN','CHINA','CHINE','中国','WRITE-CN','WRITE-CHINA'].includes(raw)||
+     /(?:^|-)WRITE-CN(?:$|-)|中国仓|CHINA-WAREHOUSE|SHIPSTER/.test(raw))return'CN';
+  if(['FR','FRANCE','法国','WRITE-FR','WRITE-FRANCE'].includes(raw)||
+     /(?:^|-)WRITE-FR(?:$|-)|法国仓|FRANCE-WAREHOUSE|WAREHOUSE-FR|ENTREP[OÔ]T-FR/.test(raw))return'FR';
+ }
  const inferred=g.WRITE_HUMAN_WORKFLOW_V84?.fulfillmentOrigin?.({...o,fulfillmentOrigin:'',origin:''})?.origin;
- if(inferred==='CN'||inferred==='FR')return inferred;
- const store=String(o.storeAccount||o.shopAccount||o.sourceRawFields?.['店铺账号']||'');
- if(/SHIPSTER|\bJJ\b|中国仓|CHINA/i.test(store))return'CN';
- if(/法国仓|FRANCE\s*WAREHOUSE|WAREHOUSE\s*FR|ENTREP[OÔ]T\s*FR/i.test(store))return'FR';
- return'UNKNOWN';
+ return inferred==='CN'||inferred==='FR'?inferred:'UNKNOWN';
 }
 function sourceOrders(workbookName){
  const b=g.WRITE_V8_SOURCE_BRIDGE?.(),all=b?.orders||[];
