@@ -1,3 +1,41 @@
+## V10.5.4 — Parcel Aggregation Pricing Integrity
+
+### Acceptance basis
+- Original 50-item real-browser E2E fifth retest: **50 PASS / 0 FAIL / 0 BLOCKED**.
+- New production-critical X07 accuracy gate failed because one learned aggregate FACT row silently overcharged.
+- Reviewed invoice total: **53.00**. Replay export total: **60.30**. Overstatement: **7.30**.
+
+### X07 root cause
+- `v1050-production-hardening.js::components(row)` previously summed every `rawEvidence.multiplicity` in an aggregated FACT row.
+- Two identical parcels containing `Stylo eternel ×1` therefore became an artificial per-parcel component quantity of 2.
+- That caused both errors at once:
+  - SKU COGS: 3.20 × 2 = 6.40 instead of 3.20 per parcel.
+  - PACKAGE_FEE tier: Q2 = 2.55 instead of Q1 = 2.10.
+- The already-wrong per-parcel total 8.95 was then multiplied again by FACT Quantity 2, producing 17.90 instead of 10.60.
+
+### New pricing invariant
+- `row.quantity` on PACKAGE FACT rows means **packageCount only**.
+- Per-parcel component multiplicity is reconstructed from `rawEvidence` grouped by `orderId + trackingNumber`.
+- COGS and PACKAGE_FEE are calculated from one parcel composition.
+- `Amount = perParcelUnitTotal × packageCount` is the only place where aggregate FACT Quantity multiplies price.
+- Identical parcel groups must have identical component signatures.
+
+### Fail-closed behavior
+- If an aggregated FACT row unexpectedly contains different parcel compositions, pricing is not guessed.
+- COGS / Shipping / Unit Total / Amount are blanked and `needsReview=true`.
+- This prevents a silent wrong invoice from being treated as learned and trusted.
+
+### Regression protection
+- Added V10.5.4 parcel-aggregation pricing contract.
+- Hard assertion for Stylo ×1, packageCount 2:
+  - COGs 3.20
+  - Shipping 2.10
+  - Unit Total 5.30
+  - Amount 10.60
+- Hard assertion that per-parcel Stylo ×2 with packageCount 2 stays Q2, not Q4.
+- Original 50 tests, F02 recombination, Unknown Z isolation, release identity, namespace, template, SAFE XLSX and D1 gates remain mandatory.
+- The V10.5.3 release-authority regression is now forward-compatible: it verifies index/history consistency against the authoritative current release instead of hard-coding 10.5.3.
+
 ## V10.5.3 — Export Parity & Release Authority
 
 ### Production acceptance basis

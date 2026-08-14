@@ -1,36 +1,54 @@
 {
   "current": {
-    "version": "10.5.3",
-    "time": "2026-08-14 11:40",
-    "title": "Export Parity & Release Authority",
+    "version": "10.5.4",
+    "time": "2026-08-14 13:10",
+    "title": "Parcel Aggregation Pricing Integrity",
     "sections": [
       {
-        "label": "导出一致性",
+        "label": "X07 根因修复",
         "items": [
-          "基于原50项真实E2E第四轮 48 PASS / 2 FAIL / 0 BLOCKED，仅收口 B05 与 F02，不改动已通过的48项业务逻辑。",
-          "修复正式导出链 export-runtime → production-adapter → production build 的仓别断链：adapter 现在逐候选字段解析 origin，UNKNOWN 不再遮挡 WRITE-CN。",
-          "导出侧统一识别 WRITE-CN / WRITE_CN / WRITE CN / CN / CHINA / CHINE / 中国为 CN，并读取 storeAccount、shopAccount、salesChannel、sourceRawFields/rawFields 店铺账号。",
-          "因此跨设备 D1 恢复后的 SKU 成本与 CN PACKAGE_FEE 可在新组合正式 Excel 中同时保留；已完整定价行不得因导出重算再次清空 Shipping/Unit Total/Amount 或标红。"
+          "原50项真实 E2E 第五轮已达到 50 PASS / 0 FAIL / 0 BLOCKED；新增核心学习准确性门槛 X07 发现聚合相同包裹时存在静默金额错误。",
+          "修复 v1050 production hardening 的 components(row)：不再把聚合 FACT rawEvidence 中多个包裹的 multiplicity 累加成单包商品数量。",
+          "PACKAGE 行现在先按 orderId + trackingNumber 恢复每个原始包裹的 composition；只有各包裹 composition 完全一致才允许聚合定价。",
+          "单包 COGS = SKU unit cost × 单包 component multiplicity；单包 Shipping = PACKAGE_FEE(单包主商品 multiplicity)；Unit Total 始终是单包值。",
+          "FACT Quantity 明确定义为 packageCount，只允许在最终 Amount = Unit Total × packageCount 阶段参与乘法。",
+          "两个 Stylo eternel ×1 包裹聚合为 Quantity=2 时，单包仍必须是 COGs 3.20 / Shipping 2.10 / Unit Total 5.30，Amount=10.60。"
         ]
       },
       {
-        "label": "版本单一事实源",
+        "label": "Fail-closed 安全",
         "items": [
-          "修复完整生产加载链的 legacy release writers：universal-source-v759、v10/runtime、review-learning-hero-v1011、v1033-safe-export 均不再写 body[data-release] 或旧侧栏版本。",
-          "首次更新弹窗继续读取权威 body[data-release]，产品版本由当前发布元数据/index 统一为 10.5.3。",
-          "新增 V10.5.3 Export Parity + Release Authority 回归合同：仅扫描 index.html 实际加载的生产脚本，禁止任何 legacy loaded module 再次成为产品版本写入者。"
+          "若聚合行意外包含不同 parcel composition，系统 fail-closed：价格置空、needsReview=true，而不是静默生成错误金额。"
         ]
       },
       {
         "label": "回归保护",
         "items": [
-          "保留第四轮已通过的 namespace UI、SKU 独立成本、PACKAGE_FEE 学习、D1 恢复、Unknown Z 隔离、业务优先级、Total colis、SAFE XLSX、数量守恒和 50k 压力行为。",
-          "本版本不清理生产 D1 现有 conflict，不修改知识库学习语义；D1 冲突治理继续作为独立后续任务。"
+          "保留第五轮已通过的 50/50 原断言、版本 10.5.3 权威链、新组合 F02、Unknown Z 隔离、D1 恢复、namespace、Total colis、SAFE XLSX 和压力守恒。",
+          "本版本不改人工审核学习规则、不改 D1 schema/数据、不清理现有 conflict；仅修单包定价与聚合数量边界。",
+          "发布门禁兼容修正：V10.5.3 export/release regression contract 不再硬编码产品版本 10.5.3，改为验证 index 与 release-history 当前权威版本一致，避免正常升级到 10.5.4 被旧合同误拦截。"
         ]
       }
     ]
   },
   "history": [
+    {
+      "version": "10.5.4",
+      "time": "2026-08-14 13:10",
+      "title": "Parcel Aggregation Pricing Integrity",
+      "items": [
+        "原50项真实 E2E 第五轮已达到 50 PASS / 0 FAIL / 0 BLOCKED；新增核心学习准确性门槛 X07 发现聚合相同包裹时存在静默金额错误。",
+        "修复 v1050 production hardening 的 components(row)：不再把聚合 FACT rawEvidence 中多个包裹的 multiplicity 累加成单包商品数量。",
+        "PACKAGE 行现在先按 orderId + trackingNumber 恢复每个原始包裹的 composition；只有各包裹 composition 完全一致才允许聚合定价。",
+        "单包 COGS = SKU unit cost × 单包 component multiplicity；单包 Shipping = PACKAGE_FEE(单包主商品 multiplicity)；Unit Total 始终是单包值。",
+        "FACT Quantity 明确定义为 packageCount，只允许在最终 Amount = Unit Total × packageCount 阶段参与乘法。",
+        "两个 Stylo eternel ×1 包裹聚合为 Quantity=2 时，单包仍必须是 COGs 3.20 / Shipping 2.10 / Unit Total 5.30，Amount=10.60。",
+        "若聚合行意外包含不同 parcel composition，系统 fail-closed：价格置空、needsReview=true，而不是静默生成错误金额。",
+        "保留第五轮已通过的 50/50 原断言、版本 10.5.3 权威链、新组合 F02、Unknown Z 隔离、D1 恢复、namespace、Total colis、SAFE XLSX 和压力守恒。",
+        "本版本不改人工审核学习规则、不改 D1 schema/数据、不清理现有 conflict；仅修单包定价与聚合数量边界。",
+        "发布门禁兼容修正：V10.5.3 export/release regression contract 不再硬编码产品版本 10.5.3，改为验证 index 与 release-history 当前权威版本一致，避免正常升级到 10.5.4 被旧合同误拦截。"
+      ]
+    },
     {
       "version": "10.5.3",
       "time": "2026-08-14 11:40",
@@ -1409,5 +1427,5 @@
       ]
     }
   ],
-  "currentVersion": "10.5.3"
+  "currentVersion": "10.5.4"
 }

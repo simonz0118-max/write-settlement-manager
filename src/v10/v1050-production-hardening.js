@@ -32,15 +32,63 @@ function exactUnitCost(e,row){
  }catch{}
  return null;
 }
-function components(row){
+function componentMap(evidence=[],row={}){
  const m=new Map();
- for(const e of row.rawEvidence||[]){
+ for(const e of evidence){
   if(String(e._role||e.role||row.role)==='FREE_GIFT')continue;
   const sku=baseSku(e.sku),name=clean(e.productName||e.rawProductName||e.shortDescription),q=Math.max(0,Number(e.multiplicity??e.quantity??1)||0);
-  if(!q)continue;const k=sku?'sku:'+norm(sku):'name:'+norm(name);if(k==='sku:'||k==='name:')continue;
-  const x=m.get(k)||{sku,productName:name,family:clean(e.family),quantity:0};x.quantity+=q;m.set(k,x);
+  if(!q)continue;
+  const k=sku?'sku:'+norm(sku):'name:'+norm(name);if(k==='sku:'||k==='name:')continue;
+  const x=m.get(k)||{sku,productName:name,family:clean(e.family),quantity:0};
+  x.quantity+=q;m.set(k,x);
  }
- return [...m.values()];
+ return [...m.values()].sort((a,b)=>(a.sku||a.productName).localeCompare(b.sku||b.productName,'en',{numeric:true,sensitivity:'base'}));
+}
+function componentSignature(comps=[]){
+ return comps.map(c=>`${baseSku(c.sku)||norm(c.productName)}\u0002${round4(c.quantity)}`).join('\u0003');
+}
+function components(row){
+ const evidence=(row.rawEvidence||[]).filter(e=>String(e._role||e.role||row.role)!=='FREE_GIFT');
+ if(!evidence.length)return [];
+ const groups=new Map();
+ for(const e of evidence){
+  const oid=clean(e.orderId),tracking=clean(e.trackingNumber);
+  // production-core aggregates PACKAGE rows only after each parcel composition is known.
+  // orderId + trackingNumber therefore identifies the original parcel represented by this evidence.
+  const parcelKey=`${oid||'(NO_ORDER)'}\u0001${tracking||'(NO_TRACKING)'}`;
+  if(!groups.has(parcelKey))groups.set(parcelKey,[]);
+  groups.get(parcelKey).push(e);
+ }
+ const parcelComps=[...groups.values()].map(xs=>componentMap(xs,row)).filter(xs=>xs.length);
+ if(parcelComps.length){
+  const sigs=new Set(parcelComps.map(componentSignature));
+  if(sigs.size===1){
+   row.packageCount=Math.max(1,Number(row.quantity)||parcelComps.length||1);
+   row.perPackageComponentSignature=componentSignature(parcelComps[0]);
+   row.componentAggregationMode='PER_PARCEL_EVIDENCE';
+   return parcelComps[0];
+  }
+  // A grouped FACT row should never contain different parcel compositions.
+  // Fail closed instead of silently issuing a wrong invoice.
+  row.componentAggregationConflict=true;
+  row.componentAggregationSignatures=[...sigs];
+  return [];
+ }
+ // Defensive fallback for legacy evidence without parcel identity:
+ // normalize aggregate quantities by FACT package count only when exact.
+ const packageCount=Math.max(1,Number(row.quantity)||1),aggregate=componentMap(evidence,row);
+ const normalized=[];
+ for(const c of aggregate){
+  const q=c.quantity/packageCount;
+  if(!Number.isFinite(q)||q<=0||Math.abs(q*packageCount-c.quantity)>1e-9){
+   row.componentAggregationConflict=true;return [];
+  }
+  normalized.push({...c,quantity:q});
+ }
+ row.packageCount=packageCount;
+ row.componentAggregationMode='NORMALIZED_LEGACY_EVIDENCE';
+ row.perPackageComponentSignature=componentSignature(normalized);
+ return normalized;
 }
 function packageFee(row,comps){
  const T=g.WRITE_V1040_LAYERING?._test;if(!T?.packageFeeSku)return null;
@@ -55,7 +103,14 @@ function packageFee(row,comps){
 function hardenPackage(row){
  if(String(row.role)!=='PACKAGE')return row;
  row.origin=canonicalOrigin(row.origin);
+ row.componentAggregationConflict=false;row.componentAggregationSignatures=[];
  const comps=components(row);let cogs=0,missing=[];
+ if(row.componentAggregationConflict){
+  row.cogs=null;row.shipping=null;row.unitTotal=null;row.amount=null;
+  row.priceBlank=true;row.needsReview=true;row.priceMatch='V1054_PARCEL_COMPOSITION_CONFLICT';
+  row.priceSource='V1054_REVIEW_REQUIRED';row.missingCostComponents=['PARCEL_COMPOSITION_CONFLICT'];
+  return row;
+ }
  for(const c of comps){const x=exactUnitCost(c,row);if(!x)missing.push(c);else cogs+=x.unitCost*c.quantity}
  const fee=packageFee(row,comps);
  if(missing.length||!fee){
@@ -65,7 +120,7 @@ function hardenPackage(row){
   return row;
  }
  row.cogs=round4(cogs);row.shipping=round4(fee.fee);row.unitTotal=round4(cogs+fee.fee);
- row.amount=round4(row.unitTotal*(Number(row.quantity)||0));row.priceBlank=false;row.needsReview=false;
+ row.packageCount=Math.max(1,Number(row.quantity)||1);row.amount=round4(row.unitTotal*row.packageCount);row.priceBlank=false;row.needsReview=false;
  row.priceMatch='V1050_EXACT_SKU_PLUS_PACKAGE_FEE';row.priceSource='V1050_EXACT_SKU_COGS_PLUS_LEARNED_PACKAGE_FEE_ONCE';
  row.packageFeeRuleSku=fee.sku;return row;
 }
@@ -102,5 +157,5 @@ function reviewTruth(){
 }
 function boot(){install();lockVersion();bindExport();reviewTruth();g.addEventListener?.('write-production-result-updated',()=>reviewTruth());let n=0;const t=setInterval(()=>{install();lockVersion();bindExport();reviewTruth();if(++n>40)clearInterval(t)},125)}
 if(typeof document!=='undefined'){document.readyState==='loading'?document.addEventListener('DOMContentLoaded',boot,{once:true}):boot()}else install();
-g.WRITE_V1050_HARDENING={VERSION:MODULE_VERSION,releaseVersion,canonicalOrigin,hardenPackage,install,_test:{components,exactUnitCost,packageFee}};
+g.WRITE_V1050_HARDENING={VERSION:MODULE_VERSION,releaseVersion,canonicalOrigin,hardenPackage,install,_test:{components,componentMap,componentSignature,exactUnitCost,packageFee}};
 })(typeof window!=='undefined'?window:globalThis);
