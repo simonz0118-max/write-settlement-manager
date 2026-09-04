@@ -1,3 +1,11 @@
+## V10.6.11 — Native Hero Structural Fix
+
+- 不再生成第二 Hero，只装饰 index.html 原生 landing/dashboard hero。
+- 启动时清理 V10.6.7-10 生成的 stage/wave/utility/footer。
+- 删除 V10.6.7-10 UI 生产加载，V10.6.11 为唯一 UI 层。
+- 保留应用原生 [hidden] 页面切换机制，不再猜测 mode。
+- V10.6.6 导出权威与 V10.5.4 冻结核心不修改。
+
 ## V10.6.10 — UI Integrity Closure
 
 - 修复双 Hero、Sidebar 品牌区遮挡、主题幽灵图标、侧栏网格与折叠状态。
