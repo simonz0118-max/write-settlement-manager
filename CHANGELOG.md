@@ -1,3 +1,11 @@
+## V10.6.9 — Pixel Rebuild 9.5 Target
+
+- 删除 V10.6.7/V10.6.8 UI 加载，使用单一结构化 UI。
+- Hero/Dashboard 固定 DOM，复用原业务按钮节点和 ID。
+- Sidebar 三列严格对齐，主题幽灵图标清除。
+- SVG 双层波形与蓝/绿/紫三卡片按最终参考图重构。
+- V10.6.6 导出权威和 V10.5.4 冻结核心不修改。
+
 ## V10.6.8 — Final Approved Reference UI Exact
 
 - 最终参考图 UI 单一覆盖层，移除 V10.6.7 UI 加载，避免样式竞争。
