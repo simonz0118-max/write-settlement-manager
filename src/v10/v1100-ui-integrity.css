@@ -1,0 +1,40 @@
+/* WRITE V11.0 Production — UI integrity fixes */
+html[data-theme="dark"] body.write-v1100 #v10614SettingsNav{
+  font-family:inherit!important;
+  font-size:14px!important;
+  font-weight:650!important;
+  line-height:1.2!important;
+  letter-spacing:0!important;
+}
+html[data-theme="dark"] body.write-v1100 #v10614SettingsNav>span:last-child{
+  font:inherit!important;
+  color:inherit!important;
+  line-height:1.2!important;
+}
+html[data-theme="dark"] body.write-v1100 #v10614SettingsNav .v10612-nav-icon{
+  width:22px!important;height:22px!important;min-width:22px!important;
+  display:grid!important;place-items:center!important;
+}
+html[data-theme="dark"] body.write-v1100 #v10614SettingsNav .v10612-nav-icon svg{
+  width:19px!important;height:19px!important;display:block!important;
+  fill:none!important;stroke:currentColor!important;stroke-width:1.8!important;
+  stroke-linecap:round!important;stroke-linejoin:round!important;
+}
+
+/* V11 owns the three hero action icons: fixed box + no inherited fill */
+html[data-theme="dark"] body.write-v1100 .v10612-action-icon{
+  width:66px!important;height:66px!important;min-width:66px!important;
+  display:grid!important;place-items:center!important;overflow:hidden!important;
+}
+html[data-theme="dark"] body.write-v1100 .v10612-action-icon svg{
+  width:29px!important;height:29px!important;display:block!important;
+  fill:none!important;stroke:currentColor!important;stroke-width:1.9!important;
+  stroke-linecap:round!important;stroke-linejoin:round!important;
+}
+html[data-theme="dark"] body.write-v1100 .v10612-action-icon svg *{
+  vector-effect:non-scaling-stroke;
+}
+
+/* V11 official version surfaces */
+html[data-theme="dark"] body.write-v1100 .brand-copy small{color:#8e897f!important}
+html[data-theme="dark"] body.write-v1100 .v10612-side-footer span:last-of-type{color:#8e897f!important}
