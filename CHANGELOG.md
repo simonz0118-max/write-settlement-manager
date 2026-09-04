@@ -1,3 +1,11 @@
+## V10.6.13 — Hero Copy Root Cause Reset
+
+- 根因确认：灰色大矩形对应 hero-copy 1180px 宽度。
+- 清零 hero-copy / immediate wrappers 的背景、圆角、阴影和 backdrop。
+- 修复 V10.6.2 workflow 将 sidebar toggle 文本清空后造成的空白按钮。
+- 不创建第二 Hero，不移动业务按钮。
+- V10.6.6 导出权威与 V10.5.4 冻结核心不修改。
+
 ## V10.6.12 — CSS Authority Cleanup
 
 - 根因修复：移除 V10.6.0/1/2 高特异性旧视觉 CSS 的生产加载。

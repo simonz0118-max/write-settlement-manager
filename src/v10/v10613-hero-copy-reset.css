@@ -1,0 +1,49 @@
+/* WRITE V10.6.13 — Hero Copy Reset */
+html[data-theme="dark"] body.write-v10613{--side:300px}
+html[data-theme="dark"] body.write-v10613 #importLanding .landing-hero .hero-copy,
+html[data-theme="dark"] body.write-v10613 [data-view-panel="dashboard"] .dashboard-hero .hero-copy,
+html[data-theme="dark"] body.write-v10613 [data-view-panel="dashboard"] .dashboard-hero .hero-copy.compact{
+  background:transparent!important;background-image:none!important;border:0!important;outline:0!important;border-radius:0!important;box-shadow:none!important;
+  backdrop-filter:none!important;-webkit-backdrop-filter:none!important;overflow:visible!important;
+}
+html[data-theme="dark"] body.write-v10613 #importLanding,
+html[data-theme="dark"] body.write-v10613 #importLanding .landing-hero,
+html[data-theme="dark"] body.write-v10613 #importLanding .dropzone,
+html[data-theme="dark"] body.write-v10613 #importLanding #idleState,
+html[data-theme="dark"] body.write-v10613 [data-view-panel="dashboard"],
+html[data-theme="dark"] body.write-v10613 [data-view-panel="dashboard"] .dashboard-hero,
+html[data-theme="dark"] body.write-v10613 [data-view-panel="dashboard"] .hero-buttons{
+  background:transparent!important;background-image:none!important;box-shadow:none!important;
+}
+html[data-theme="dark"] body.write-v10613 #importLanding .landing-hero,
+html[data-theme="dark"] body.write-v10613 [data-view-panel="dashboard"] .dashboard-hero{
+  width:100%!important;max-width:none!important;min-height:calc(100vh - 80px)!important;margin:0!important;border:0!important;border-radius:0!important;overflow:hidden!important;
+}
+html[data-theme="dark"] body.write-v10613 #importLanding .hero-copy,
+html[data-theme="dark"] body.write-v10613 [data-view-panel="dashboard"] .hero-copy{
+  max-width:1180px!important;padding-top:38px!important;padding-bottom:162px!important;
+}
+html[data-theme="dark"] body.write-v10613 .hero-copy::before{margin-bottom:17px!important}
+html[data-theme="dark"] body.write-v10613 .hero-copy>p{margin-top:17px!important}
+html[data-theme="dark"] body.write-v10613 .v10612-subline{margin-top:23px!important;margin-bottom:32px!important}
+html[data-theme="dark"] body.write-v10613 .primary-hero{background:linear-gradient(145deg,rgba(7,32,66,.96),rgba(5,20,40,.98))!important}
+html[data-theme="dark"] body.write-v10613 .landing-actions>*:nth-child(2),
+html[data-theme="dark"] body.write-v10613 .hero-buttons>*:nth-child(2){background:linear-gradient(145deg,rgba(7,43,47,.94),rgba(5,25,31,.98))!important}
+html[data-theme="dark"] body.write-v10613 .landing-actions>*:nth-child(3),
+html[data-theme="dark"] body.write-v10613 .hero-buttons>*:nth-child(3){background:linear-gradient(145deg,rgba(42,29,79,.95),rgba(24,18,50,.98))!important}
+html[data-theme="dark"] body.write-v10613 #v106SidebarToggle{font-size:0!important;line-height:1!important;position:relative!important}
+html[data-theme="dark"] body.write-v10613 #v106SidebarToggle::before{content:'☰'!important;display:block!important;color:#eef4ff!important;font-size:20px!important;font-weight:500!important;line-height:1!important}
+html[data-theme="dark"] body.write-v10613 .app-shell:not(.sidebar-collapsed) #v106SidebarToggle::before{content:'‹'!important;font-size:27px!important;transform:translateY(-1px)!important}
+html[data-theme="dark"] body.write-v10613 .v10612-wave{z-index:1!important}
+html[data-theme="dark"] body.write-v10613 .hero-copy{z-index:3!important}
+html[data-theme="dark"] body.write-v10613 .landing-hero::before,
+html[data-theme="dark"] body.write-v10613 .landing-hero::after,
+html[data-theme="dark"] body.write-v10613 .dashboard-hero::before,
+html[data-theme="dark"] body.write-v10613 .dashboard-hero::after{content:none!important;display:none!important}
+html[data-theme="dark"] body.write-v10613 .app-shell:not(.sidebar-collapsed) .sidebar{background:linear-gradient(180deg,#081421 0%,#07111d 100%)!important}
+html[data-theme="dark"] body.write-v10613 .side-tip{background:rgba(8,18,31,.54)!important}
+html[data-theme="dark"] body.write-v10613 .v10612-side-footer{margin-top:16px!important}
+@media(max-width:980px){
+ html[data-theme="dark"] body.write-v10613 #importLanding .hero-copy,
+ html[data-theme="dark"] body.write-v10613 [data-view-panel="dashboard"] .hero-copy{padding-top:46px!important;padding-bottom:140px!important}
+}
