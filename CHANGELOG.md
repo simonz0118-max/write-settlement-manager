@@ -1,3 +1,11 @@
+## V11.0.2 — Layout / Toggle / Version Closure
+
+- 修复展开侧边栏时第一张 Hero 卡被遮挡。
+- 修复浅色模式 sidebar toggle 空白。
+- 修复旧 observer 将版本回写成 v11.0 / v11.0.1。
+- 保留 V11 Earth UI、Light Theme、Settings、按钮动效和业务功能。
+- V10.6.6 导出权威与 V10.5.4 冻结核心不修改。
+
 ## V11.0.1 Production Hotfix — Light Theme
 
 - 修复浅色模式的深/浅混合、白色 Hero 大板和旧蓝紫配色回退。

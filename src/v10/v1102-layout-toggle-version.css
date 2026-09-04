@@ -1,0 +1,109 @@
+/* WRITE V11.0.2 — layout/toggle/version closure */
+
+/* 1) Expanded sidebar must reduce the usable hero width instead of letting the
+      1180px hero copy overflow under the fixed 300px sidebar. */
+body.write-v1102 .app-shell:not(.sidebar-collapsed) .landing-hero .hero-copy,
+body.write-v1102 .app-shell:not(.sidebar-collapsed) .dashboard-hero .hero-copy,
+body.write-v1102 .app-shell:not(.sidebar-collapsed) .dashboard-hero .hero-copy.compact{
+  width:100%!important;
+  max-width:100%!important;
+  min-width:0!important;
+  margin:0!important;
+  padding-left:36px!important;
+  padding-right:36px!important;
+}
+body.write-v1102 .app-shell:not(.sidebar-collapsed) .dropzone,
+body.write-v1102 .app-shell:not(.sidebar-collapsed) .landing-actions,
+body.write-v1102 .app-shell:not(.sidebar-collapsed) .hero-buttons{
+  width:min(100%,1040px)!important;
+  max-width:1040px!important;
+  min-width:0!important;
+  margin-left:auto!important;
+  margin-right:auto!important;
+}
+body.write-v1102 .app-shell:not(.sidebar-collapsed) .landing-actions,
+body.write-v1102 .app-shell:not(.sidebar-collapsed) .hero-buttons{
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+}
+body.write-v1102 .app-shell:not(.sidebar-collapsed) .primary-hero,
+body.write-v1102 .app-shell:not(.sidebar-collapsed) .secondary-hero,
+body.write-v1102 .app-shell:not(.sidebar-collapsed) .export-hero{
+  min-width:0!important;
+  width:100%!important;
+  overflow:hidden!important;
+}
+body.write-v1102 .app-shell:not(.sidebar-collapsed) .primary-hero>div,
+body.write-v1102 .app-shell:not(.sidebar-collapsed) .secondary-hero>div,
+body.write-v1102 .app-shell:not(.sidebar-collapsed) .export-hero>div{
+  min-width:0!important;
+}
+body.write-v1102 .app-shell:not(.sidebar-collapsed) .primary-hero b,
+body.write-v1102 .app-shell:not(.sidebar-collapsed) .secondary-hero b,
+body.write-v1102 .app-shell:not(.sidebar-collapsed) .export-hero b{
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+}
+
+/* On narrower laptop windows keep three cards only while they remain legible. */
+@media(max-width:1280px){
+  body.write-v1102 .app-shell:not(.sidebar-collapsed) .landing-actions,
+  body.write-v1102 .app-shell:not(.sidebar-collapsed) .hero-buttons{
+    gap:12px!important;
+  }
+  body.write-v1102 .app-shell:not(.sidebar-collapsed) .primary-hero,
+  body.write-v1102 .app-shell:not(.sidebar-collapsed) .secondary-hero,
+  body.write-v1102 .app-shell:not(.sidebar-collapsed) .export-hero{
+    grid-template-columns:54px minmax(0,1fr)!important;
+    padding:16px 44px 16px 16px!important;
+  }
+  body.write-v1102 .app-shell:not(.sidebar-collapsed) .v10612-action-icon{
+    width:54px!important;height:54px!important;min-width:54px!important;
+  }
+}
+@media(max-width:1050px){
+  body.write-v1102 .app-shell:not(.sidebar-collapsed) .landing-actions,
+  body.write-v1102 .app-shell:not(.sidebar-collapsed) .hero-buttons{
+    grid-template-columns:1fr!important;
+    width:min(100%,620px)!important;
+  }
+}
+
+/* 2) Sidebar toggle glyph authority for BOTH light and dark themes.
+      V10.6.2 clears textContent, so the icon must be supplied by CSS. */
+body.write-v1102 #v106SidebarToggle{
+  font-size:0!important;
+  line-height:1!important;
+}
+body.write-v1102 #v106SidebarToggle::before{
+  content:'☰'!important;
+  display:block!important;
+  font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif!important;
+  font-size:20px!important;
+  font-weight:500!important;
+  line-height:1!important;
+}
+body.write-v1102 .app-shell:not(.sidebar-collapsed) #v106SidebarToggle::before{
+  content:'‹'!important;
+  font-size:28px!important;
+  transform:translateY(-1px)!important;
+}
+html[data-theme="light"] body.write-v1102 #v106SidebarToggle::before{color:#3e3831!important}
+html[data-theme="dark"] body.write-v1102 #v106SidebarToggle::before{color:#eee8de!important}
+
+/* 3) Give the hero enough inner breathing room without allowing any horizontal clip. */
+body.write-v1102 .landing-hero,
+body.write-v1102 .dashboard-hero,
+body.write-v1102 .workspace,
+body.write-v1102 .content{
+  min-width:0!important;
+}
+body.write-v1102 .landing-hero,
+body.write-v1102 .dashboard-hero{
+  overflow:hidden!important;
+}
+
+/* Version surface styling only; text is enforced by patched authoritative JS. */
+body.write-v1102 .brand-copy small,
+body.write-v1102 .v10612-side-footer span:last-of-type{
+  white-space:nowrap!important;
+}
