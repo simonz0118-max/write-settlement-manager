@@ -1,0 +1,80 @@
+/* WRITE V11.0.4 — root layout authority
+   Stop centering an oversized row. Make the hero actions part of workspace flow. */
+
+body.write-v1104 .workspace{
+  min-width:0!important;
+  overflow:hidden!important;
+}
+
+body.write-v1104 .landing-hero .hero-copy,
+body.write-v1104 .dashboard-hero .hero-copy,
+body.write-v1104 .dashboard-hero .hero-copy.compact{
+  width:100%!important;
+  max-width:none!important;
+  min-width:0!important;
+  padding-left:clamp(28px,4vw,64px)!important;
+  padding-right:clamp(28px,4vw,64px)!important;
+  margin:0!important;
+}
+
+body.write-v1104 .dropzone{
+  width:100%!important;
+  max-width:none!important;
+  min-width:0!important;
+}
+
+body.write-v1104 .landing-actions,
+body.write-v1104 .hero-buttons{
+  position:static!important;
+  left:auto!important;
+  right:auto!important;
+  transform:none!important;
+  width:100%!important;
+  max-width:none!important;
+  min-width:0!important;
+  margin:0!important;
+  padding:0!important;
+  display:grid!important;
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  gap:16px!important;
+  justify-content:stretch!important;
+  align-items:stretch!important;
+  overflow:visible!important;
+}
+
+body.write-v1104 .landing-actions>*,
+body.write-v1104 .hero-buttons>*{
+  width:100%!important;
+  max-width:none!important;
+  min-width:0!important;
+  margin:0!important;
+}
+
+body.write-v1104 .primary-hero,
+body.write-v1104 .secondary-hero,
+body.write-v1104 .export-hero{
+  min-width:0!important;
+  width:100%!important;
+  max-width:100%!important;
+}
+
+@media(max-width:1120px){
+  body.write-v1104 .landing-actions,
+  body.write-v1104 .hero-buttons{
+    grid-template-columns:1fr!important;
+    max-width:620px!important;
+    margin-left:auto!important;
+    margin-right:auto!important;
+  }
+}
+
+/* Toggle remains explicit in both themes. */
+body.write-v1104 #v106SidebarToggle{font-size:0!important}
+body.write-v1104 #v106SidebarToggle::before{
+  content:'☰'!important;display:block!important;font-size:20px!important;line-height:1!important;
+}
+body.write-v1104 .app-shell:not(.sidebar-collapsed) #v106SidebarToggle::before{
+  content:'‹'!important;font-size:28px!important;
+}
+html[data-theme="light"] body.write-v1104 #v106SidebarToggle::before{color:#3e3831!important}
+html[data-theme="dark"] body.write-v1104 #v106SidebarToggle::before{color:#eee8de!important}

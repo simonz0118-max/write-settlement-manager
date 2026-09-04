@@ -1,3 +1,11 @@
+## V11.0.4 — Root Workspace Layout Fix
+
+- 删除 V11.0.3 measured-layout 运行时方案。
+- Hero / dropzone / actions 全部直接服从 workspace 100% 宽度。
+- 三张卡使用真正的 3× minmax(0,1fr) 网格，不允许向 sidebar 溢出。
+- 窄屏自动单列。
+- V10.6.6 导出权威与 V10.5.4 冻结核心不修改。
+
 ## V11.0.3 — Measured Workspace Layout Fix
 
 - 直接读取 workspace.clientWidth 计算 Hero 操作区，不再依赖历史 CSS 宽度链。
