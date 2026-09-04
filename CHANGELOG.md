@@ -1,3 +1,26 @@
+## V10.6.0 — Simple Workflow & Folder Learning
+
+### 极简操作
+- 侧边栏默认折叠；高级功能只有用户主动展开后才显示。
+- 英雄页默认只保留：导入订单、导出统计发票、导入审核后数据。
+- 默认首页隐藏统计卡片和高级面板，减少第一次使用时的操作负担。
+
+### 默认 FACT 导出
+- 点击“导出统计发票”先询问是否同时生成其他页面。
+- 默认选择为仅生成用户可见的 FACT。
+- FACT-only XLSX 仍包含 veryHidden 的 `WRITE_LEARNING_SOURCE`，因此人工审核后的学习闭环不依赖订单/会计等可见 Sheet。
+- 用户选择“FACT + 其他页面”时继续走 V10.5.4 已验证的完整导出链。
+
+### 默认审核文件夹
+- 第一次使用引导选择人工审核表文件夹。
+- 以后点击“导入审核后数据”自动扫描文件夹内 XLSX/ZIP 并调用既有批量学习模块。
+- 使用 SHA-256 内容指纹跳过未变化文件；仅在内容变化时重新学习。
+- 文件夹权限丢失时重新授权；不支持 File System Access API 的浏览器回退为原手动选文件方式。
+
+### 核心冻结边界
+- V10.5.4 Production Accepted 定价核心继续冻结。
+- 本版本不修改 SKU 成本、PACKAGE_FEE、单包 composition、FACT Quantity/packageCount、COGs、Shipping、Unit Total、Amount、Unknown 隔离、D1 定价恢复及人工审核学习语义。
+
 ## V10.5.4 — Parcel Aggregation Pricing Integrity
 
 ### Acceptance basis

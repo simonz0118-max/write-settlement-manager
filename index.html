@@ -31,13 +31,14 @@
 <link href="./src/v10/v1011-hero-learning.css?v=10.2.0-001" rel="stylesheet"/>
 <link href="./src/v10/cloud-rule-library-v102.css?v=10.2.4-001" rel="stylesheet"/>
 <link href="./src/v10/v1037-ui.css?v=10.3.7-ui-001" rel="stylesheet"/>
+<link href="./src/v10/v1060-simple-workflow.css?v=10.6.0-001" rel="stylesheet"/>
 </head>
-<body data-release="10.5.4">
+<body data-release="10.6.0">
 <div class="app-shell">
 <aside class="sidebar">
 <div class="brand">
 <img class="brand-logo brand-logo-c" src="./assets/panda-logo-c-image2.png" alt="WRITE 熊猫简笔画 Logo"/>
-<div class="brand-copy"><strong>WRITE</strong><span>Settlement Manager</span><small>v10.5.4 Production</small></div>
+<div class="brand-copy"><strong>WRITE</strong><span>Settlement Manager</span><small>v10.6.0 Production</small></div>
 </div>
 <nav class="side-nav" id="sideNav">
 <button class="nav-item active" data-view="dashboard"><span>⌂</span>首页</button>
@@ -76,8 +77,9 @@
 <div class="dropzone" id="dropzone">
 <input accept=".xlsx,.zip,.csv,.tsv,.json,.xml,.xls,.pdf,.png,.jpg,.jpeg" hidden="" id="fileInput" multiple="" type="file"/>
 <div class="landing-actions" id="idleState">
-<button class="primary-hero" id="chooseButton"><span>⇧</span><div><b>开始导入订单</b><small>支持 Excel / ZIP 格式</small></div></button>
-<button class="secondary-hero reviewed-import-trigger" id="landingReviewedImportButton" type="button"><span>✓</span><div><b>导入人工审核表</b><small>学习已审核 FACT / 成本 / SKU</small></div></button>
+<button class="primary-hero" id="chooseButton"><span>⇧</span><div><b>导入订单</b><small>选择订单 Excel / ZIP</small></div></button>
+<button class="secondary-hero" id="landingExportButton" type="button" disabled><span>⇩</span><div><b>导出统计发票</b><small>导入订单后可用</small></div></button>
+<button class="secondary-hero reviewed-import-trigger" id="landingReviewedImportButton" type="button"><span>✓</span><div><b>导入审核后数据</b><small>自动读取默认审核文件夹</small></div></button>
 <div class="privacy"></div>
 </div>
 <div class="busy-box" hidden="" id="busyState">
@@ -126,9 +128,9 @@
 <h1>订单已经完成<br/><em>分类与结算。</em></h1>
 <p>可以继续复核分类，也可以直接导出包含 FACT 分类汇总的专业 Excel 报表。</p>
 <div class="hero-buttons">
-<button class="export-hero" id="heroExportButton"><span>⇩</span><div><b>导出结算报表</b><small>FACT 汇总 + 会计明细 Excel</small></div></button>
-<button class="secondary-hero" id="heroImportButton"><span>⇧</span><div><b>重新导入订单</b><small>清空当前统计后重新选择文件</small></div></button>
-<button class="secondary-hero reviewed-import-trigger" id="heroReviewedImportButton" type="button"><span>✓</span><div><b>导入人工审核表</b><small>随时更新知识库，不清空当前订单</small></div></button>
+<button class="export-hero" id="heroExportButton"><span>⇩</span><div><b>导出统计发票</b><small>默认仅 FACT，可选完整报表</small></div></button>
+<button class="secondary-hero" id="heroImportButton"><span>⇧</span><div><b>导入订单</b><small>重新选择订单文件</small></div></button>
+<button class="secondary-hero reviewed-import-trigger" id="heroReviewedImportButton" type="button"><span>✓</span><div><b>导入审核后数据</b><small>自动读取默认审核文件夹</small></div></button>
 </div>
 </div>
 <div class="hero-image"><div aria-hidden="true" class="hero-visual">
@@ -314,4 +316,5 @@ setTimeout(function(){
 <script src="./src/v10/v1037-history.js?v=10.3.7-history-001"></script>
 <script src="./src/v10/release-notes-runtime-v1041.js?v=10.4.1-authoritative-001"></script>
 <script src="./src/v10/v1050-production-hardening.js?v=10.5.0-001"></script>
+<script defer src="./src/v10/v1060-simple-workflow.js?v=10.6.0-001"></script>
 </body></html>

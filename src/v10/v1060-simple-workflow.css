@@ -1,0 +1,28 @@
+/* WRITE V10.6.0 — Simple Workflow */
+body.write-v106-simple .app-shell.sidebar-collapsed{grid-template-columns:72px 1fr}
+body.write-v106-simple .app-shell.sidebar-collapsed .sidebar{width:72px;padding:14px 10px}
+body.write-v106-simple .app-shell.sidebar-collapsed .brand{padding:6px 0 14px;justify-content:center}
+body.write-v106-simple .app-shell.sidebar-collapsed .brand-logo{width:44px;height:44px}
+body.write-v106-simple .app-shell.sidebar-collapsed .brand-copy,
+body.write-v106-simple .app-shell.sidebar-collapsed .side-tip,
+body.write-v106-simple .app-shell.sidebar-collapsed .side-status{display:none!important}
+body.write-v106-simple .app-shell.sidebar-collapsed .nav-item{font-size:0;justify-content:center;padding:12px 6px}
+body.write-v106-simple .app-shell.sidebar-collapsed .nav-item span{font-size:18px;width:auto;margin:0}
+body.write-v106-simple .app-shell.sidebar-collapsed .nav-item b{display:none!important}
+.v106-sidebar-toggle{width:42px;height:36px;margin:0 auto 10px;border:1px solid var(--line2);border-radius:10px;background:var(--panel);color:var(--text);font-size:18px;display:grid;place-items:center}
+body.write-v106-simple .metrics-grid,body.write-v106-simple .dashboard-grid{display:none!important}
+body.write-v106-simple .landing-hero,body.write-v106-simple .dashboard-hero{min-height:220px;grid-template-columns:1fr;background:var(--panel)}
+body.write-v106-simple .landing-hero .hero-image,body.write-v106-simple .dashboard-hero .hero-image{display:none!important}
+body.write-v106-simple .landing-hero .hero-copy>h1,body.write-v106-simple .landing-hero .hero-copy>p,
+body.write-v106-simple .dashboard-hero .hero-copy>.eyebrow,body.write-v106-simple .dashboard-hero .hero-copy>h1,body.write-v106-simple .dashboard-hero .hero-copy>p{display:none!important}
+body.write-v106-simple .hero-copy,body.write-v106-simple .hero-copy.compact{padding:40px!important;display:flex;align-items:center;justify-content:center}
+body.write-v106-simple .landing-actions,body.write-v106-simple .hero-buttons{width:100%;justify-content:center;gap:12px}
+body.write-v106-simple .primary-hero,body.write-v106-simple .export-hero,body.write-v106-simple .secondary-hero{min-width:220px}
+body.write-v106-simple #landingExportButton:disabled{opacity:.5;cursor:not-allowed}
+.v106-modal-backdrop{position:fixed;inset:0;z-index:100500;background:rgba(20,20,24,.25);backdrop-filter:blur(8px);display:grid;place-items:center;padding:20px}
+.v106-modal{width:min(460px,100%);position:relative;background:var(--panel,#fff);color:var(--text,#111);border:1px solid var(--line,#ddd);border-radius:18px;padding:26px;box-shadow:0 30px 90px rgba(0,0,0,.2)}
+.v106-modal h3{font-size:19px;margin:0 32px 10px 0}.v106-modal p{font-size:12px;color:var(--muted,#777);line-height:1.7;margin:0}
+.v106-x{position:absolute;right:14px;top:12px;border:0;background:transparent;color:var(--muted,#777);font-size:22px}
+.v106-modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:22px;flex-wrap:wrap}.v106-primary,.v106-secondary{border-radius:10px;padding:11px 15px;font-size:12px}.v106-primary{border:0;background:#18191c;color:#fff}.v106-secondary{border:1px solid var(--line2,#ddd);background:var(--panel,#fff);color:var(--text,#111)}
+.v106-toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%);z-index:100600;background:#18191c;color:#fff;border-radius:10px;padding:11px 15px;font-size:12px;box-shadow:0 12px 38px rgba(0,0,0,.18);max-width:min(620px,90vw);text-align:center}.v106-toast.bad{background:#7d2622}
+@media(max-width:820px){body.write-v106-simple .app-shell.sidebar-collapsed{display:block}body.write-v106-simple .app-shell.sidebar-collapsed .sidebar{position:fixed;width:64px;inset:0 auto 0 0;z-index:60}body.write-v106-simple .app-shell.sidebar-collapsed .workspace{margin-left:64px}.v106-sidebar-toggle{width:40px}body.write-v106-simple .landing-actions,body.write-v106-simple .hero-buttons{flex-direction:column}body.write-v106-simple .primary-hero,body.write-v106-simple .export-hero,body.write-v106-simple .secondary-hero{width:100%;min-width:0}}
