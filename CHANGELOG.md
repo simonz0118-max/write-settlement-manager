@@ -1,3 +1,10 @@
+## V10.6.6 — Production Export & Release Authority Closure
+
+- 修复正式 Excel 导出 P0 与 undefined.workbooks。
+- runtime 旧 capture listener 对 V10.6.4+ 导出权威让权。
+- currentVersion/current.version/page 统一为 10.6.6。
+- V10.5.4 冻结定价、学习、D1 核心不修改。
+
 ## V10.6.4 — Single Export Authority Closure
 
 - 正式导出收口为唯一权威，删除旧导出入口竞争。
