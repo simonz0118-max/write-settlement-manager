@@ -1,3 +1,10 @@
+## V10.6.4 — Single Export Authority Closure
+
+- 正式导出收口为唯一权威，删除旧导出入口竞争。
+- 每次导出必须先逐页选择；FACT 必选，其他四页独立可选，默认仅 FACT。
+- WRITE_LEARNING_SOURCE 继续 veryHidden 保留。
+- V10.5.4 冻结定价、学习、D1 核心不修改。
+
 ## V10.6.3 — Authoritative Export Selection Hotfix
 
 - 修复导入订单后旧 capture 导出监听器抢先执行、导致选择弹窗被绕过的问题。
