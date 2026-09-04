@@ -1,3 +1,11 @@
+## V11.0.3 — Measured Workspace Layout Fix
+
+- 直接读取 workspace.clientWidth 计算 Hero 操作区，不再依赖历史 CSS 宽度链。
+- 修复展开侧边栏后第一张卡被遮挡。
+- ResizeObserver / sidebar observer / resize 自动重新计算。
+- 保留 V11 Earth UI、Light Theme、Settings、按钮动效与业务功能。
+- V10.6.6 导出权威与 V10.5.4 冻结核心不修改。
+
 ## V11.0.2 — Layout / Toggle / Version Closure
 
 - 修复展开侧边栏时第一张 Hero 卡被遮挡。

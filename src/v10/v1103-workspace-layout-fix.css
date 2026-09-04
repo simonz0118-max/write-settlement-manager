@@ -1,0 +1,23 @@
+/* WRITE V11.0.3 — workspace measured layout authority */
+body.write-v1103 .landing-actions,
+body.write-v1103 .hero-buttons{
+  box-sizing:border-box!important;
+  min-width:0!important;
+  transform:none!important;
+  left:auto!important;
+  right:auto!important;
+}
+body.write-v1103 .landing-actions>*,
+body.write-v1103 .hero-buttons>*{
+  min-width:0!important;
+  max-width:100%!important;
+}
+body.write-v1103 .landing-hero .hero-copy,
+body.write-v1103 .dashboard-hero .hero-copy{
+  box-sizing:border-box!important;
+  min-width:0!important;
+}
+@media(max-width:1050px){
+  body.write-v1103 .landing-actions,
+  body.write-v1103 .hero-buttons{grid-template-columns:1fr!important}
+}
