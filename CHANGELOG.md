@@ -1,3 +1,11 @@
+## V10.6.3 — Authoritative Export Selection Hotfix
+
+- 修复导入订单后旧 capture 导出监听器抢先执行、导致选择弹窗被绕过的问题。
+- 所有正式导出入口由 document capture 级控制器统一接管，DOM 重渲染后仍有效。
+- 导出前必须选择页面：FACT 必选；结算总览、订单明细、商品汇总、审计记录分别可选，默认均不选。
+- WRITE_LEARNING_SOURCE 始终 veryHidden 保留，FACT-only 文件仍可正常回传学习。
+- 不修改 V10.5.4 冻结定价与学习核心。
+
 ## V10.6.2 — Workflow & UI Closure
 
 - 导入前/导入后统一为同一套 Professional Hero 视觉与三卡片操作。
