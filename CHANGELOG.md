@@ -1,3 +1,10 @@
+## V10.6.10 — UI Integrity Closure
+
+- 修复双 Hero、Sidebar 品牌区遮挡、主题幽灵图标、侧栏网格与折叠状态。
+- V10.6.10 成为唯一 UI 层，移除 V10.6.7/8/9 生产加载。
+- appViews / importLanding 互斥，任何状态只显示一个主 Hero。
+- V10.6.6 导出权威与 V10.5.4 冻结核心不修改。
+
 ## V10.6.9 — Pixel Rebuild 9.5 Target
 
 - 删除 V10.6.7/V10.6.8 UI 加载，使用单一结构化 UI。
