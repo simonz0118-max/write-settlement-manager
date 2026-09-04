@@ -1,3 +1,9 @@
+## V10.6.8 — Final Approved Reference UI Exact
+
+- 最终参考图 UI 单一覆盖层，移除 V10.6.7 UI 加载，避免样式竞争。
+- 修复配色、幽灵图标、侧栏对齐、卡片过渡和 Hero 波形。
+- 保留 V10.6.6 导出权威与 V10.5.4 冻结核心。
+
 ## V10.6.7 — Approved Reference UI Pixel Closure
 
 - 按确认参考图重构 UI。
