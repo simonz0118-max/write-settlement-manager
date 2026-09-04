@@ -1,3 +1,10 @@
+## V10.6.7 — Approved Reference UI Pixel Closure
+
+- 按确认参考图重构 UI。
+- 修复主题行幽灵图标与侧栏对齐。
+- 展开侧栏不再挤坏 Hero。
+- V10.6.6 导出权威与 V10.5.4 冻结核心不修改。
+
 ## V10.6.6 — Production Export & Release Authority Closure
 
 - 修复正式 Excel 导出 P0 与 undefined.workbooks。

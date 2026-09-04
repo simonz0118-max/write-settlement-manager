@@ -1,0 +1,5 @@
+(function(g){'use strict';const VERSION='10.6.7';
+const icons={dashboard:'⌂',orders:'▤',products:'◇',review:'◎',quality:'△',learning:'⌘',imports:'↧',history:'↺'};
+function render(){document.body.classList.add('write-v1067');document.querySelectorAll('.nav-item[data-view]').forEach(b=>{const s=b.querySelector(':scope>span:first-child');if(s&&icons[b.dataset.view])s.textContent=icons[b.dataset.view]});const t=document.getElementById('themeToggleButton');if(t){[...t.children].slice(2).forEach(x=>x.remove())}const h=document.querySelector('#importLanding .hero-copy>h1');if(h)h.innerHTML='让结算<em>更简单</em>';document.querySelectorAll('#importLanding .hero-copy>p,[data-view-panel="dashboard"] .dashboard-hero .hero-copy>p').forEach(p=>p.textContent='导入订单、生成统计、审核学习。把复杂流程留给系统。');}
+function boot(){render();new MutationObserver(()=>requestAnimationFrame(render)).observe(document.documentElement,{childList:true,subtree:true});}
+document.readyState==='loading'?document.addEventListener('DOMContentLoaded',boot,{once:true}):boot();g.WRITE_V1067_REFERENCE_UI={VERSION,render};})(window);
