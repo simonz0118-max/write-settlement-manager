@@ -1,3 +1,11 @@
+## V10.6.12 — CSS Authority Cleanup
+
+- 根因修复：移除 V10.6.0/1/2 高特异性旧视觉 CSS 的生产加载。
+- 保留 V10.6.0/V10.6.2 工作流 JS，并迁移 modal/toast 必要样式。
+- Hero 取消旧 1320px 灰色大容器，改为连续透明画布。
+- 波形不再被旧 panel 背景遮挡。
+- V10.6.6 导出权威与 V10.5.4 冻结核心不修改。
+
 ## V10.6.11 — Native Hero Structural Fix
 
 - 不再生成第二 Hero，只装饰 index.html 原生 landing/dashboard hero。
