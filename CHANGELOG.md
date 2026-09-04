@@ -1,3 +1,10 @@
+## V11.0.1 Production Hotfix — Light Theme
+
+- 修复浅色模式的深/浅混合、白色 Hero 大板和旧蓝紫配色回退。
+- 新增完整 warm Earth light theme authority。
+- 深色模式继续保持 Earth UI。
+- V10.6.6 导出权威与 V10.5.4 冻结核心不修改。
+
 ## V11.0 Production — UI Integrity
 
 - 正式版本号升级为 V11.0 Production。

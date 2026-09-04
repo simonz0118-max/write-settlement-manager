@@ -1,0 +1,248 @@
+/* WRITE V11.0.1 Production Hotfix — warm light theme authority
+   Fixes the broken mixed light-mode screenshot.
+   No pricing/learning/export core changes. */
+
+/* LIGHT THEME: complete warm palette authority, no blue/purple, no white hero slab */
+html[data-theme="light"] body.write-v1101{
+  --v11l-bg:#f1ede4;
+  --v11l-bg-2:#e9e3d8;
+  --v11l-panel:#f7f3eb;
+  --v11l-panel-2:#eee8dd;
+  --v11l-sidebar:#e6dfd3;
+  --v11l-text:#29251f;
+  --v11l-muted:#756d62;
+  --v11l-line:#cfc4b5;
+  --v11l-copper:#a7613d;
+  --v11l-copper-2:#c57b4e;
+  --v11l-olive:#707a50;
+  --v11l-clay:#a5523d;
+  --v11l-shadow:0 15px 36px rgba(68,56,43,.10);
+  margin:0!important;
+  background:var(--v11l-bg)!important;
+  color:var(--v11l-text)!important;
+  overflow-x:hidden!important;
+}
+
+html[data-theme="light"] body.write-v1101 .app-shell{
+  background:
+    radial-gradient(900px 420px at 76% -8%,rgba(173,112,70,.10),transparent 65%),
+    linear-gradient(180deg,var(--v11l-bg) 0%,#eee9df 100%)!important;
+}
+html[data-theme="light"] body.write-v1101 .workspace,
+html[data-theme="light"] body.write-v1101 .content,
+html[data-theme="light"] body.write-v1101 .landing,
+html[data-theme="light"] body.write-v1101 #appViews>.view{
+  background:transparent!important;
+}
+html[data-theme="light"] body.write-v1101 .topbar{
+  background:rgba(241,237,228,.82)!important;
+  border-bottom:1px solid rgba(89,76,61,.09)!important;
+}
+html[data-theme="light"] body.write-v1101 .top-title{color:#81786d!important}
+
+/* Remove the legacy white rectangle in light mode. */
+html[data-theme="light"] body.write-v1101 #importLanding,
+html[data-theme="light"] body.write-v1101 #importLanding .landing-hero,
+html[data-theme="light"] body.write-v1101 #importLanding .landing-hero .hero-copy,
+html[data-theme="light"] body.write-v1101 #importLanding .dropzone,
+html[data-theme="light"] body.write-v1101 #importLanding #idleState,
+html[data-theme="light"] body.write-v1101 [data-view-panel="dashboard"],
+html[data-theme="light"] body.write-v1101 [data-view-panel="dashboard"] .dashboard-hero,
+html[data-theme="light"] body.write-v1101 [data-view-panel="dashboard"] .hero-copy,
+html[data-theme="light"] body.write-v1101 [data-view-panel="dashboard"] .hero-buttons{
+  background:transparent!important;
+  background-image:none!important;
+  border-color:transparent!important;
+  box-shadow:none!important;
+  backdrop-filter:none!important;
+  -webkit-backdrop-filter:none!important;
+}
+html[data-theme="light"] body.write-v1101 .landing-hero,
+html[data-theme="light"] body.write-v1101 .dashboard-hero{
+  width:100%!important;
+  max-width:none!important;
+  min-height:calc(100vh - 80px)!important;
+  margin:0!important;
+  border:0!important;
+  border-radius:0!important;
+  overflow:hidden!important;
+}
+
+/* Light hero typography */
+html[data-theme="light"] body.write-v1101 .hero-copy::before{color:#887d70!important}
+html[data-theme="light"] body.write-v1101 .hero-copy>h1{color:#2c2721!important}
+html[data-theme="light"] body.write-v1101 .hero-copy>h1 em{
+  background:linear-gradient(90deg,#b86a42 0%,#a65a38 55%,#885137 100%)!important;
+  -webkit-background-clip:text!important;background-clip:text!important;color:transparent!important;
+}
+html[data-theme="light"] body.write-v1101 .hero-copy>p,
+html[data-theme="light"] body.write-v1101 .v10612-subline{color:#756d62!important}
+html[data-theme="light"] body.write-v1101 .v10612-subline::before,
+html[data-theme="light"] body.write-v1101 .v10612-subline::after{
+  background:linear-gradient(90deg,transparent,#aa9e8d)!important;
+}
+
+/* Light hero cards: copper / olive / clay */
+html[data-theme="light"] body.write-v1101 .landing-actions>*:nth-child(1),
+html[data-theme="light"] body.write-v1101 .hero-buttons>*:nth-child(1){
+  --accent:#b36a43!important;
+  background:linear-gradient(145deg,#f6eee5,#eee2d6)!important;
+  border-color:rgba(179,106,67,.46)!important;
+  color:#2d261f!important;
+  box-shadow:var(--v11l-shadow)!important;
+}
+html[data-theme="light"] body.write-v1101 .landing-actions>*:nth-child(2),
+html[data-theme="light"] body.write-v1101 .hero-buttons>*:nth-child(2){
+  --accent:#75805a!important;
+  background:linear-gradient(145deg,#f0f0e6,#e6e6d8)!important;
+  border-color:rgba(117,128,90,.42)!important;
+  color:#2c2d25!important;
+  box-shadow:var(--v11l-shadow)!important;
+}
+html[data-theme="light"] body.write-v1101 .landing-actions>*:nth-child(3),
+html[data-theme="light"] body.write-v1101 .hero-buttons>*:nth-child(3){
+  --accent:#a85842!important;
+  background:linear-gradient(145deg,#f4e9e3,#eadbd4)!important;
+  border-color:rgba(168,88,66,.42)!important;
+  color:#312520!important;
+  box-shadow:var(--v11l-shadow)!important;
+}
+html[data-theme="light"] body.write-v1101 .primary-hero b,
+html[data-theme="light"] body.write-v1101 .secondary-hero b,
+html[data-theme="light"] body.write-v1101 .export-hero b{
+  color:#29251f!important;
+}
+html[data-theme="light"] body.write-v1101 .primary-hero small,
+html[data-theme="light"] body.write-v1101 .secondary-hero small,
+html[data-theme="light"] body.write-v1101 .export-hero small{
+  color:#736b60!important;
+}
+html[data-theme="light"] body.write-v1101 .landing-actions>*:nth-child(1) .v10612-action-icon,
+html[data-theme="light"] body.write-v1101 .hero-buttons>*:nth-child(1) .v10612-action-icon{
+  background:linear-gradient(145deg,#c98559,#a85f39)!important;color:#fff!important;
+  box-shadow:0 9px 22px rgba(139,78,44,.18)!important;
+}
+html[data-theme="light"] body.write-v1101 .landing-actions>*:nth-child(2) .v10612-action-icon,
+html[data-theme="light"] body.write-v1101 .hero-buttons>*:nth-child(2) .v10612-action-icon{
+  background:linear-gradient(145deg,#939d72,#6d7752)!important;color:#fff!important;
+  box-shadow:0 9px 22px rgba(92,100,68,.16)!important;
+}
+html[data-theme="light"] body.write-v1101 .landing-actions>*:nth-child(3) .v10612-action-icon,
+html[data-theme="light"] body.write-v1101 .hero-buttons>*:nth-child(3) .v10612-action-icon{
+  background:linear-gradient(145deg,#bd6d55,#974b38)!important;color:#fff!important;
+  box-shadow:0 9px 22px rgba(124,62,45,.18)!important;
+}
+html[data-theme="light"] body.write-v1101 .v10612-action-icon svg{stroke:#fff!important}
+html[data-theme="light"] body.write-v1101 .primary-hero::after,
+html[data-theme="light"] body.write-v1101 .secondary-hero::after,
+html[data-theme="light"] body.write-v1101 .export-hero::after{
+  color:#62594f!important;background:rgba(255,255,255,.28)!important;
+}
+
+/* warm light sidebar */
+html[data-theme="light"] body.write-v1101 .app-shell:not(.sidebar-collapsed) .sidebar{
+  background:linear-gradient(180deg,#e9e3d9 0%,#e3dccf 100%)!important;
+  border-right:1px solid #cfc4b5!important;
+  color:#312c26!important;
+}
+html[data-theme="light"] body.write-v1101 .brand-logo{mix-blend-mode:multiply!important}
+html[data-theme="light"] body.write-v1101 .brand-copy strong{color:#2c2823!important}
+html[data-theme="light"] body.write-v1101 .brand-copy span{color:#595248!important}
+html[data-theme="light"] body.write-v1101 .brand-copy small{color:#81786c!important}
+html[data-theme="light"] body.write-v1101 .nav-item{color:#514a42!important}
+html[data-theme="light"] body.write-v1101 .nav-item .v10612-nav-icon{color:#72695e!important}
+html[data-theme="light"] body.write-v1101 .nav-item:hover{
+  background:rgba(157,115,78,.08)!important;
+  border-color:rgba(157,115,78,.13)!important;
+  color:#2f2a24!important;
+}
+html[data-theme="light"] body.write-v1101 .nav-item.active{
+  color:#fffaf2!important;
+  background:linear-gradient(135deg,#a5643f,#755b3f)!important;
+  border-color:#a56743!important;
+  box-shadow:0 8px 20px rgba(86,59,38,.15)!important;
+}
+html[data-theme="light"] body.write-v1101 .nav-item.active .v10612-nav-icon{color:#f4d0b2!important}
+html[data-theme="light"] body.write-v1101 .nav-item>b{
+  background:#d9c2ac!important;border-color:#b99678!important;color:#5b3e2d!important;
+}
+html[data-theme="light"] body.write-v1101 .theme-cycle{
+  border-top-color:#c7bcad!important;
+}
+html[data-theme="light"] body.write-v1101 #themeIcon,
+html[data-theme="light"] body.write-v1101 #themeLabel,
+html[data-theme="light"] body.write-v1101 .theme-cycle::after{color:#5f574d!important}
+html[data-theme="light"] body.write-v1101 .side-tip{
+  background:rgba(247,243,235,.64)!important;
+  border-color:#cfc4b5!important;
+}
+html[data-theme="light"] body.write-v1101 .side-tip b{color:#38322b!important}
+html[data-theme="light"] body.write-v1101 .side-tip ol{color:#625a50!important}
+html[data-theme="light"] body.write-v1101 .v10612-side-footer{color:#766d61!important}
+html[data-theme="light"] body.write-v1101 .v10612-side-footer i{
+  background:#a7613d!important;box-shadow:0 0 10px rgba(167,97,61,.28)!important;
+}
+html[data-theme="light"] body.write-v1101 #v106SidebarToggle{
+  background:#eee8de!important;border-color:#c8bcac!important;color:#3e3831!important;
+}
+html[data-theme="light"] body.write-v1101 #v106SidebarToggle::before{color:#3e3831!important}
+
+/* light wave in earth tones */
+html[data-theme="light"] body.write-v1101 .v10612-wave path:first-of-type{
+  fill:rgba(177,133,92,.22)!important;stroke:#ba936e!important;
+}
+html[data-theme="light"] body.write-v1101 .v10612-wave path:last-of-type{
+  fill:rgba(127,134,93,.20)!important;stroke:#929775!important;
+}
+
+/* light settings modal */
+html[data-theme="light"] body.write-v1101 .v10614-settings-backdrop{
+  background:rgba(62,53,44,.34)!important;
+}
+html[data-theme="light"] body.write-v1101 .v10614-settings{
+  background:#f6f1e8!important;color:#302a24!important;border-color:#cec2b2!important;
+}
+html[data-theme="light"] body.write-v1101 .v10614-settings-head{border-bottom-color:#d8cebf!important}
+html[data-theme="light"] body.write-v1101 .v10614-settings-head span{color:#887d70!important}
+html[data-theme="light"] body.write-v1101 .v10614-settings-close{
+  background:#ece5da!important;color:#3e3730!important;border-color:#cfc4b5!important;
+}
+html[data-theme="light"] body.write-v1101 .v10614-setting-row{
+  background:#efe9df!important;border-color:#d6ccbd!important;
+}
+html[data-theme="light"] body.write-v1101 .v10614-setting-row p,
+html[data-theme="light"] body.write-v1101 .v10614-settings-note{color:#766e64!important}
+html[data-theme="light"] body.write-v1101 .v10614-folder-name{
+  background:#e2dbcf!important;color:#51483f!important;border-color:#cfc4b5!important;
+}
+html[data-theme="light"] body.write-v1101 .v10614-change-folder{
+  background:#ead7c7!important;color:#653f2a!important;border-color:#b47a56!important;
+}
+
+/* keep button click feel in light mode too */
+html[data-theme="light"] body.write-v1101 button{
+  transition:transform .11s cubic-bezier(.2,.8,.2,1),box-shadow .14s ease,border-color .14s ease,filter .14s ease!important;
+}
+html[data-theme="light"] body.write-v1101 button:not(:disabled):hover{filter:brightness(1.02)}
+html[data-theme="light"] body.write-v1101 button:not(:disabled):active{
+  transform:translateY(2px) scale(.985)!important;
+  filter:brightness(.96)!important;
+  box-shadow:inset 0 2px 5px rgba(67,54,42,.13),0 3px 9px rgba(67,54,42,.08)!important;
+}
+html[data-theme="light"] body.write-v1101 button:focus-visible{
+  outline:2px solid #ad7956!important;outline-offset:2px!important;
+}
+
+/* DARK stays earth-toned. Remove residual blue/purple inherited from old v10612. */
+html[data-theme="dark"] body.write-v1101 .app-shell{
+  background:radial-gradient(760px 360px at 78% -4%,rgba(194,123,79,.10),transparent 62%),linear-gradient(180deg,#151513 0%,#171612 100%)!important;
+}
+html[data-theme="dark"] body.write-v1101 .landing-hero,
+html[data-theme="dark"] body.write-v1101 .dashboard-hero,
+html[data-theme="dark"] body.write-v1101 .hero-copy{
+  background:transparent!important;background-image:none!important;box-shadow:none!important;
+}
+html[data-theme="dark"] body.write-v1101 .nav-item.active{
+  background:linear-gradient(135deg,rgba(129,84,53,.62),rgba(80,67,48,.68))!important;
+  border-color:rgba(194,123,79,.48)!important;
+}
