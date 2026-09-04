@@ -1,0 +1,129 @@
+/* WRITE V11.0.5 — single coordinate-system authority
+   Root fix: fixed sidebar + explicitly offset workspace. No grid/fixed hybrid. */
+body.write-v1105{--v1105-side:300px}
+
+body.write-v1105 .app-shell,
+body.write-v1105 .app-shell:not(.sidebar-collapsed){
+  display:block!important;
+  width:100%!important;
+  min-width:0!important;
+}
+
+body.write-v1105 .app-shell:not(.sidebar-collapsed) .sidebar{
+  position:fixed!important;
+  top:0!important;bottom:0!important;left:0!important;right:auto!important;
+  width:var(--v1105-side)!important;
+  max-width:var(--v1105-side)!important;
+  z-index:120!important;
+}
+
+body.write-v1105 .app-shell:not(.sidebar-collapsed) .workspace{
+  display:block!important;
+  position:relative!important;
+  left:auto!important;right:auto!important;
+  margin-left:var(--v1105-side)!important;
+  margin-right:0!important;
+  width:calc(100% - var(--v1105-side))!important;
+  max-width:calc(100% - var(--v1105-side))!important;
+  min-width:0!important;
+  overflow:hidden!important;
+}
+
+body.write-v1105 .app-shell.sidebar-collapsed .workspace{
+  margin-left:0!important;
+  width:100%!important;
+  max-width:100%!important;
+}
+
+body.write-v1105 .workspace .content,
+body.write-v1105 .workspace #importLanding,
+body.write-v1105 .workspace .landing,
+body.write-v1105 .workspace .landing-hero,
+body.write-v1105 .workspace .dashboard-hero{
+  box-sizing:border-box!important;
+  position:relative!important;
+  left:auto!important;right:auto!important;
+  width:100%!important;
+  max-width:100%!important;
+  min-width:0!important;
+  margin-left:0!important;margin-right:0!important;
+  transform:none!important;
+}
+
+body.write-v1105 .landing-hero .hero-copy,
+body.write-v1105 .dashboard-hero .hero-copy,
+body.write-v1105 .dashboard-hero .hero-copy.compact{
+  box-sizing:border-box!important;
+  width:100%!important;
+  max-width:1180px!important;
+  min-width:0!important;
+  margin-left:auto!important;margin-right:auto!important;
+  padding-left:36px!important;padding-right:36px!important;
+  overflow:visible!important;
+}
+
+body.write-v1105 .dropzone{
+  box-sizing:border-box!important;
+  position:static!important;
+  left:auto!important;right:auto!important;
+  transform:none!important;
+  width:min(1040px,100%)!important;
+  max-width:1040px!important;
+  min-width:0!important;
+  margin-left:auto!important;margin-right:auto!important;
+  overflow:visible!important;
+}
+
+body.write-v1105 .landing-actions,
+body.write-v1105 .hero-buttons{
+  box-sizing:border-box!important;
+  position:static!important;
+  left:auto!important;right:auto!important;
+  transform:none!important;
+  width:100%!important;
+  max-width:100%!important;
+  min-width:0!important;
+  margin:0!important;
+  padding:0!important;
+  display:grid!important;
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  gap:16px!important;
+  overflow:visible!important;
+}
+body.write-v1105 .landing-actions>*,
+body.write-v1105 .hero-buttons>*{
+  box-sizing:border-box!important;width:100%!important;max-width:100%!important;min-width:0!important;margin:0!important;
+}
+
+/* Settings nav: same typography and color as every other nav row. */
+body.write-v1105 #v10614SettingsNav{
+  color:inherit!important;
+  font-size:14px!important;
+  font-weight:600!important;
+  line-height:1!important;
+}
+html[data-theme="light"] body.write-v1105 #v10614SettingsNav{color:#514a42!important}
+html[data-theme="dark"] body.write-v1105 #v10614SettingsNav{color:#b7b0a5!important}
+body.write-v1105 #v10614SettingsNav>span:last-child{
+  color:inherit!important;font:inherit!important;letter-spacing:normal!important;opacity:1!important;
+}
+body.write-v1105 #v10614SettingsNav .v10612-nav-icon{color:inherit!important}
+
+/* Toggle: explicit theme authority, including glyph. */
+body.write-v1105 #v106SidebarToggle{font-size:0!important;line-height:1!important}
+body.write-v1105 #v106SidebarToggle::before{
+  content:'☰'!important;display:block!important;font-size:20px!important;font-weight:500!important;line-height:1!important;
+}
+body.write-v1105 .app-shell:not(.sidebar-collapsed) #v106SidebarToggle::before{content:'‹'!important;font-size:28px!important}
+html[data-theme="light"] body.write-v1105 #v106SidebarToggle{
+  background:#eee8de!important;border-color:#c8bcac!important;color:#3e3831!important;
+}
+html[data-theme="light"] body.write-v1105 #v106SidebarToggle::before{color:#3e3831!important}
+html[data-theme="dark"] body.write-v1105 #v106SidebarToggle{
+  background:#1c1c18!important;border-color:rgba(221,211,193,.16)!important;color:#eee8de!important;
+}
+html[data-theme="dark"] body.write-v1105 #v106SidebarToggle::before{color:#eee8de!important}
+
+@media(max-width:1180px){
+ body.write-v1105 .landing-actions,body.write-v1105 .hero-buttons{grid-template-columns:1fr!important;max-width:620px!important;margin-left:auto!important;margin-right:auto!important}
+}
