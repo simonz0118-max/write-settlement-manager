@@ -10,7 +10,7 @@
  */
 (function(g){'use strict';
 
-const VERSION='11.0.7';
+const VERSION='11.0.8';
 const dec=new TextDecoder();
 const clean=v=>String(v??'').replace(/\r/g,' ').replace(/\s+/g,' ').trim();
 const upper=v=>clean(v).toUpperCase();
@@ -43,25 +43,40 @@ const unesc=s=>String(s)
   .replace(/&#(\d+);/g,(_,d)=>String.fromCodePoint(parseInt(d,10)))
   .replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&apos;/g,"'").replace(/&amp;/g,'&');
 
+function xmlTag(name){return`(?:[A-Za-z_][\\w.-]*:)?${name}`}
+function xmlAttr(attrs,name){
+  const m=new RegExp(`\\b${name}\\s*=\\s*(["'])(.*?)\\1`,'i').exec(String(attrs||''));
+  return m?m[2]:'';
+}
 function sharedStrings(map){
   const b=map.get('xl/sharedStrings.xml');if(!b)return[];
-  return [...dec.decode(b).matchAll(/<si\b[^>]*>([\s\S]*?)<\/si>/g)]
-    .map(m=>unesc([...m[1].matchAll(/<t\b[^>]*>([\s\S]*?)<\/t>/g)].map(x=>x[1]).join('')));
+  const x=dec.decode(b),si=new RegExp(`<${xmlTag('si')}\\b[^>]*>([\\s\\S]*?)<\\/${xmlTag('si')}>`,'gi');
+  return [...x.matchAll(si)].map(m=>{
+    const tr=new RegExp(`<${xmlTag('t')}\\b[^>]*>([\\s\\S]*?)<\\/${xmlTag('t')}>`,'gi');
+    return unesc([...m[1].matchAll(tr)].map(x=>x[1]).join(''));
+  });
 }
 function cellValue(cell,ss){
-  if(/\bt="inlineStr"/.test(cell))return unesc([...cell.matchAll(/<t\b[^>]*>([\s\S]*?)<\/t>/g)].map(m=>m[1]).join(''));
-  const v=/<v>([\s\S]*?)<\/v>/.exec(cell)?.[1]??'';
-  if(/\bt="s"/.test(cell))return ss[Number(v)]??'';
-  if(/\bt="b"/.test(cell))return v==='1';
+  const open=/<(?:[A-Za-z_][\w.-]*:)?c\b([^>]*)/i.exec(cell);
+  const type=xmlAttr(open?.[1]||'','t').toLowerCase();
+  if(type==='inlinestr'){
+    const tr=new RegExp(`<${xmlTag('t')}\\b[^>]*>([\\s\\S]*?)<\\/${xmlTag('t')}>`,'gi');
+    return unesc([...cell.matchAll(tr)].map(m=>m[1]).join(''));
+  }
+  const vr=new RegExp(`<${xmlTag('v')}\\b[^>]*>([\\s\\S]*?)<\\/${xmlTag('v')}>`,'i');
+  const v=vr.exec(cell)?.[1]??'';
+  if(type==='s')return ss[Number(v)]??'';
+  if(type==='b')return v==='1';
   const n=Number(v);return v!==''&&Number.isFinite(n)?n:unesc(v);
 }
 function matrix(xml,ss){
-  const out=[];
-  for(const rm of xml.matchAll(/<row\b[^>]*\br="(\d+)"[^>]*>([\s\S]*?)<\/row>/g)){
-    const ri=Number(rm[1])-1,row=out[ri]||[];
-    for(const cm of rm[2].matchAll(/<c\b([^>]*?)(?:\/>|>([\s\S]*?)<\/c>)/g)){
-      const attrs=cm[1]||'',ref=/\br="([A-Z]+)(\d+)"/.exec(attrs);if(!ref)continue;
-      let ci=0;for(const ch of ref[1])ci=ci*26+(ch.charCodeAt(0)-64);
+  const out=[],rowRe=new RegExp(`<${xmlTag('row')}\\b([^>]*)>([\\s\\S]*?)<\\/${xmlTag('row')}>`,'gi');
+  for(const rm of xml.matchAll(rowRe)){
+    const ri=Number(xmlAttr(rm[1],'r'))-1;if(!Number.isFinite(ri)||ri<0)continue;
+    const row=out[ri]||[],cellRe=new RegExp(`<${xmlTag('c')}\\b([^>]*?)(?:\\/>|>([\\s\\S]*?)<\\/${xmlTag('c')}>)`,'gi');
+    for(const cm of rm[2].matchAll(cellRe)){
+      const ref=/^([A-Za-z]+)(\d+)$/.exec(xmlAttr(cm[1],'r'));if(!ref)continue;
+      let ci=0;for(const ch of ref[1].toUpperCase())ci=ci*26+(ch.charCodeAt(0)-64);
       row[ci-1]=cellValue(cm[0],ss);
     }
     out[ri]=row;

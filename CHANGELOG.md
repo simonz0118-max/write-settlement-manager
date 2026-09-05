@@ -1,3 +1,10 @@
+## V11.0.8 — Release Integrity R2
+
+- 修复首包OOXML门禁转义错误。
+- MANIFEST强制生成/验证。
+- 真实XLSX正式学习路径X07门禁。
+- 动态当前版本合同。
+
 ## V11.0.4 — Root Workspace Layout Fix
 
 - 删除 V11.0.3 measured-layout 运行时方案。
