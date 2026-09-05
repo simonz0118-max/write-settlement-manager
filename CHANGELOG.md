@@ -1,4 +1,4 @@
-## V11.0.8 — Release Integrity R2
+## V11.0.12 — Full Acceptance Closure\n\n- IndexedDB revision/operationId CAS，关闭旧学习/旧同步晚到污染。\n- 严格 ruleIds 和批量结果契约。\n- 修复部署包必跑测试漏复制。\n- 原 seed 0x1041E2E 浏览器持久化→正式重算→真实 FACT XLSX 下载门禁。\n- 冻结定价核心和 FACT 模板不改。\n\n## V11.0.8 — Release Integrity R2
 
 - 修复首包OOXML门禁转义错误。
 - MANIFEST强制生成/验证。

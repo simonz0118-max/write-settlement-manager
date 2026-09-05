@@ -10,7 +10,7 @@
  */
 (function(g){'use strict';
 
-const VERSION='11.0.8';
+const VERSION='11.0.12';
 const dec=new TextDecoder();
 const clean=v=>String(v??'').replace(/\r/g,' ').replace(/\s+/g,' ').trim();
 const upper=v=>clean(v).toUpperCase();
@@ -70,18 +70,8 @@ function cellValue(cell,ss){
   const n=Number(v);return v!==''&&Number.isFinite(n)?n:unesc(v);
 }
 function matrix(xml,ss){
-  const out=[],rowRe=new RegExp(`<${xmlTag('row')}\\b([^>]*)>([\\s\\S]*?)<\\/${xmlTag('row')}>`,'gi');
-  for(const rm of xml.matchAll(rowRe)){
-    const ri=Number(xmlAttr(rm[1],'r'))-1;if(!Number.isFinite(ri)||ri<0)continue;
-    const row=out[ri]||[],cellRe=new RegExp(`<${xmlTag('c')}\\b([^>]*?)(?:\\/>|>([\\s\\S]*?)<\\/${xmlTag('c')}>)`,'gi');
-    for(const cm of rm[2].matchAll(cellRe)){
-      const ref=/^([A-Za-z]+)(\d+)$/.exec(xmlAttr(cm[1],'r'));if(!ref)continue;
-      let ci=0;for(const ch of ref[1].toUpperCase())ci=ci*26+(ch.charCodeAt(0)-64);
-      row[ci-1]=cellValue(cm[0],ss);
-    }
-    out[ri]=row;
-  }
-  return out;
+  const out=[],rowRe=new RegExp(`<${xmlTag('row')}\\b([^>]*?)(?:\\/>|>([\\s\\S]*?)<\\/${xmlTag('row')}>)`,'gi');
+  for(const rm of xml.matchAll(rowRe)){const rowNo=Number(xmlAttr(rm[1],'r')),ri=rowNo-1;if(!Number.isFinite(ri)||ri<0)continue;const row=out[ri]||[],body=rm[2]||'',cellRe=new RegExp(`<${xmlTag('c')}\\b([^>]*?)(?:\\/>|>([\\s\\S]*?)<\\/${xmlTag('c')}>)`,'gi');for(const cm of body.matchAll(cellRe)){const ref=/^([A-Za-z]+)(\d+)$/.exec(xmlAttr(cm[1],'r'));if(!ref||Number(ref[2])!==rowNo)continue;let ci=0;for(const ch of ref[1].toUpperCase())ci=ci*26+(ch.charCodeAt(0)-64);row[ci-1]=cellValue(cm[0],ss)}out[ri]=row}return out
 }
 function normalizeTarget(t=''){
   return t.startsWith('/xl/')?t.slice(1):(t.startsWith('xl/')?t:'xl/'+t.replace(/^\//,''));
