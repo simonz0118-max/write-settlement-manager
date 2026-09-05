@@ -10,7 +10,7 @@
  */
 (function(g){'use strict';
 
-const VERSION='10.2.5';
+const VERSION='11.0.7';
 const dec=new TextDecoder();
 const clean=v=>String(v??'').replace(/\r/g,' ').replace(/\s+/g,' ').trim();
 const upper=v=>clean(v).toUpperCase();
@@ -59,8 +59,8 @@ function matrix(xml,ss){
   const out=[];
   for(const rm of xml.matchAll(/<row\b[^>]*\br="(\d+)"[^>]*>([\s\S]*?)<\/row>/g)){
     const ri=Number(rm[1])-1,row=out[ri]||[];
-    for(const cm of rm[2].matchAll(/<c\b([^>]*)>([\s\S]*?)<\/c>|<c\b([^>]*)\/>/g)){
-      const attrs=cm[1]||cm[3]||'',ref=/\br="([A-Z]+)(\d+)"/.exec(attrs);if(!ref)continue;
+    for(const cm of rm[2].matchAll(/<c\b([^>]*?)(?:\/>|>([\s\S]*?)<\/c>)/g)){
+      const attrs=cm[1]||'',ref=/\br="([A-Z]+)(\d+)"/.exec(attrs);if(!ref)continue;
       let ci=0;for(const ch of ref[1])ci=ci*26+(ch.charCodeAt(0)-64);
       row[ci-1]=cellValue(cm[0],ss);
     }
