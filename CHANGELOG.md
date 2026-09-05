@@ -1,3 +1,10 @@
+## V11.1.0 — Security Closure
+
+- 生产规则写入认证与HttpOnly管理会话。
+- 服务端控制规则权威字段并增加审计/请求限制。
+- catalog读写认证与CORS收口。
+- 冻结定价核心、FACT模板、付款与学习业务逻辑不改。
+
 ## V11.0.13 — Final Release Gate Closure
 
 - release-meta.js 真实换行修复。

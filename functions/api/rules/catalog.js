@@ -1,5 +1,6 @@
+import {requireAdmin} from '../../_shared/rules-auth.js';
 const TABLE='write_rules_v1017';
-const cors={'access-control-allow-origin':'*','access-control-allow-methods':'GET, POST, OPTIONS','access-control-allow-headers':'content-type'};
+const cors={};
 const json=(body,status=200)=>new Response(JSON.stringify(body),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store',...cors}});
 const PRODUCT_TYPES=new Set(['REVIEWED_PRODUCT','COST_MODEL','PRODUCT_CATEGORY']);
 const MANAGE_TYPES=new Set(['REVIEWED_PRODUCT','COST_MODEL','PRODUCT_CATEGORY','REVIEWED_FACT','RULE_CONFLICT']);
@@ -137,6 +138,7 @@ async function mutateRule(db,op){
 export async function onRequestOptions(){return new Response(null,{status:204,headers:{allow:'GET, POST, OPTIONS',...cors}})}
 export async function onRequestGet({request,env}){
   try{
+    const denied=requireAdmin(request,env);if(denied)return denied;
     if(!env.WRITE_RULES_DB)return json({ok:false,error:'WRITE_RULES_DB binding missing'},503);
     await ensure(env.WRITE_RULES_DB);
     const u=new URL(request.url),q=String(u.searchParams.get('q')||''),terms=q.split(/[\n,;，；]+/).map(x=>x.trim()).filter(Boolean);
@@ -154,6 +156,7 @@ export async function onRequestGet({request,env}){
 }
 export async function onRequestPost({request,env}){
   try{
+    const denied=requireAdmin(request,env);if(denied)return denied;
     if(!env.WRITE_RULES_DB)return json({ok:false,error:'WRITE_RULES_DB binding missing'},503);
     const db=env.WRITE_RULES_DB;await ensure(db);const body=await request.json().catch(()=>({}));
     const ops=Array.isArray(body.operations)?body.operations:[body],results=[];
