@@ -1,0 +1,16 @@
+/* WRITE V11.0.6 — acceptance blockers UI closure */
+@media(max-width:768px){
+  body.write-v1106 .app-shell:not(.sidebar-collapsed){display:block!important}
+  body.write-v1106 .app-shell:not(.sidebar-collapsed) .sidebar{position:fixed!important;inset:0 auto 0 0!important;width:min(300px,calc(100vw - 56px))!important;max-width:min(300px,calc(100vw - 56px))!important;z-index:1000!important;box-shadow:18px 0 45px rgba(0,0,0,.22)!important}
+  body.write-v1106 .app-shell:not(.sidebar-collapsed) .workspace{margin-left:0!important;width:100%!important;max-width:100%!important;min-width:0!important}
+  body.write-v1106 .landing-hero .hero-copy,body.write-v1106 .dashboard-hero .hero-copy{padding-left:22px!important;padding-right:22px!important}
+  body.write-v1106 .landing-actions,body.write-v1106 .hero-buttons{grid-template-columns:1fr!important;width:min(100%,560px)!important;margin-left:auto!important;margin-right:auto!important}
+}
+body.write-v1106 #v10614SettingsNav{font-family:inherit!important;font-size:14px!important;font-weight:600!important;line-height:1!important;letter-spacing:0!important;opacity:1!important}
+body.write-v1106 #v10614SettingsNav>span:last-child{font:inherit!important;color:inherit!important;opacity:1!important}
+html[data-theme="light"] body.write-v1106 #v10614SettingsNav,html[data-theme="light"] body.write-v1106 #v10614SettingsNav>span:last-child,html[data-theme="light"] body.write-v1106 #v10614SettingsNav .v10612-nav-icon{color:#514a42!important}
+html[data-theme="dark"] body.write-v1106 #v10614SettingsNav,html[data-theme="dark"] body.write-v1106 #v10614SettingsNav>span:last-child,html[data-theme="dark"] body.write-v1106 #v10614SettingsNav .v10612-nav-icon{color:#b7b0a5!important}
+html[data-theme="light"] body.write-v1106 #v106SidebarToggle{background:#eee8de!important;border-color:#c8bcac!important;color:#3e3831!important}
+html[data-theme="light"] body.write-v1106 #v106SidebarToggle::before{color:#3e3831!important}
+html[data-theme="dark"] body.write-v1106 #v106SidebarToggle{background:#1c1c18!important;border-color:rgba(221,211,193,.16)!important;color:#eee8de!important}
+html[data-theme="dark"] body.write-v1106 #v106SidebarToggle::before{color:#eee8de!important}

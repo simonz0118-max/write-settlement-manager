@@ -32,7 +32,8 @@ async function importReviewedFolder(){
  if(!pack.changed.length){toast(`已检查 ${pack.rows.length} 个文件，没有新的审核数据。`);return{files:pack.rows.length,changed:0}}
  const api=g.WRITE_V1015_BATCH_LEARNING;if(!api?.run)throw new Error('批量学习模块尚未加载');
  const result=await api.run(pack.changed.map(x=>x.file));
- if(Number(result?.totals?.failed||0)===0)saveManifest(pack.next);
+ /* V11.0.6: record attempted content hashes. Changed bytes retrigger. */
+ saveManifest(pack.next);
  toast(`审核学习完成：检查 ${pack.rows.length} 个文件，新处理 ${pack.changed.length} 个。`,Number(result?.totals?.failed||0)>0);
  return{files:pack.rows.length,changed:pack.changed.length,result}
 }

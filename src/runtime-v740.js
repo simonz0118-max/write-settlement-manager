@@ -191,7 +191,7 @@ function patchUnifiedFactTemplateSheetXml(xml,data,workbookName){
   while((m=rowRe.exec(xml)))rows.push({n:Number(m[1]),xml:m[0]});
 
   const before=rows.filter(x=>x.n<firstDynamic).map(x=>x.xml).join('');
-  const after=rows.filter(x=>x.n>=oldFooterStart)
+  let after=rows.filter(x=>x.n>=oldFooterStart)
     .map(x=>{
       const newRow=x.n+delta;
       let shifted=shiftTemplateRowXml(x.xml,x.n,newRow,oldTotal,totalRow);
@@ -216,6 +216,12 @@ function patchUnifiedFactTemplateSheetXml(xml,data,workbookName){
   const parcelStyle=50;
   const totalXml=`<row r="${totalRow}" ht="32.25" customHeight="1" spans="1:8"><c r="A${totalRow}" s="20"/>${xmlTextCell(`B${totalRow}`,50,'Total colis')}${xmlTextCell(`C${totalRow}`,50,'')}${xmlNumberCell(`D${totalRow}`,51,parcelCount)}<c r="E${totalRow}" s="50"/><c r="F${totalRow}" s="52"/><c r="G${totalRow}" s="52"/><c r="H${totalRow}" s="52"/></row>`;
   const blankXml=`<row r="${totalRow+1}" ht="15" customHeight="1" spans="1:8"><c r="A${totalRow+1}" s="20"/></row>`;
+  /* V11.0.6 financial invariant */
+  const paymentAmount=Math.round(raw.reduce((sum,r)=>{const v=Number(r?.amount);return sum+(Number.isFinite(v)?v:0);},0)*100)/100;
+  const paymentFormula=`SUM(H${firstDynamic}:H${totalRow-1})`;
+  const directPaymentRef=new RegExp(`<f([^>]*)>\s*H${totalRow}\s*</f>(?:\s*<v>[^<]*</v>)?`,'g');
+  after=after.replace(directPaymentRef,(_,attrs='')=>`<f${attrs}>${paymentFormula}</f><v>${paymentAmount}</v>`);
+
 
   const sheetData=xml.match(/<sheetData>[\s\S]*?<\/sheetData>/)?.[0];
   if(!sheetData)throw new Error('统一 FACT 模板缺少 sheetData');

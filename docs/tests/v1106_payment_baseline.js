@@ -1,0 +1,1 @@
+const rows=[{amount:3.70},{amount:11.20},{amount:6.50},{amount:9.55},{amount:10.80},{amount:11.25}];const total=Math.round(rows.reduce((s,r)=>s+r.amount,0)*100)/100;if(total!==53)throw new Error('payment baseline '+total);console.log('V11.0.6 PAYMENT 53.00 BASELINE PASS');

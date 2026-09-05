@@ -23,8 +23,8 @@ function repair(){
   icon(document.getElementById('heroExportButton'),'file','v10612-action-icon');
   icon(document.getElementById('heroImportButton'),'upload','v10612-action-icon');
   icon(document.getElementById('heroReviewedImportButton'),'db','v10612-action-icon');
-  document.querySelectorAll('.brand-copy small').forEach(x=>x.textContent='v11.0.2 Production');
-  const f=document.querySelector('.v10612-side-footer span:last-of-type');if(f)f.textContent='v11.0.2';
+  document.querySelectorAll('.brand-copy small').forEach(x=>x.textContent='v11.0.6 Production');
+  const f=document.querySelector('.v10612-side-footer span:last-of-type');if(f)f.textContent='v11.0.6';
 }
 function boot(){
   repair();let q=false;

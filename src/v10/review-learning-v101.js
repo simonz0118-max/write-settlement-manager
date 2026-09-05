@@ -213,17 +213,16 @@ function parseLegacyOrders(rows,sheetName=''){
 }
 
 function newFactRows(rows){
-  let country='';const by=new Map(),all=[];
+  let country='';const by=new Map(),byNo=new Map(),all=[];
   for(const r of rows){
     const b=r?.[1],c=r?.[2],d=r?.[3];
-    if(typeof b==='string'&&b&&!clean(c)&&(d==null||d==='')){country=clean(b);continue}
+    if(typeof b==='string'&&b&&!clean(c)&&(d==null||d==='')){country=upper(b)||'GLOBAL';continue}
     if(Number.isFinite(Number(b))&&clean(c)){
-      const x={country,no:Number(b),description:clean(c),quantity:finite(d),
-        cogs:finite(r?.[4]),shipping:finite(r?.[5]),unitTotal:finite(r?.[6]),amount:finite(r?.[7])};
-      if(x.description.toLowerCase()!=='total colis'){all.push(x);by.set(`${country}\u0001${x.no}`,x)}
+      const x={country:upper(country)||'GLOBAL',no:Number(b),description:clean(c),quantity:finite(d),cogs:finite(r?.[4]),shipping:finite(r?.[5]),unitTotal:finite(r?.[6]),amount:finite(r?.[7])};
+      if(x.description.toLowerCase()!=='total colis'){all.push(x);by.set(`${x.country}\u0001${x.no}`,x);if(!byNo.has(x.no))byNo.set(x.no,x);else byNo.set(x.no,null)}
     }
   }
-  return{all,by};
+  return{all,by,byNo};
 }
 function parseProv(rows){
   if(String(rows?.[0]?.[0]||'')!=='WRITE_LEARNING_SOURCE_V1')throw new Error('INVALID_PROVENANCE');
@@ -287,16 +286,18 @@ async function importNewCN(file,map,ss,sheets){
   if(!factS||!provS)throw new Error('NEW_CN_STRUCTURE_MISSING');
   const facts=newFactRows(rowsFor(map,factS,ss)),prov=parseProv(rowsFor(map,provS,ss)),groups=new Map();
   for(const p of prov){
-    if(provenanceOrigin(p)!=='CN')continue;
-    const key=`${clean(p.factCountry)}\u0001${Number(p.factNo)}`;
+    const origin=provenanceOrigin(p);
+    if(origin==='FR')continue;
+    if(origin!=='CN'&&(!clean(p.configurationFingerprint)||!Number.isFinite(Number(p.factNo))))continue;
+    const key=`${upper(p.factCountry)||'GLOBAL'}\u0001${Number(p.factNo)}`;
     if(!groups.has(key))groups.set(key,[]);groups.get(key).push(p);
   }
   const totals={factRules:0,productRules:0,costRules:0,componentEquations:0,componentCostRules:0,conflicts:0,alreadyLearned:0,newRules:0,ruleIds:[]},seen=new Set();let unmatched=0;
   for(const[key,items]of groups){
-    const f=facts.by.get(key);if(!f){unmatched++;continue}
+    const f=facts.by.get(key)||facts.byNo.get(Number(items?.[0]?.factNo));if(!f){unmatched++;continue}
     const h=items[0],unit=Number.isFinite(f.unitTotal)?f.unitTotal:
       (Number.isFinite(f.cogs)&&Number.isFinite(f.shipping)?f.cogs+f.shipping:null);
-    const spec={invoiceEntity:clean(h.invoiceEntity)||'DEFAULT',origin:'CN',country:upper(h.factCountry),
+    const spec={invoiceEntity:clean(h.invoiceEntity)||'DEFAULT',origin:'CN',country:upper(h.factCountry)||upper(f.country)||'GLOBAL',
       currency:upper(h.currency)||'EUR',taxRegime:clean(h.taxRegime)||'UNSPECIFIED',role:clean(h.role)||'PACKAGE',
       configurationFingerprint:restoreInternalKey(clean(h.configurationFingerprint)),description:f.description,cogs:f.cogs,shipping:f.shipping,
       unitTotal:unit,amount:f.amount,quantity:f.quantity,sourceFile:file.name};
