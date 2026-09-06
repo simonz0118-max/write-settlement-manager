@@ -1,6 +1,6 @@
-/* WRITE V11.2.0 — unattended reviewed-folder learning orchestrator */
+/* WRITE V11.2.1 — unattended reviewed-folder learning orchestrator closure */
 (function(g){'use strict';
-const VERSION='11.2.0';
+const VERSION='11.2.1';
 const DB_NAME='WRITE_V106_SETTINGS',STORE='settings';
 const CONFIG_KEY='folderAutomationConfigV1',STATUS_KEY='folderAutomationStatusV1';
 const LOCK='WRITE_REVIEW_FOLDER_AUTO_SCAN';
@@ -22,7 +22,7 @@ function classifyOutcomes(outcomes=[]){
  const authRequired=retryable.some(x=>/\b401\b|UNAUTHORIZED|AUTH/i.test(String(x?.retryReason||x?.error||'')));
  return{retryable,attention,retryCount:retryable.length,attentionCount:attention.length,authRequired};
 }
-function scheduleRetry(){clearTimeout(retryTimer);const delay=retryDelayFor(failureCount);retryTimer=setTimeout(()=>requestScan('retry'),delay);publish({phase:'RETRY_WAIT',retryAt:new Date(Date.now()+delay).toISOString(),failureCount})}
+function armRetry(){clearTimeout(retryTimer);const delay=retryDelayFor(Math.max(0,failureCount-1));const retryAt=new Date(Date.now()+delay).toISOString();retryTimer=setTimeout(()=>requestScan('retry'),delay);return{retryAt,retryDelayMs:delay}}
 function runWithLock(fn){if(navigator.locks?.request)return navigator.locks.request(LOCK,{mode:'exclusive'},fn);return fn()}
 async function execute(reason){
  const config=await getConfig();if(!config.enabled)return publish({phase:'DISABLED',reason});
@@ -34,14 +34,14 @@ async function execute(reason){
  if(result?.notConfigured){failureCount=0;clearTimeout(retryTimer);return publish({phase:'NOT_CONFIGURED',reason,lastResult:result})}
  if(result?.unsupported){failureCount=0;clearTimeout(retryTimer);return publish({phase:'DISABLED',reason:'unsupported',lastResult:result})}
  const c=classifyOutcomes(result?.outcomes||[]);
- if(c.retryCount){failureCount+=1;scheduleRetry();return publish({phase:'PARTIAL',reason,retryCount:c.retryCount,attentionCount:c.attentionCount,authRequired:c.authRequired,failureCount,checked:Number(result.files||0),changed:Number(result.changed||0),learned:Number(result.learned||0),syncOnly:Number(result.syncOnly||0),lastResult:result})}
+ if(c.retryCount){failureCount+=1;const retry=armRetry();return publish({phase:'PARTIAL',reason,retryCount:c.retryCount,attentionCount:c.attentionCount,authRequired:c.authRequired,failureCount,...retry,checked:Number(result.files||0),changed:Number(result.changed||0),learned:Number(result.learned||0),syncOnly:Number(result.syncOnly||0),lastResult:result})}
  failureCount=0;clearTimeout(retryTimer);
  if(c.attentionCount)return publish({phase:'PARTIAL',reason,retryCount:0,attentionCount:c.attentionCount,authRequired:false,checked:Number(result.files||0),changed:Number(result.changed||0),learned:Number(result.learned||0),syncOnly:Number(result.syncOnly||0),lastResult:result});
  return publish({phase:'SUCCESS',reason,retryCount:0,attentionCount:0,authRequired:false,checked:Number(result.files||0),changed:Number(result.changed||0),learned:Number(result.learned||0),syncOnly:Number(result.syncOnly||0),lastSuccessAt:new Date().toISOString(),lastResult:result})
 }
-function requestScan(reason='manual'){if(activeRun){queuedReason=queuedReason||reason;return activeRun}activeRun=runWithLock(()=>execute(reason)).catch(async e=>{failureCount+=1;scheduleRetry();return publish({phase:'FAILED',reason,failureCount,error:String(e?.message||e)})}).finally(()=>{activeRun=null;if(queuedReason){const next=queuedReason;queuedReason='';queueMicrotask(()=>requestScan(next))}});return activeRun}
+function requestScan(reason='manual'){if(activeRun){queuedReason=queuedReason||reason;return activeRun}activeRun=runWithLock(()=>execute(reason)).catch(async e=>{failureCount+=1;const retry=armRetry();return publish({phase:'FAILED',reason,failureCount,...retry,error:String(e?.message||e)})}).finally(()=>{activeRun=null;if(queuedReason){const next=queuedReason;queuedReason='';queueMicrotask(()=>requestScan(next))}});return activeRun}
 function installInterval(config){clearInterval(intervalTimer);if(config.enabled)intervalTimer=setInterval(()=>requestScan('interval'),config.intervalMs)}
 async function initialize(){const config=await getConfig();installInterval(config);if(config.scanOnFocus){g.addEventListener('focus',()=>requestScan('focus'));document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')requestScan('visible')})}if(config.scanOnOnline)g.addEventListener('online',()=>requestScan('online'));g.addEventListener('write-review-folder-selected',()=>requestScan('folder-selected'));if(config.enabled&&config.scanOnStartup)setTimeout(()=>requestScan('startup'),1500);return publish({phase:config.enabled?'IDLE':'DISABLED',config})}
-const api={VERSION,initialize,requestScan,getConfig,setConfig,getStatus:()=>dbGet(STATUS_KEY),_test:{retryDelayFor,classifyOutcomes,normalizedConfig}};g.WRITE_V112_FOLDER_AUTOMATION=api;
+const api={VERSION,initialize,requestScan,getConfig,setConfig,getStatus:()=>dbGet(STATUS_KEY),_test:{retryDelayFor,classifyOutcomes,normalizedConfig,armRetry}};g.WRITE_V112_FOLDER_AUTOMATION=api;
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',initialize,{once:true});else initialize();
 })(window);
