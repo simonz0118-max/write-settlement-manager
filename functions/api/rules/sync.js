@@ -72,15 +72,29 @@ async function writeBulk(db,rules,requestId){
   }
   return accepted;
 }
-async function fetchRules(db,since){
-  const q=since
-    ? db.prepare(`SELECT * FROM ${TABLE} WHERE updated_at>? ORDER BY updated_at ASC LIMIT 10000`).bind(String(since))
-    : db.prepare(`SELECT * FROM ${TABLE} ORDER BY updated_at ASC LIMIT 10000`);
+function safePrefix(v){
+  const s=String(v||'').trim();
+  if(!s)return '';
+  if(!/^SECURITY-CANARY-[A-Za-z0-9._:-]*$/.test(s))throw new Error('INVALID_RULE_ID_PREFIX');
+  return s;
+}
+async function fetchRules(db,since,ruleIdPrefix=''){
+  const prefix=safePrefix(ruleIdPrefix);
+  let q;
+  if(prefix&&since){
+    q=db.prepare(`SELECT * FROM ${TABLE} WHERE rule_id LIKE ? AND updated_at>? ORDER BY updated_at ASC LIMIT 1000`).bind(prefix+'%',String(since));
+  }else if(prefix){
+    q=db.prepare(`SELECT * FROM ${TABLE} WHERE rule_id LIKE ? ORDER BY updated_at ASC LIMIT 1000`).bind(prefix+'%');
+  }else if(since){
+    q=db.prepare(`SELECT * FROM ${TABLE} WHERE updated_at>? ORDER BY updated_at ASC LIMIT 10000`).bind(String(since));
+  }else{
+    q=db.prepare(`SELECT * FROM ${TABLE} ORDER BY updated_at ASC LIMIT 10000`);
+  }
   const out=await q.all();return Array.isArray(out.results)?out.results:[];
 }
 export async function onRequestOptions(){return new Response(null,{status:204,headers:{allow:'POST, GET, OPTIONS'}})}
 export async function onRequestGet({env}){
-  return json({ok:true,service:'WRITE_RULES_SYNC',version:'11.1.0',method:'GET',auth:'required-for-sync'});
+  return json({ok:true,service:'WRITE_RULES_SYNC',version:'11.1.1',method:'GET',auth:'required-for-sync'});
 }
 export async function onRequestPost({request,env}){
   try{
@@ -92,9 +106,9 @@ export async function onRequestPost({request,env}){
     if(rules.length>500)return json({ok:false,error:'Too many rules in one request',count:rules.length},413);
     const requestId=crypto.randomUUID?.()||String(Date.now());
     const accepted=await writeBulk(db,rules,requestId);
-    const rows=await fetchRules(db,body.since?String(body.since):null);
+    const rows=await fetchRules(db,body.since?String(body.since):null,body.ruleIdPrefix?String(body.ruleIdPrefix):'');
     const cursor=rows.length?String(rows[rows.length-1].updated_at):new Date().toISOString();
-    return json({ok:true,acceptedRuleIds:accepted,rules:rows.map(fromRow),cursor,serverVersion:'11.1.0',
+    return json({ok:true,acceptedRuleIds:accepted,rules:rows.map(fromRow),cursor,serverVersion:'11.1.1',
       received:rules.length,accepted:accepted.length,authority:'SERVER_CONTROLLED'});
   }catch(e){return json({ok:false,error:String(e?.message||e),stage:'POST_SYNC'},500)}
 }

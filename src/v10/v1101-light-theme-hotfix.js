@@ -5,8 +5,8 @@ function apply(){
   const theme=document.documentElement.dataset.theme||'light';
   const meta=document.querySelector('meta[name="theme-color"]');
   if(meta)meta.setAttribute('content',theme==='dark'?'#151513':'#f1ede4');
-  document.querySelectorAll('.brand-copy small').forEach(x=>x.textContent='v11.1.0 Production');
-  const f=document.querySelector('.v10612-side-footer span:last-of-type');if(f)f.textContent='v11.1.0';
+  document.querySelectorAll('.brand-copy small').forEach(x=>x.textContent='v11.1.1 Production');
+  const f=document.querySelector('.v10612-side-footer span:last-of-type');if(f)f.textContent='v11.1.1';
 }
 function boot(){
   apply();

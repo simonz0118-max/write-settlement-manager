@@ -1,3 +1,9 @@
+## V11.1.1 — Canary Query Closure
+
+- 修复R2 canary清理stdin冲突。
+- 新增服务端 SECURITY-CANARY-* 前缀限定查询，验收不再拉取整个生产知识库。
+- 新增清理隔离负向门禁。
+
 ## V11.1.0 — Security Closure
 
 - 生产规则写入认证与HttpOnly管理会话。
