@@ -2,8 +2,8 @@
 (function(g){'use strict';const VERSION='11.0.4';
 function apply(){
   document.body.classList.add('write-v1104');
-  document.querySelectorAll('.brand-copy small').forEach(x=>x.textContent='v11.1.1 Production');
-  const f=document.querySelector('.v10612-side-footer span:last-of-type');if(f)f.textContent='v11.1.1';
+  document.querySelectorAll('.brand-copy small').forEach(x=>x.textContent='v11.2.0 Production');
+  const f=document.querySelector('.v10612-side-footer span:last-of-type');if(f)f.textContent='v11.2.0';
   const b=document.getElementById('v106SidebarToggle');
   if(b){
     const c=document.querySelector('.app-shell')?.classList.contains('sidebar-collapsed');

@@ -59,6 +59,16 @@ function renderFiles(p,rows){p.querySelector('#rlFiles').innerHTML=rows.map(x=>`
 function syncSummary(x){if(!x||typeof x!=='object')return'';const bits=[];for(const k of['pushed','pulled','uploaded','downloaded','conflicts'])if(Number.isFinite(Number(x[k])))bits.push(`${k} ${x[k]}`);return bits.length?' · '+bits.join(' / '):''}
 async function syncCloud(expectedRuleIds=[]){try{if(!g.WRITE_KB?.sync)throw Error('知识库未提供云同步接口');const detail=await g.WRITE_KB.sync({force:true});if(!detail?.ok)throw Error(detail?.error||detail?.reason||'Cloud sync 未确认');const receipt=g.WRITE_KB?.cloudReceiptStatus?.()||{};if(!receipt.cloud||Number(receipt.pending||0)!==0)throw Error('云端回执未闭环：待同步 '+Number(receipt.pending||0));const cloudIds=new Set([...(detail.acceptedRuleIds||[]),...(detail.cloudRuleIds||[])].map(String));const expected=[...expectedRuleIds].map(String).filter(Boolean),missing=expected.filter(id=>!cloudIds.has(id));if(missing.length)throw Error(`云端未验证到 ${missing.length} 条本批知识规则`);return{ok:true,msg:`云端已收录 ${expected.length} 条 · 本次上传 ${num(detail.pushed)} · 云端拉取 ${num(detail.pulled)} · 待同步 0`,detail,receipt,verifiedRuleIds:expected.length}}catch(e){return{ok:false,msg:'云端收录未确认：'+(e?.message||e),detail:null}}}
 
+async function learnBatch(files,{onProgress=()=>{}}={}){
+ const raw=[...files].filter(f=>/\.(xlsx|zip)$/i.test(String(f.name||'')));if(!raw.length)throw Error('请选择 XLSX 或 ZIP 文件');
+ g.WRITE_KB?.beginBatchLearning?.();let ended=false;
+ try{
+  onProgress({phase:'expand',current:0,total:raw.length});const pack=await expandInputFiles(raw);if(!pack.expanded.length)throw Error('没有找到可学习的 XLSX；ZIP 必须包含 .xlsx 文件');
+  const rows=[],api=g.WRITE_V101_REVIEW_LEARNING;if(!api?.importReviewedWorkbook)throw Error('审核学习模块尚未加载');
+  for(let i=0;i<pack.expanded.length;i++){const f=pack.expanded[i].file;onProgress({phase:'learn',current:i+1,total:pack.expanded.length});try{rows.push({name:f.name,ok:true,result:await api.importReviewedWorkbook(f,{skipSync:true})})}catch(e){rows.push({name:f.name,ok:false,error:e?.message||String(e)})}}
+  const t=aggregate(rows);g.WRITE_KB?.endBatchLearning?.();ended=true;onProgress({phase:'sync',current:pack.expanded.length,total:pack.expanded.length});const cloud=await syncCloud(t.ruleIds);onProgress({phase:'done',current:pack.expanded.length,total:pack.expanded.length,cloudOk:!!cloud.ok});return{sources:pack.sourceSummary,rows,totals:t,cloud}
+ }finally{if(!ended)g.WRITE_KB?.endBatchLearning?.()}
+}
 async function run(files){
   const raw=[...files].filter(f=>/\.(xlsx|zip)$/i.test(String(f.name||'')));if(!raw.length)throw Error('请选择 XLSX 或 ZIP 文件');
   setBusy(true);g.WRITE_KB?.beginBatchLearning?.();let p=view('正在解析批量学习文件',`已选择 ${raw.length} 个文件`,5,true);p.querySelector('#rlFiles').innerHTML='';p.querySelector('#rlTotals').innerHTML='';p.querySelector('#rlSync').innerHTML='<i></i>等待本地学习完成';
@@ -81,5 +91,5 @@ async function run(files){
 function install(){const i=input();if(!i)return;i.multiple=true;i.accept='.xlsx,.zip';document.addEventListener('click',e=>{const b=e.target?.closest?.('.reviewed-import-trigger,#knowledgeImportReviewed');if(!b)return;e.preventDefault();e.stopImmediatePropagation();if(g.WRITE_V106_SIMPLE_WORKFLOW?.handleReviewedImportClick){g.WRITE_V106_SIMPLE_WORKFLOW.handleReviewedImportClick().catch(err=>{const p=view('学习失败',err?.message||String(err),100,false);p.querySelector('#rlSync').innerHTML='<i class="bad"></i>未完成审核学习'});return}i.click()},true);i.addEventListener('change',async()=>{const fs=[...(i.files||[])];i.value='';if(!fs.length)return;try{await run(fs)}catch(e){g.WRITE_KB?.endBatchLearning?.();setBusy(false);const p=view('学习失败',e?.message||String(e),100,false);p.querySelector('#rlSync').innerHTML='<i class="bad"></i>未上传云端'}},true)}
 function start(){install();panel()}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();
-g.WRITE_V1015_BATCH_LEARNING={VERSION,run,expandInputFiles,extractZip,_test:{safeEntryName,aggregate}};
+g.WRITE_V1015_BATCH_LEARNING={VERSION,run,learnBatch,expandInputFiles,extractZip,_test:{safeEntryName,aggregate}};
 })(window);

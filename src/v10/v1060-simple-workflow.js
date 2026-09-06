@@ -1,6 +1,6 @@
 /* WRITE V10.6.0 — Simple Workflow */
 (function(g){'use strict';
-const VERSION='11.0.12';
+const VERSION='11.2.0';
 const DB_NAME='WRITE_V106_SETTINGS',STORE='settings',HANDLE_KEY='reviewFolder';
 const MANIFEST_KEY='write-v106-reviewed-folder-manifest-v5';
 const REVIEW_PARSER_VERSION='11.0.12';
@@ -17,11 +17,11 @@ function toast(msg,bad=false){let n=$('#v106Toast');if(!n){n=document.createElem
 function modalBase(id,title,body){let m=document.getElementById(id);if(m)m.remove();m=document.createElement('div');m.id=id;m.className='v106-modal-backdrop';m.innerHTML=`<div class="v106-modal"><button class="v106-x" type="button" aria-label="关闭">×</button><h3>${esc(title)}</h3><p>${esc(body)}</p><div class="v106-modal-actions"></div></div>`;document.body.appendChild(m);return m}
 async function chooseReviewFolder(){
  if(typeof g.showDirectoryPicker!=='function'){document.getElementById('knowledgeReviewedFile')?.click();toast('当前浏览器不支持固定审核文件夹，已切换为手动选择文件。',true);return null}
- try{const h=await g.showDirectoryPicker({mode:'read',id:'write-reviewed-folder'});folderHandle=h;await dbPut(HANDLE_KEY,h);folderScopeId=crypto?.randomUUID?.()||`folder-${Date.now()}-${Math.random().toString(36).slice(2)}`;await dbPut(FOLDER_SCOPE_KEY,folderScopeId);for(const k of [...LEGACY_MANIFEST_KEYS,MANIFEST_KEY])localStorage.removeItem(k);toast(`审核文件夹已设置：${h.name}`);return h}catch(e){if(e?.name!=='AbortError')toast('文件夹设置失败：'+(e?.message||e),true);return null}
+ try{const h=await g.showDirectoryPicker({mode:'read',id:'write-reviewed-folder'});folderHandle=h;await dbPut(HANDLE_KEY,h);folderScopeId=crypto?.randomUUID?.()||`folder-${Date.now()}-${Math.random().toString(36).slice(2)}`;await dbPut(FOLDER_SCOPE_KEY,folderScopeId);for(const k of [...LEGACY_MANIFEST_KEYS,MANIFEST_KEY])localStorage.removeItem(k);toast(`审核文件夹已设置：${h.name}`);g.dispatchEvent?.(new CustomEvent('write-review-folder-selected',{detail:{name:h.name,scopeId:folderScopeId}}));return h}catch(e){if(e?.name!=='AbortError')toast('文件夹设置失败：'+(e?.message||e),true);return null}
 }
 async function ensurePermission(h){if(!h)return false;try{if((await h.queryPermission?.({mode:'read'}))==='granted')return true;return (await h.requestPermission?.({mode:'read'}))==='granted'}catch(e){return false}}
-async function digest(file){const b=await file.arrayBuffer(),h=await crypto.subtle.digest('SHA-256',b);return [...new Uint8Array(h)].map(x=>x.toString(16).padStart(2,'0')).join('')}
-async function collect(dir,prefix='',out=[]){for await(const [name,h] of dir.entries()){const path=prefix?`${prefix}/${name}`:name;if(h.kind==='directory'){await collect(h,path,out);continue}if(!/\.(xlsx|zip)$/i.test(name)||/^\.?~\$/.test(name))continue;const f=await h.getFile();Object.defineProperty(f,'__writeRelativePath',{value:path,configurable:true});out.push({file:f,path})}return out}
+async function digest(file){if(Number(file?.size||0)>250*1024*1024)throw new Error('文件超过 250 MB 上限：'+String(file?.name||''));const b=await file.arrayBuffer(),h=await crypto.subtle.digest('SHA-256',b);return [...new Uint8Array(h)].map(x=>x.toString(16).padStart(2,'0')).join('')}
+async function collect(dir,prefix='',out=[],errors=[]){let entries=[];try{for await(const x of dir.entries())entries.push(x)}catch(e){errors.push({path:prefix||'.',error:String(e?.message||e)});return out}entries.sort((a,b)=>String(a[0]).localeCompare(String(b[0])));for(const [name,h] of entries){const path=prefix?`${prefix}/${name}`:name;try{if(h.kind==='directory'){await collect(h,path,out,errors);continue}if(!/\.(xlsx|zip)$/i.test(name)||/^\.?~\$/.test(name))continue;const f=await h.getFile();if(Number(f.size||0)>250*1024*1024){errors.push({path,error:'FILE_TOO_LARGE'});continue}Object.defineProperty(f,'__writeRelativePath',{value:path,configurable:true});out.push({file:f,path})}catch(e){errors.push({path,error:String(e?.message||e)})}}return out}
 function manifestDbKey(path){return `${MANIFEST_KEY}:${folderScopeId||'UNSCOPED'}:${path}`}
 function opId(){return crypto?.randomUUID?.()||`op-${Date.now()}-${Math.random().toString(36).slice(2)}`}
 function cleanIds(values){
@@ -101,9 +101,9 @@ function manifestAction(prev,observedHash){
  return'SKIP'
 }
 async function scanChanged(h){
- const rows=await collect(h),learn=[],syncOnly=[];
+ const collectErrors=[],rows=await collect(h,'',[],collectErrors),learn=[],syncOnly=[];
  for(const x of rows){const observedHash=await digest(x.file),prev=await manifestGet(x.path),action=manifestAction(prev,observedHash),item={...x,observedHash,action,prev};if(action==='LEARN')learn.push(item);else if(action==='SYNC')syncOnly.push(item)}
- return{rows,learn,syncOnly,changed:[...learn,...syncOnly]}
+ return{rows,learn,syncOnly,changed:[...learn,...syncOnly],collectErrors}
 }
 async function withPathLock(path,fn){const locks=g.navigator?.locks;if(locks?.request)return locks.request(`WRITE_REVIEW:${path}`,{mode:'exclusive'},fn);return fn()}
 async function strictSyncRecord(path,observedHash){
@@ -118,11 +118,11 @@ async function strictSyncRecord(path,observedHash){
   return done.stale?{...(done.current||{}),staleResponseIgnored:true}:done.current
  })
 }
-async function processOneLearn(x,api){
+async function processOneLearn(x,api,options={}){
  return withPathLock(x.path,async()=>{
   const latest=await manifestGet(x.path),action=manifestAction(latest,x.observedHash);if(action!=='LEARN')return{path:x.path,action:'SKIP_AFTER_LOCK',...(latest||{})};
   const snap=await manifestBegin(x.path,'LEARN',{observedHash:x.observedHash,size:x.file.size,lastModified:x.file.lastModified,localStatus:'PENDING',syncStatus:'NOT_READY',retryReason:'LEARNING_IN_PROGRESS'});
-  let result=null,error='';try{result=await api.run([x.file])}catch(e){error=e?.message||String(e)}
+  let result=null,error='';try{result=options.silent&&api.learnBatch?await api.learnBatch([x.file],{silent:true}):await api.run([x.file])}catch(e){error=e?.message||String(e)}
   const state=classifyBatchResult(result);if(error){state.localStatus='FAILED';state.syncStatus='NOT_READY';state.retryReason='EXCEPTION:'+error}
   const patch={observedHash:x.observedHash,size:x.file.size,lastModified:x.file.lastModified,...state,sourcePath:x.path,processedAt:new Date().toISOString()};
   if(state.localStatus==='LOCAL_SUCCESS'||state.localStatus==='NO_APPLICABLE_DATA'){patch.learnedHash=x.observedHash;patch.learnedParserVersion=REVIEW_PARSER_VERSION;patch.learnedSchemaVersion=LEARNING_SCHEMA_VERSION}
@@ -130,20 +130,30 @@ async function processOneLearn(x,api){
   return done.stale?{path:x.path,action:'LEARN',staleResponseIgnored:true,...(done.current||{}),error,result}:{path:x.path,action:'LEARN',...done.current,error,result}
  })
 }
-async function processReviewedFolderHandle(h){
- const pack=await scanChanged(h);if(!pack.rows.length)return{files:0,changed:0,learned:0,syncOnly:0,outcomes:[],pack};if(!pack.changed.length)return{files:pack.rows.length,changed:0,learned:0,syncOnly:0,outcomes:[],pack};
- const api=g.WRITE_V1015_BATCH_LEARNING;if(!api?.run)throw new Error('批量学习模块尚未加载');const outcomes=[];
- for(const x of pack.learn)outcomes.push(await processOneLearn(x,api));for(const x of pack.syncOnly)outcomes.push({path:x.path,action:'SYNC',...(await strictSyncRecord(x.path,x.observedHash)||{})});
+async function processReviewedFolderHandle(h,options={}){
+ const pack=await scanChanged(h),outcomes=[];
+ for(const e of(pack.collectErrors||[]))outcomes.push({path:e.path,action:'COLLECT',localStatus:'FAILED',syncStatus:'NOT_READY',retryReason:'COLLECT:'+e.error});
+ if(!pack.changed.length)return{files:pack.rows.length,changed:0,learned:0,syncOnly:0,outcomes,pack};
+ const api=g.WRITE_V1015_BATCH_LEARNING;if(!api?.run)throw new Error('批量学习模块尚未加载');
+ for(const x of pack.learn)outcomes.push(await processOneLearn(x,api,options));for(const x of pack.syncOnly)outcomes.push({path:x.path,action:'SYNC',...(await strictSyncRecord(x.path,x.observedHash)||{})});
  return{files:pack.rows.length,changed:pack.changed.length,learned:pack.learn.length,syncOnly:pack.syncOnly.length,outcomes,pack}
+}
+async function loadStoredFolderContext(){if(!folderHandle)folderHandle=await dbGet(HANDLE_KEY).catch(()=>null);if(!folderScopeId)folderScopeId=await dbGet(FOLDER_SCOPE_KEY).catch(()=>null)||'';return{folderHandle,folderScopeId}}
+async function scanStoredFolder({interactive=false,silent=false,reason='manual'}={}){
+ if(typeof g.showDirectoryPicker!=='function'&&!folderHandle)return{unsupported:true,reason,outcomes:[]};
+ await loadStoredFolderContext();
+ if(!folderHandle){if(!interactive)return{notConfigured:true,reason,outcomes:[]};folderHandle=await chooseReviewFolder();if(!folderHandle)return{cancelled:true,reason,outcomes:[]}}
+ let permission='granted';try{if(typeof folderHandle.queryPermission==='function')permission=await folderHandle.queryPermission({mode:'read'})}catch{permission='prompt'}
+ if(permission!=='granted'){if(!interactive)return{needsPermission:true,reason,outcomes:[]};try{permission=typeof folderHandle.requestPermission==='function'?await folderHandle.requestPermission({mode:'read'}):'denied'}catch{permission='denied'};if(permission!=='granted')return{needsPermission:true,reason,outcomes:[]}}
+ const out=await processReviewedFolderHandle(folderHandle,{silent,reason});return{...out,reason}
 }
 async function importReviewedFolder(){
  if(typeof g.showDirectoryPicker!=='function'){document.getElementById('knowledgeReviewedFile')?.click();return{fallback:true}}
- if(!folderHandle)folderHandle=await dbGet(HANDLE_KEY).catch(()=>null);if(!folderScopeId)folderScopeId=await dbGet(FOLDER_SCOPE_KEY).catch(()=>null)||'';if(folderHandle&&!folderScopeId){folderScopeId=crypto?.randomUUID?.()||`folder-${Date.now()}-${Math.random().toString(36).slice(2)}`;await dbPut(FOLDER_SCOPE_KEY,folderScopeId)}if(!folderHandle){folderHandle=await chooseReviewFolder();if(!folderHandle)return{cancelled:true}}if(!await ensurePermission(folderHandle)){folderHandle=await chooseReviewFolder();if(!folderHandle)return{cancelled:true}}
- toast('正在读取审核文件夹并检查新数据…');const out=await processReviewedFolderHandle(folderHandle);
- if(!out.files){toast('审核文件夹里没有 XLSX / ZIP 文件。');return out}
- if(!out.changed){toast(`已检查 ${out.files} 个文件，没有新的审核数据。`);return out}
- const bad=out.outcomes.some(x=>!['LOCAL_SUCCESS','NO_APPLICABLE_DATA'].includes(x.localStatus)||!['SYNCED','NOT_REQUIRED'].includes(x.syncStatus)),retry=out.outcomes.filter(x=>!['LOCAL_SUCCESS','NO_APPLICABLE_DATA'].includes(x.localStatus)||!['SYNCED','NOT_REQUIRED'].includes(x.syncStatus)).length;
- toast(`审核学习完成：检查 ${out.files} 个文件，本次处理 ${out.changed} 个${retry?`，${retry} 个保留重试状态`:''}。`,bad);return out
+ toast('正在读取审核文件夹并检查新数据…');const out=await scanStoredFolder({interactive:true,silent:false,reason:'manual'});
+ if(out?.cancelled||out?.needsPermission)return out;if(!out.files){toast('审核文件夹里没有 XLSX / ZIP 文件。');return out}
+ if(!out.changed&&!out.outcomes?.length){toast(`已检查 ${out.files} 个文件，没有新的审核数据。`);return out}
+ const retry=(out.outcomes||[]).filter(x=>['FAILED','INVALID_RESULT'].includes(x.localStatus)||(x.localStatus==='LOCAL_SUCCESS'&&x.syncStatus==='SYNC_PENDING')).length,attention=(out.outcomes||[]).filter(x=>['UNMATCHED','CONFLICT'].includes(x.localStatus)).length,bad=retry+attention>0;
+ toast(`审核学习完成：检查 ${out.files} 个文件，本次处理 ${out.changed} 个${retry?`，${retry} 个待重试`:''}${attention?`，${attention} 个待人工处理`:''}。`,bad);return out
 }
 function handleReviewedImportClick(){return importReviewedFolder().catch(e=>{toast('审核数据导入失败：'+(e?.message||e),true);throw e})}
 function chooseExportMode(){return new Promise(resolve=>{const m=modalBase('v106ExportMode','导出统计发票','默认只生成 FACT。是否需要同时生成其他统计页面？');const a=m.querySelector('.v106-modal-actions');a.innerHTML='<button class="v106-secondary" data-mode="full">FACT + 其他页面</button><button class="v106-primary" data-mode="fact">仅生成 FACT</button>';const done=v=>{m.remove();resolve(v)};m.querySelector('.v106-x').onclick=()=>done('cancel');a.onclick=e=>{const b=e.target.closest('[data-mode]');if(b)done(b.dataset.mode)};setTimeout(()=>a.querySelector('[data-mode="fact"]')?.focus(),0)})}
@@ -152,5 +162,5 @@ function installLandingExport(){const b=$('#landingExportButton');if(!b)return;b
 function intro(){if(typeof g.showDirectoryPicker!=='function')return;dbGet(HANDLE_KEY).then(h=>{folderHandle=h;if(h)return;const m=modalBase('v106FolderIntro','设置人工审核文件夹','第一次使用请指定一个人工审核表文件夹。以后点击“导入审核后数据”，WRITE 会自动读取这个文件夹里的新文件并学习。');const a=m.querySelector('.v106-modal-actions');a.innerHTML='<button class="v106-secondary" data-later>稍后设置</button><button class="v106-primary" data-pick>选择文件夹</button>';m.querySelector('.v106-x').onclick=()=>m.remove();a.querySelector('[data-later]').onclick=()=>m.remove();a.querySelector('[data-pick]').onclick=async()=>{const h2=await chooseReviewFolder();if(h2)m.remove()}}).catch(()=>{})}
 function start(){installSidebar();installLandingExport();intro()}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();
-g.WRITE_V106_SIMPLE_WORKFLOW={VERSION,chooseExportMode,chooseReviewFolder,handleReviewedImportClick,importReviewedFolder,_test:{collect,scanChanged,digest,cleanIds,toRuleIds,idsDigest,validBatchContract,receiptCovers,classifyBatchResult,manifestGet,manifestBegin,manifestCas,manifestAction,strictSyncRecord,processOneLearn,processReviewedFolderHandle,setFolderHandle:h=>folderHandle=h}};
+g.WRITE_V106_SIMPLE_WORKFLOW={VERSION,chooseExportMode,chooseReviewFolder,handleReviewedImportClick,importReviewedFolder,scanStoredFolder,getFolderStatus:loadStoredFolderContext,_test:{collect,scanChanged,digest,cleanIds,toRuleIds,idsDigest,validBatchContract,receiptCovers,classifyBatchResult,manifestGet,manifestBegin,manifestCas,manifestAction,strictSyncRecord,processOneLearn,processReviewedFolderHandle,setFolderHandle:h=>folderHandle=h,setFolderContext:async(h,scope='TEST_SCOPE',persist=false)=>{folderHandle=h;folderScopeId=scope;if(persist){await dbPut(HANDLE_KEY,h);await dbPut(FOLDER_SCOPE_KEY,scope)}return{folderHandle,folderScopeId}}}};
 })(window);
